@@ -45,6 +45,8 @@ tests/unit/                 Unit test (Vitest)
 tests/manual/               Checklist kiểm thử tay trong Excel
 docs/ADR/                   Quyết định kiến trúc
 docs/SIDELOAD.md            Cài đặt môi trường, sideload, xử lý sự cố
+docs/DEPLOY.md              Triển khai lên GitHub Pages, cài bản production
+.github/workflows/          GitHub Actions: build, kiểm tra, deploy Pages
 prompts/                    Bộ đặc tả yêu cầu dự án
 ```
 
@@ -73,4 +75,6 @@ Hướng dẫn đầy đủ (chứng chỉ HTTPS, Excel trên web, xóa cache, m
 
 ## Triển khai
 
-Chưa có bản production: nhà cung cấp hosting HTTPS chưa được chọn ([ADR-0005](docs/ADR/0005-hosting-va-trien-khai.md)).
+Bản production được host trên GitHub Pages của một GitHub Organization dành riêng ([ADR-0007](docs/ADR/0007-hosting-github-pages.md)), deploy tự động bằng GitHub Actions khi push lên `master`. Hướng dẫn: [docs/DEPLOY.md](docs/DEPLOY.md).
+
+Trạng thái: workflow đã sẵn sàng, **chưa deploy** (chưa có repo GitHub).

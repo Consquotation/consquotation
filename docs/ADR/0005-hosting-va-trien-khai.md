@@ -1,6 +1,6 @@
 # ADR-0005: Hosting và triển khai
 
-- Trạng thái: Chấp nhận (còn mục mở: chọn nhà cung cấp hosting)
+- Trạng thái: Chấp nhận. Mục mở "chọn nhà cung cấp hosting" được giải quyết bởi [ADR-0007](0007-hosting-github-pages.md) (GitHub Pages)
 - Ngày: 2026-10-19
 
 ## Bối cảnh
