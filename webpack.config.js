@@ -119,7 +119,7 @@ module.exports = async (env, options) => {
       new CopyWebpackPlugin({
         patterns: [
           {
-            from: "assets/*",
+            from: "assets/*.png",
             to: "assets/[name][ext][query]",
           },
           // minimized: true để Terser bỏ qua — file phải giữ nguyên ES5 như bản đã test.

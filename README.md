@@ -59,7 +59,8 @@ npm run typecheck    # TypeScript
 npm run lint         # ESLint + Prettier
 npm test             # Vitest
 npm run validate     # kiểm tra manifest (gửi nội dung manifest tới dịch vụ kiểm tra của Microsoft)
-npm run build        # build production vào dist/
+npm run build        # build production vào dist/ (đặt CQ_PROD_URL để sinh manifest production)
+npm run validate:prod  # kiểm tra dist/manifest.prod.xml
 npm run check        # chạy typecheck, lint, test, validate, build
 ```
 

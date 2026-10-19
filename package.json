@@ -21,6 +21,7 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "validate": "office-addin-manifest validate manifest/manifest.dev.xml",
+    "validate:prod": "office-addin-manifest validate dist/manifest.prod.xml",
     "check": "npm run typecheck && npm run lint && npm run test && npm run validate && npm run build"
   },
   "dependencies": {

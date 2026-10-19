@@ -39,6 +39,13 @@ export const STRINGS = {
     available: "Khả dụng",
     unavailable: "Không khả dụng",
     persisted: "Lưu trữ bền vững (persisted)",
+    persistRequest: "Xin lưu trữ bền vững",
+    persistResult: {
+      already: "Đã được cấp từ trước",
+      granted: "Được chấp nhận",
+      denied: "Bị từ chối",
+      unsupported: "Webview không hỗ trợ",
+    },
     yes: "Có",
     no: "Không",
     unknown: "Không xác định",

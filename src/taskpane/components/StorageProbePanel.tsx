@@ -12,7 +12,14 @@ import {
 } from "@fluentui/react-components";
 import InfoList from "./InfoList";
 import { readPartitionKey } from "../../office/environment";
-import { ProbeResult, StorageStatus, readStorageStatus, runStorageProbe } from "../../storage/storageProbe";
+import {
+  PersistenceRequest,
+  ProbeResult,
+  StorageStatus,
+  readStorageStatus,
+  requestPersistence,
+  runStorageProbe,
+} from "../../storage/storageProbe";
 import { STRINGS } from "../../shared/strings.vi";
 
 /* global indexedDB, navigator */
@@ -20,7 +27,12 @@ import { STRINGS } from "../../shared/strings.vi";
 type ProbeState =
   | { kind: "idle" }
   | { kind: "running" }
-  | { kind: "done"; status: StorageStatus; result: ProbeResult | null }
+  | {
+      kind: "done";
+      status: StorageStatus;
+      persistence: PersistenceRequest;
+      result: ProbeResult | null;
+    }
   | { kind: "error"; message: string };
 
 const useStyles = makeStyles({
@@ -66,8 +78,9 @@ const StorageProbePanel: React.FC = () => {
       const factory = typeof indexedDB === "undefined" ? undefined : indexedDB;
       const storageManager = typeof navigator === "undefined" ? undefined : navigator.storage;
       const status = await readStorageStatus(factory, storageManager);
+      const persistence = await requestPersistence(storageManager);
       const result = factory ? await runStorageProbe(factory, partitionKey) : null;
-      setState({ kind: "done", status, result });
+      setState({ kind: "done", status, persistence, result });
     } catch (error) {
       setState({ kind: "error", message: error instanceof Error ? error.message : String(error) });
     }
@@ -92,6 +105,7 @@ const StorageProbePanel: React.FC = () => {
           items={[
             { label: s.indexedDb, value: state.status.indexedDbAvailable ? s.available : s.unavailable },
             { label: s.persisted, value: formatBoolean(state.status.persisted) },
+            { label: s.persistRequest, value: s.persistResult[state.persistence] },
             {
               label: s.usage,
               value: `${formatBytes(state.status.usageBytes)} / ${formatBytes(state.status.quotaBytes)}`,

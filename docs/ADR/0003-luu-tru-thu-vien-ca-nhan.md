@@ -63,9 +63,9 @@ Các cơ chế lưu mà Office.js và webview cung cấp:
 ## Cần xác minh trong Excel thật
 
 - [x] IndexedDB còn dữ liệu sau khi đóng và mở lại Excel.
-- [ ] IndexedDB mất sau khi xóa cache, để xác nhận kịch bản cảnh báo.
-- [ ] `Office.context.partitionKey` trên Windows desktop (dự kiến `undefined`) và trên Excel web.
-- [ ] `navigator.storage.persist()` và `navigator.storage.estimate()` trong WebView2.
+- [x] IndexedDB mất sau khi xóa cache, để xác nhận kịch bản cảnh báo.
+- [ ] `Office.context.partitionKey` trên Windows desktop (dự kiến `undefined`) và trên Excel web. (Windows: đã xác minh; Excel web: chưa)
+- [x] `navigator.storage.persist()` và `navigator.storage.estimate()` trong WebView2.
 
 ## Kết quả xác minh
 
@@ -78,8 +78,12 @@ Các cơ chế lưu mà Office.js và webview cung cấp:
 | `Office.context.partitionKey` | Không có (`undefined`), đúng như tài liệu Microsoft |
 | `navigator.storage.persisted()` | `false` — trình duyệt nhúng có thể dọn dữ liệu khi thiếu dung lượng |
 | `navigator.storage.estimate()` quota | 10.240 MB |
+| `navigator.storage.persist()` | **Bị từ chối** — WebView2 trong Excel không cấp lưu trữ bền vững |
+| Sau `npx office-addin-cache clear` | Dữ liệu IndexedDB **mất hoàn toàn** (thư mục `Wef` bị xóa) |
 
-Chưa xác minh: xóa cache Office, gọi `navigator.storage.persist()`, Excel trên web. Làm ở giai đoạn 3.
+Kết luận: hai rủi ro mất dữ liệu (xóa cache Office, trình duyệt nhúng tự dọn khi thiếu dung lượng) đều có thật trên nền tảng chính. Backup bắt buộc và cảnh báo "thư viện trống bất thường" là yêu cầu bắt buộc của giai đoạn 3, không phải tùy chọn.
+
+Chưa xác minh: Excel trên web.
 
 ## Nguồn
 

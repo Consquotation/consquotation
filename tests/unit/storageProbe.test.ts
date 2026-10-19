@@ -1,6 +1,56 @@
 import { IDBFactory } from "fake-indexeddb";
 import { describe, expect, it } from "vitest";
-import { probeDatabaseName, readStorageStatus, runStorageProbe } from "../../src/storage/storageProbe";
+import {
+  probeDatabaseName,
+  readStorageStatus,
+  requestPersistence,
+  runStorageProbe,
+} from "../../src/storage/storageProbe";
+
+function fakeStorageManager(options: {
+  persisted?: () => Promise<boolean>;
+  persist?: () => Promise<boolean>;
+}): StorageManager {
+  return options as unknown as StorageManager;
+}
+
+describe("requestPersistence", () => {
+  it("không gọi persist() khi đã được cấp từ trước", async () => {
+    let persistCalls = 0;
+    const manager = fakeStorageManager({
+      persisted: async () => true,
+      persist: async () => {
+        persistCalls++;
+        return true;
+      },
+    });
+    await expect(requestPersistence(manager)).resolves.toBe("already");
+    expect(persistCalls).toBe(0);
+  });
+
+  it("trả về granted / denied theo kết quả persist()", async () => {
+    await expect(
+      requestPersistence(fakeStorageManager({ persisted: async () => false, persist: async () => true }))
+    ).resolves.toBe("granted");
+    await expect(
+      requestPersistence(fakeStorageManager({ persisted: async () => false, persist: async () => false }))
+    ).resolves.toBe("denied");
+  });
+
+  it("báo unsupported khi thiếu API hoặc lời gọi lỗi", async () => {
+    await expect(requestPersistence(undefined)).resolves.toBe("unsupported");
+    await expect(requestPersistence(fakeStorageManager({}))).resolves.toBe("unsupported");
+    await expect(
+      requestPersistence(
+        fakeStorageManager({
+          persist: async () => {
+            throw new Error("denied");
+          },
+        })
+      )
+    ).resolves.toBe("unsupported");
+  });
+});
 
 describe("probeDatabaseName", () => {
   it("dùng tên gốc khi không có partition key (Excel trên Windows)", () => {

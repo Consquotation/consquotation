@@ -101,6 +101,8 @@ $env:CQ_PROD_URL = "https://<domain-cua-ban>"; npm run build
 
 Build sinh `dist/manifest.prod.xml` với mọi URL trỏ tới domain production và **thất bại** nếu manifest còn chứa `localhost`. Không đặt `CQ_PROD_URL` thì build vẫn chạy nhưng không sinh manifest production.
 
+Kiểm tra manifest production vừa sinh: `npm run validate:prod`.
+
 ## 9. Xử lý sự cố
 
 | Hiện tượng | Cách xử lý |

@@ -100,3 +100,31 @@ export async function readStorageStatus(
 
   return { indexedDbAvailable: factory !== undefined, persisted, usageBytes, quotaBytes };
 }
+
+/**
+ * Kết quả xin lưu trữ bền vững:
+ * - "already": đã được cấp từ trước, không gọi lại.
+ * - "granted" / "denied": kết quả của navigator.storage.persist().
+ * - "unsupported": webview không có API này hoặc lời gọi lỗi.
+ */
+export type PersistenceRequest = "already" | "granted" | "denied" | "unsupported";
+
+/**
+ * Xin trình duyệt nhúng không tự dọn dữ liệu của add-in khi thiếu dung lượng (ADR-0003).
+ * Chỉ là biện pháp phụ: không ngăn được việc xóa cache Office, nên backup vẫn bắt buộc.
+ */
+export async function requestPersistence(
+  storageManager: StorageManager | undefined
+): Promise<PersistenceRequest> {
+  if (!storageManager?.persist) {
+    return "unsupported";
+  }
+  try {
+    if (storageManager.persisted && (await storageManager.persisted())) {
+      return "already";
+    }
+    return (await storageManager.persist()) ? "granted" : "denied";
+  } catch {
+    return "unsupported";
+  }
+}
