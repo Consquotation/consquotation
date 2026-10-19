@@ -1,0 +1,22 @@
+<!doctype html>
+<html lang="vi">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=Edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>ConsQuotation</title>
+
+    <!-- Kiểm tra webview (ES5) — phải chạy trước bundle chính. -->
+    <script type="text/javascript" src="compat-gate.js"></script>
+
+    <!-- Office JavaScript API -->
+    <script type="text/javascript" src="https://appsforoffice.microsoft.com/lib/1/hosted/office.js"></script>
+</head>
+
+<!-- overflow-y: scroll để thanh cuộn luôn hiện trong WebView2 (theo khuyến nghị của Microsoft). -->
+<body style="width: 100%; height: 100%; margin: 0; padding: 0; overflow-y: scroll;">
+    <div id="container"></div>
+</body>
+
+</html>

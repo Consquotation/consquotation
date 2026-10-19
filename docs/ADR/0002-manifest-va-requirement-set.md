@@ -47,9 +47,17 @@ Các API cốt lõi mà ConsQuotation cần:
 
 ## Cần xác minh trong Excel thật
 
-- [ ] `npm start` sideload thành công với tài khoản Microsoft cá nhân trên máy phát triển.
+- [x] `npm start` sideload thành công với tài khoản Microsoft cá nhân trên máy phát triển.
 - [ ] `office-addin-manifest validate` báo hợp lệ cho cả manifest dev và prod.
-- [ ] Kiểm tra môi trường lúc chạy báo đạt trên Excel Microsoft 365 của máy phát triển.
+- [x] Kiểm tra môi trường lúc chạy báo đạt trên Excel Microsoft 365 của máy phát triển.
+
+## Kết quả xác minh
+
+**2026-10-19 — giai đoạn 1:**
+
+- Cách triển khai manifest production: chỉ lưu `manifest/manifest.dev.xml` trong repo. `manifest.prod.xml` được sinh vào `dist/` khi build production với biến `CQ_PROD_URL`. Build thất bại nếu manifest production còn chứa `localhost`.
+- `office-addin-manifest validate` báo manifest dev hợp lệ. Trình kiểm tra yêu cầu `Version` ≥ 1.0 và có `SupportUrl`, nên manifest dùng `1.0.0.0` và trỏ SupportUrl tới `help.html` của chính add-in. Manifest production chưa được validate vì chưa có domain thật (ADR-0005).
+- Excel Microsoft 365 trên Windows (build 16.0.20430.20182): sideload bằng `npm start` với tài khoản Microsoft cá nhân thành công. Tab ConsQuotation có nút "Mở ConsQuotation" kèm icon, task pane mở được, kiểm tra ExcelApi 1.8 đạt.
 
 ## Nguồn
 

@@ -62,10 +62,24 @@ Các cơ chế lưu mà Office.js và webview cung cấp:
 
 ## Cần xác minh trong Excel thật
 
-- [ ] IndexedDB còn dữ liệu sau khi đóng và mở lại Excel.
+- [x] IndexedDB còn dữ liệu sau khi đóng và mở lại Excel.
 - [ ] IndexedDB mất sau khi xóa cache, để xác nhận kịch bản cảnh báo.
 - [ ] `Office.context.partitionKey` trên Windows desktop (dự kiến `undefined`) và trên Excel web.
 - [ ] `navigator.storage.persist()` và `navigator.storage.estimate()` trong WebView2.
+
+## Kết quả xác minh
+
+**2026-10-19 — Excel Microsoft 365 trên Windows, build 16.0.20430.20182 x64** (công cụ "Kiểm tra lưu trữ cục bộ" của giai đoạn 1, checklist `tests/manual/phase-1-checklist.md`):
+
+| Hạng mục | Kết quả |
+|---|---|
+| IndexedDB | Khả dụng |
+| Dữ liệu sau khi đóng/mở lại Excel | Còn nguyên |
+| `Office.context.partitionKey` | Không có (`undefined`), đúng như tài liệu Microsoft |
+| `navigator.storage.persisted()` | `false` — trình duyệt nhúng có thể dọn dữ liệu khi thiếu dung lượng |
+| `navigator.storage.estimate()` quota | 10.240 MB |
+
+Chưa xác minh: xóa cache Office, gọi `navigator.storage.persist()`, Excel trên web. Làm ở giai đoạn 3.
 
 ## Nguồn
 

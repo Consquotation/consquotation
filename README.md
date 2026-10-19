@@ -1,36 +1,75 @@
-# ConsQuotation — Excel Add-in Prompt Pack
+# ConsQuotation
 
-Bộ prompt để phát triển **ConsQuotation dưới dạng Microsoft Excel Add-in**, không phải ứng dụng desktop độc lập. Excel vẫn là bảng tính chính; add-in bổ sung Ribbon, task pane và nghiệp vụ báo giá.
+Microsoft Excel Add-in hỗ trợ lập báo giá thi công xây dựng **ngay trong Excel**. Excel vẫn là bảng tính chính (ô, công thức, copy/paste, in, lưu file); add-in bổ sung tab Ribbon, task pane và nghiệp vụ báo giá. Mỗi người dùng tự xây dựng và quản lý thư viện công tác, định mức, đơn giá của mình — add-in **không** kèm sẵn dữ liệu định mức hay đơn giá.
 
-## Nguyên tắc cốt lõi
-- Ưu tiên Office.js + TypeScript, sau khi xác minh nền tảng Excel mục tiêu và khả năng API.
-- Mỗi người dùng tự tạo, quản lý, import/export và backup thư viện công tác, định mức, tài nguyên và đơn giá của mình.
-- Không yêu cầu thư viện chung cài sẵn; không bịa định mức, đơn giá, thuế suất hoặc quy tắc thương mại.
-- Tận dụng Excel native cho ô, công thức, worksheet, copy/paste, undo/redo, định dạng, in và lưu file; không xây dựng grid riêng thay Excel.
-- Không ghi đè workbook hoặc gửi dữ liệu ra ngoài khi chưa được thông báo/xác nhận.
+## Trạng thái
 
-## Danh sách prompt
-1. `01_MASTER_CONTEXT.md`
-2. `02_PRODUCT_REQUIREMENTS.md`
-3. `03_PLATFORM_ARCHITECTURE.md`
-4. `04_ADDIN_SETUP_MANIFEST.md`
-5. `05_RIBBON_TASKPANE_UX.md`
-6. `06_WORKBOOK_INTEGRATION.md`
-7. `07_QUOTATION_WORKFLOW.md`
-8. `08_USER_OWNED_LIBRARY.md`
-9. `09_LIBRARY_IMPORT_EXPORT.md`
-10. `10_PRICING_FORMULA_ENGINE.md`
-11. `11_TEMPLATE_PRINT_EXPORT.md`
-12. `12_STORAGE_PRIVACY.md`
-13. `13_VALIDATION_ERRORS.md`
-14. `14_EXCEL_COMPATIBILITY.md`
-15. `15_SECURITY_DEPLOYMENT.md`
-16. `16_TESTING_ACCEPTANCE.md`
-17. `17_PERFORMANCE_RELIABILITY.md`
-18. `18_IMPLEMENTATION_ROADMAP.md`
-19. `19_START_SESSION.md`
-20. `20_ACCEPTANCE_CHECKLIST.md`
-21. `21_README_GENERATION.md`
+**Giai đoạn 1 — Scaffold** (theo [roadmap](prompts/18_IMPLEMENTATION_ROADMAP.md)).
 
-## Cách sử dụng
-Đưa thư mục này vào `prompts/` trong repository. Đọc prompt 01–03 trước; triển khai theo roadmap. Xác minh các API và giới hạn Office.js từ tài liệu Microsoft hiện hành. Ghi rõ nền tảng đã test và chưa test.
+Đã có:
+- Ribbon: tab **ConsQuotation** › nhóm **Báo giá** › nút **Mở ConsQuotation**.
+- Task pane tiếng Việt: thông tin môi trường Excel và kiểm tra mức API tối thiểu.
+- Thông báo "không tương thích" cho Excel dùng webview cũ (IE11/EdgeHTML) hoặc thiếu ExcelApi 1.8.
+- Công cụ kiểm tra lưu trữ cục bộ (IndexedDB) phục vụ xác minh ADR-0003.
+
+Chưa có: tạo bảng báo giá, thư viện cá nhân, import/export, tính toán, validation (giai đoạn 2–6).
+
+## Công nghệ
+
+Office.js · TypeScript (strict) · React 18 · Fluent UI React v9 · webpack 5 · Vitest. Dự án được tạo bằng Yeoman generator for Office Add-ins (`yo office`, template React + TypeScript, manifest XML) rồi tùy biến. Phiên bản cụ thể xem [package.json](package.json).
+
+## Nền tảng Excel
+
+| Nền tảng | Mức hỗ trợ | Đã kiểm thử |
+|---|---|---|
+| Excel Microsoft 365 trên Windows | Chính | Có — luồng giai đoạn 1, build 16.0.20430.20182 (2026-10-19) |
+| Excel trên web | Phụ | Chưa |
+| Excel 2016/2019/2021/2024 bản retail trên Windows (WebView2) | Hỗ trợ | Chưa — không có máy kiểm thử |
+| Excel trên Mac | Chưa kiểm thử | Chưa |
+| Excel 2016/2019 bản volume (IE11) | Hiện thông báo không tương thích | Chỉ unit test |
+
+Chi tiết: [ADR-0001](docs/ADR/0001-nen-tang-excel-muc-tieu.md), [ADR-0002](docs/ADR/0002-manifest-va-requirement-set.md).
+
+## Cấu trúc thư mục
+
+```
+manifest/manifest.dev.xml   Manifest phát triển (localhost). Manifest production sinh khi build.
+src/taskpane/               Task pane (React + Fluent UI)
+src/commands/               FunctionFile cho lệnh Ribbon
+src/compat/compat-gate.js   Kiểm tra webview viết bằng ES5, chạy trước bundle
+src/office/                 Adapter Office.js (requirement set, thông tin môi trường)
+src/storage/                Lưu trữ cục bộ (hiện: công cụ kiểm tra IndexedDB)
+src/shared/                 Chuỗi tiếng Việt dùng chung
+src/help/help.html          Trang trợ giúp (SupportUrl của manifest)
+tests/unit/                 Unit test (Vitest)
+tests/manual/               Checklist kiểm thử tay trong Excel
+docs/ADR/                   Quyết định kiến trúc
+docs/SIDELOAD.md            Cài đặt môi trường, sideload, xử lý sự cố
+prompts/                    Bộ đặc tả yêu cầu dự án
+```
+
+## Lệnh
+
+```bash
+npm install          # cài dependency
+npm start            # chạy dev server và sideload vào Excel trên Windows
+npm run start:web -- --document "<link workbook OneDrive>"   # Excel trên web
+npm stop             # dừng và gỡ add-in đã sideload
+npm run typecheck    # TypeScript
+npm run lint         # ESLint + Prettier
+npm test             # Vitest
+npm run validate     # kiểm tra manifest (gửi nội dung manifest tới dịch vụ kiểm tra của Microsoft)
+npm run build        # build production vào dist/
+npm run check        # chạy typecheck, lint, test, validate, build
+```
+
+Hướng dẫn đầy đủ (chứng chỉ HTTPS, Excel trên web, xóa cache, manifest production): [docs/SIDELOAD.md](docs/SIDELOAD.md).
+
+## Dữ liệu và quyền riêng tư
+
+- Add-in không gửi workbook hay thư viện lên máy chủ nào và không có backend.
+- Thư viện cá nhân (khi được triển khai) lưu cục bộ trong IndexedDB của add-in. Dữ liệu này **bị xóa khi xóa cache add-in của Office** và không đồng bộ giữa các máy hoặc giữa Excel desktop và Excel trên web — người dùng phải sao lưu bằng chức năng export. Xem [ADR-0003](docs/ADR/0003-luu-tru-thu-vien-ca-nhan.md) và [ADR-0004](docs/ADR/0004-import-export-thu-vien.md).
+
+## Triển khai
+
+Chưa có bản production: nhà cung cấp hosting HTTPS chưa được chọn ([ADR-0005](docs/ADR/0005-hosting-va-trien-khai.md)).
