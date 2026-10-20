@@ -92,10 +92,10 @@ export const STRINGS = {
     working: "Đang kiểm tra và tạo…",
     confirmLocationTitle: "Tạo bảng báo giá tại vị trí này?",
     confirmLocationBody: (where: string) =>
-      `Add-in sẽ ghi vào vùng ${where}. Vùng này hiện đang trống.`,
+      `Add-in sẽ ghi vào vùng ${where}. Vùng này hiện đang trống. Lưu ý: không hoàn tác được bằng Ctrl+Z; nếu tạo nhầm, hãy xóa bảng thủ công.`,
     confirmOverwriteTitle: "Vùng đích đang có dữ liệu",
     confirmOverwriteBody: (where: string, count: number, sample: string) =>
-      `Vùng ${where} có ${count} ô đang có dữ liệu (ví dụ: ${sample}). Nếu tiếp tục, nội dung các ô này sẽ bị xóa và thay bằng mẫu báo giá. Excel có thể không hoàn tác (Undo) được thao tác của add-in.`,
+      `Vùng ${where} có ${count} ô đang có dữ liệu (ví dụ: ${sample}). Nếu tiếp tục, nội dung các ô này sẽ bị xóa và thay bằng mẫu báo giá. Thao tác này KHÔNG hoàn tác được bằng Ctrl+Z. Nếu cần giữ dữ liệu, hãy Hủy rồi chọn vị trí khác hoặc sao chép dữ liệu ra chỗ khác trước.`,
     confirmCreate: "Tạo bảng",
     confirmOverwrite: "Ghi đè",
     cancel: "Hủy",

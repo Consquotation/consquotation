@@ -4,15 +4,26 @@ Microsoft Excel Add-in hỗ trợ lập báo giá thi công xây dựng **ngay t
 
 ## Trạng thái
 
-**Giai đoạn 1 — Scaffold** (theo [roadmap](prompts/18_IMPLEMENTATION_ROADMAP.md)).
+**Giai đoạn 2 — Workbook adapter** đã xong (theo [roadmap](prompts/18_IMPLEMENTATION_ROADMAP.md)).
 
 Đã có:
 - Ribbon: tab **ConsQuotation** › nhóm **Báo giá** › nút **Mở ConsQuotation**.
-- Task pane tiếng Việt: thông tin môi trường Excel và kiểm tra mức API tối thiểu.
+- Task pane tiếng Việt với 3 tab: **Tổng quan**, **Báo giá**, **Chẩn đoán**.
+- Hiển thị workbook, sheet, vùng chọn hiện tại; tự cập nhật khi đổi vùng chọn.
+- **Tạo bảng báo giá** trên sheet mới hoặc tại ô đang chọn: khối thông tin và Excel Table 9 cột (STT tự đánh số, Thành tiền = Khối lượng × Đơn giá để trống khi thiếu số liệu, dòng Tổng cộng dùng SUBTOTAL).
+  - Vùng có dữ liệu thì hỏi xác nhận ghi đè.
+  - Chặn khi sheet bị bảo vệ, chồng lên Table có sẵn, có ô gộp, hoặc vượt giới hạn sheet.
+  - Kiểm tra lại vùng đích ngay trước khi ghi.
+- **Thêm công tác thủ công** vào cuối bảng: kiểm tra số liệu, chữ bắt đầu bằng `= + - @` được lưu dạng chữ, hỏi xác nhận khi dữ liệu bên dưới bảng bị đẩy xuống.
 - Thông báo "không tương thích" cho Excel dùng webview cũ (IE11/EdgeHTML) hoặc thiếu ExcelApi 1.8.
-- Công cụ kiểm tra lưu trữ cục bộ (IndexedDB) phục vụ xác minh ADR-0003.
+- Công cụ kiểm tra lưu trữ cục bộ (tab Chẩn đoán).
 
-Chưa có: tạo bảng báo giá, thư viện cá nhân, import/export, tính toán, validation (giai đoạn 2–6).
+Chưa có: thư viện cá nhân, import/export, kiểm tra báo giá, định giá nâng cao, in ấn (giai đoạn 3–6).
+
+### Hạn chế đã biết
+
+- **Thao tác ghi của add-in không hoàn tác được bằng Ctrl+Z.** Đã kiểm chứng trên Excel Microsoft 365 cho Windows, ngày 2026-10-20. Vì vậy add-in luôn kiểm tra và hỏi xác nhận trước khi ghi vào vùng có dữ liệu.
+- Dữ liệu cục bộ của add-in bị xóa khi xóa cache Office (ADR-0003).
 
 ## Công nghệ
 
@@ -22,7 +33,7 @@ Office.js · TypeScript (strict) · React 18 · Fluent UI React v9 · webpack 5 
 
 | Nền tảng | Mức hỗ trợ | Đã kiểm thử |
 |---|---|---|
-| Excel Microsoft 365 trên Windows | Chính | Có — luồng giai đoạn 1, build 16.0.20430.20182 (2026-10-19) |
+| Excel Microsoft 365 trên Windows | Chính | Có — giai đoạn 1 (2026-10-19) và giai đoạn 2 (2026-10-20), build 16.0.20430.20182 |
 | Excel trên web | Phụ | Chưa |
 | Excel 2016/2019/2021/2024 bản retail trên Windows (WebView2) | Hỗ trợ | Chưa — không có máy kiểm thử |
 | Excel trên Mac | Chưa kiểm thử | Chưa |
