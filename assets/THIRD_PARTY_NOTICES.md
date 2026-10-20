@@ -4,6 +4,8 @@ Các file `icon-16.png`, `icon-32.png`, `icon-64.png`, `icon-80.png`, `icon-128.
 
 Chỉnh sửa: tô màu `#0F6CBD`, thêm nền trắng dưới màn hình và phím, xuất PNG bằng `@resvg/resvg-js`. `icon-16.png` dựng từ bản 16 px; các kích thước khác dựng từ `icon-source.svg` (bản 24 px).
 
+Icon lệnh Ribbon `table-add-*.png` (**Table Add**: `table_add_16_regular`, `table_add_24_regular`) và `help-*.png` (**Question Circle**: `question_circle_16_regular`, `question_circle_24_regular`) cũng lấy từ Fluent UI System Icons 1.1.344, tô màu `#0F6CBD`, nền trong suốt, xuất PNG 16/32/80 px bằng `@resvg/resvg-js`.
+
 ---
 
 MIT License

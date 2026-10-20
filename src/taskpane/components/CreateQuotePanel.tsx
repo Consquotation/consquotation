@@ -90,37 +90,46 @@ const CreateQuotePanel: React.FC<{ gateway: WorkbookGateway; onCreated: () => vo
 
   return (
     <section className={styles.root} aria-labelledby="cq-create-title">
-      <Subtitle2 as="h2" id="cq-create-title">
+      <Subtitle2 as="h2" id="cq-create-title" tabIndex={-1}>
         {s.title}
       </Subtitle2>
       <Body1>{s.description}</Body1>
 
-      <Field label={s.placement}>
-        <RadioGroup value={placement} onChange={(_e, data) => setPlacement(data.value as Placement)}>
-          <Radio value="newSheet" label={s.newSheet} />
-          <Radio value="atSelection" label={s.atSelection} />
-        </RadioGroup>
-      </Field>
+      {/* <form> để Enter trong ô số dòng gửi biểu mẫu (dùng được bằng bàn phím). */}
+      <form
+        className={styles.root}
+        onSubmit={(event) => {
+          event.preventDefault();
+          void submit();
+        }}
+      >
+        <Field label={s.placement}>
+          <RadioGroup value={placement} onChange={(_e, data) => setPlacement(data.value as Placement)}>
+            <Radio value="newSheet" label={s.newSheet} />
+            <Radio value="atSelection" label={s.atSelection} />
+          </RadioGroup>
+        </Field>
 
-      <Field label={s.initialRows} hint={`1–${MAX_INITIAL_ROWS}`}>
-        <Input
-          type="number"
-          min={1}
-          max={MAX_INITIAL_ROWS}
-          value={rowsText}
-          onChange={(_e, data) => setRowsText(data.value)}
-        />
-      </Field>
+        <Field label={s.initialRows} hint={`1–${MAX_INITIAL_ROWS}`}>
+          <Input
+            type="number"
+            min={1}
+            max={MAX_INITIAL_ROWS}
+            value={rowsText}
+            onChange={(_e, data) => setRowsText(data.value)}
+          />
+        </Field>
 
-      <div className={styles.actions}>
-        <Button appearance="primary" onClick={() => void submit()} disabled={phase.kind === "working"}>
-          {phase.kind === "working" ? s.working : s.submit}
-        </Button>
-        {phase.kind === "working" && <Spinner size="tiny" aria-label={s.working} />}
-      </div>
+        <div className={styles.actions}>
+          <Button type="submit" appearance="primary" disabled={phase.kind === "working"}>
+            {phase.kind === "working" ? s.working : s.submit}
+          </Button>
+          {phase.kind === "working" && <Spinner size="tiny" aria-label={s.working} />}
+        </div>
+      </form>
 
       {phase.kind === "blocked" && (
-        <MessageBar intent="error" layout="multiline">
+        <MessageBar intent="error" layout="multiline" politeness="assertive">
           <MessageBarBody>
             <MessageBarTitle>{s.blockedTitle}</MessageBarTitle>
             {where(phase.plan.inspection)}: {phase.plan.inspection.blockers.map(describeBlocker).join(" ")}
@@ -128,17 +137,17 @@ const CreateQuotePanel: React.FC<{ gateway: WorkbookGateway; onCreated: () => vo
         </MessageBar>
       )}
       {phase.kind === "success" && (
-        <MessageBar intent="success" layout="multiline">
+        <MessageBar intent="success" layout="multiline" politeness="polite">
           <MessageBarBody>{phase.message}</MessageBarBody>
         </MessageBar>
       )}
       {phase.kind === "warning" && (
-        <MessageBar intent="warning" layout="multiline">
+        <MessageBar intent="warning" layout="multiline" politeness="polite">
           <MessageBarBody>{phase.message}</MessageBarBody>
         </MessageBar>
       )}
       {phase.kind === "error" && (
-        <MessageBar intent="error" layout="multiline">
+        <MessageBar intent="error" layout="multiline" politeness="assertive">
           <MessageBarBody>
             <MessageBarTitle>{s.failed}</MessageBarTitle>
             {phase.message}

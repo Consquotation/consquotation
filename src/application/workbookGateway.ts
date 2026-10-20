@@ -52,6 +52,8 @@ export interface QuoteTableInfo {
   sheetName: string;
   dataRowCount: number;
   headersMatch: boolean;
+  /** Vùng đang chọn trong Excel nằm trong bảng này. */
+  containsSelection: boolean;
 }
 
 export interface AppendInspection {
@@ -89,6 +91,8 @@ export interface WorkbookGateway {
     expectedFingerprint: string
   ): Promise<CreatedQuote>;
   listQuoteTables(): Promise<QuoteTableInfo[]>;
+  /** Kích hoạt sheet và chọn bảng (chỉ điều hướng, không ghi dữ liệu). */
+  selectQuoteTable(tableName: string): Promise<void>;
   inspectAppend(tableName: string): Promise<AppendInspection>;
   appendRows(
     tableName: string,

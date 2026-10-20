@@ -16,6 +16,7 @@ import {
 import ConfirmDialog from "./ConfirmDialog";
 import { describeBlocker } from "../../application/blockerMessages";
 import { AppendPlan, executeAppend, planAppend } from "../../application/quoteService";
+import { preferredTable } from "../../application/quoteTableSelection";
 import { QuoteTableInfo, WorkbookGateway } from "../../application/workbookGateway";
 import {
   DraftError,
@@ -58,10 +59,11 @@ const FIELDS: { field: DraftField; label: string; wide?: boolean; numeric?: bool
   { field: "notes", label: STRINGS.append.notes, wide: true },
 ];
 
-const AddWorkItemPanel: React.FC<{ gateway: WorkbookGateway; tablesVersion: number }> = ({
-  gateway,
-  tablesVersion,
-}) => {
+const AddWorkItemPanel: React.FC<{
+  gateway: WorkbookGateway;
+  tablesVersion: number;
+  onAppended: () => void;
+}> = ({ gateway, tablesVersion, onAppended }) => {
   const styles = useStyles();
   const s = STRINGS.append;
   const [tables, setTables] = React.useState<QuoteTableInfo[] | null>(null);
@@ -74,11 +76,7 @@ const AddWorkItemPanel: React.FC<{ gateway: WorkbookGateway; tablesVersion: numb
     try {
       const list = await gateway.listQuoteTables();
       setTables(list);
-      setTableName((current) =>
-        list.some((t) => t.tableName === current)
-          ? current
-          : (list.find((t) => t.headersMatch) ?? list[0])?.tableName ?? ""
-      );
+      setTableName((current) => preferredTable(list, current));
     } catch (error) {
       setTables([]);
       setPhase({ kind: "error", message: describeOfficeError(error) });
@@ -100,8 +98,9 @@ const AddWorkItemPanel: React.FC<{ gateway: WorkbookGateway; tablesVersion: numb
         return;
       }
       setPhase({ kind: "success", message: s.added(qualifiedAddress(result.rows.sheetName, result.rows.address)) });
-      setDraft(EMPTY_DRAFT);
-      void loadTables();
+      // Giữ Nhóm công tác và Đơn vị tính — thường lặp lại ở dòng kế tiếp.
+      setDraft((d) => ({ ...EMPTY_DRAFT, group: d.group, unit: d.unit }));
+      onAppended();
     } catch (error) {
       setPhase({ kind: "error", message: describeOfficeError(error) });
     }
@@ -133,12 +132,12 @@ const AddWorkItemPanel: React.FC<{ gateway: WorkbookGateway; tablesVersion: numb
 
   return (
     <section className={styles.root} aria-labelledby="cq-append-title">
-      <Subtitle2 as="h2" id="cq-append-title">
+      <Subtitle2 as="h2" id="cq-append-title" tabIndex={-1}>
         {s.title}
       </Subtitle2>
       <Body1>{s.description}</Body1>
 
-      {tables === null && <Spinner size="tiny" />}
+      {tables === null && <Spinner size="tiny" label={s.loadingTables} />}
       {tables !== null && tables.length === 0 && (
         <MessageBar intent="info">
           <MessageBarBody>{s.noTables}</MessageBarBody>
@@ -146,7 +145,14 @@ const AddWorkItemPanel: React.FC<{ gateway: WorkbookGateway; tablesVersion: numb
       )}
 
       {tables !== null && tables.length > 0 && (
-        <>
+        // <form> để Enter trong ô nhập gửi biểu mẫu (dùng được bằng bàn phím).
+        <form
+          className={styles.root}
+          onSubmit={(event) => {
+            event.preventDefault();
+            void submit();
+          }}
+        >
           <Field label={s.table}>
             <Select value={tableName} onChange={(_e, data) => setTableName(data.value)}>
               {tables.map((t) => (
@@ -177,12 +183,12 @@ const AddWorkItemPanel: React.FC<{ gateway: WorkbookGateway; tablesVersion: numb
           </div>
 
           <div className={styles.actions}>
-            <Button appearance="primary" onClick={() => void submit()} disabled={phase.kind === "working" || !tableName}>
+            <Button type="submit" appearance="primary" disabled={phase.kind === "working" || !tableName}>
               {phase.kind === "working" ? s.working : s.submit}
             </Button>
             {phase.kind === "working" && <Spinner size="tiny" aria-label={s.working} />}
           </div>
-        </>
+        </form>
       )}
 
       <Button size="small" onClick={() => void loadTables()}>
@@ -190,7 +196,7 @@ const AddWorkItemPanel: React.FC<{ gateway: WorkbookGateway; tablesVersion: numb
       </Button>
 
       {phase.kind === "blocked" && (
-        <MessageBar intent="error" layout="multiline">
+        <MessageBar intent="error" layout="multiline" politeness="assertive">
           <MessageBarBody>
             <MessageBarTitle>{s.blockedTitle}</MessageBarTitle>
             {phase.plan.inspection.blockers.map(describeBlocker).join(" ")}
@@ -198,17 +204,17 @@ const AddWorkItemPanel: React.FC<{ gateway: WorkbookGateway; tablesVersion: numb
         </MessageBar>
       )}
       {phase.kind === "success" && (
-        <MessageBar intent="success" layout="multiline">
+        <MessageBar intent="success" layout="multiline" politeness="polite">
           <MessageBarBody>{phase.message}</MessageBarBody>
         </MessageBar>
       )}
       {phase.kind === "warning" && (
-        <MessageBar intent="warning" layout="multiline">
+        <MessageBar intent="warning" layout="multiline" politeness="polite">
           <MessageBarBody>{phase.message}</MessageBarBody>
         </MessageBar>
       )}
       {phase.kind === "error" && (
-        <MessageBar intent="error" layout="multiline">
+        <MessageBar intent="error" layout="multiline" politeness="assertive">
           <MessageBarBody>
             <MessageBarTitle>{s.failed}</MessageBarTitle>
             {phase.message}

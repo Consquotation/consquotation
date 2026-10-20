@@ -62,9 +62,49 @@ export const STRINGS = {
   },
 
   tabs: {
+    label: "Các phần của ConsQuotation",
     overview: "Tổng quan",
     quote: "Báo giá",
-    diagnostics: "Chẩn đoán",
+    settings: "Cài đặt",
+  },
+
+  header: {
+    help: "Trợ giúp",
+  },
+
+  shortcuts: {
+    title: "Lối tắt",
+    createQuote: "Tạo bảng báo giá",
+    addWorkItem: "Thêm công tác thủ công",
+    help: "Xem hướng dẫn",
+  },
+
+  quoteTables: {
+    title: "Bảng báo giá trong workbook",
+    loading: "Đang tìm bảng báo giá…",
+    empty: "Chưa có bảng báo giá nào. Dùng lối tắt Tạo bảng báo giá để bắt đầu.",
+    failed: "Không đọc được danh sách bảng báo giá",
+    row: (sheet: string, rows: number) => `Sheet "${sheet}" · ${rows} dòng`,
+    headersChanged: "Tiêu đề cột đã bị đổi",
+    go: "Đi tới",
+    goLabel: (table: string) => `Đi tới bảng ${table}`,
+    reload: "Tải lại",
+  },
+
+  help: {
+    title: "Trợ giúp",
+    back: "Quay lại",
+    frameTitle: "Hướng dẫn sử dụng ConsQuotation",
+  },
+
+  settings: {
+    versionTitle: "Phiên bản",
+    version: "Phiên bản add-in",
+    buildMode: "Bản build",
+    development: "Phát triển (dev)",
+    production: "Chính thức (production)",
+    unavailableNote:
+      "Định dạng và sao lưu thư viện sẽ có ở đây khi tính năng Thư viện của tôi được triển khai.",
   },
 
   context: {
@@ -116,6 +156,7 @@ export const STRINGS = {
       "Thêm một dòng vào cuối bảng báo giá đã chọn. Bạn cũng có thể gõ trực tiếp vào bảng trong Excel.",
     table: "Bảng báo giá",
     noTables: "Workbook chưa có bảng báo giá nào. Hãy tạo bảng trước.",
+    loadingTables: "Đang tìm bảng báo giá…",
     reloadTables: "Tải lại danh sách",
     tableOption: (table: string, sheet: string, rows: number) =>
       `${table} — sheet "${sheet}" (${rows} dòng)`,

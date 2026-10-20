@@ -3,6 +3,8 @@
 const devCerts = require("office-addin-dev-certs");
 const CopyWebpackPlugin = require("copy-webpack-plugin");
 const HtmlWebpackPlugin = require("html-webpack-plugin");
+const webpack = require("webpack");
+const { version } = require("./package.json");
 
 const urlDev = "https://localhost:3000/";
 
@@ -125,6 +127,11 @@ module.exports = async (env, options) => {
       ],
     },
     plugins: [
+      // Hằng số phiên bản cho màn hình Cài đặt (src/shared/buildInfo.ts).
+      new webpack.DefinePlugin({
+        __CQ_VERSION__: JSON.stringify(version),
+        __CQ_BUILD_MODE__: JSON.stringify(dev ? "development" : "production"),
+      }),
       new HtmlWebpackPlugin({
         filename: "taskpane.html",
         template: "./src/taskpane/taskpane.html",

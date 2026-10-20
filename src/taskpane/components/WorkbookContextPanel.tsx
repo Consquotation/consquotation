@@ -69,7 +69,7 @@ const WorkbookContextPanel: React.FC<{ gateway: WorkbookGateway }> = ({ gateway 
   return (
     <section className={styles.root} aria-labelledby="cq-context-title">
       <div className={styles.heading}>
-        <Subtitle2 as="h2" id="cq-context-title">
+        <Subtitle2 as="h2" id="cq-context-title" tabIndex={-1}>
           {s.title}
         </Subtitle2>
         <Button size="small" onClick={() => void refresh()}>
@@ -80,7 +80,7 @@ const WorkbookContextPanel: React.FC<{ gateway: WorkbookGateway }> = ({ gateway 
       {state.kind === "loading" && <Spinner size="tiny" label={s.loading} />}
 
       {state.kind === "error" && (
-        <MessageBar intent="error" layout="multiline">
+        <MessageBar intent="error" layout="multiline" politeness="assertive">
           <MessageBarBody>
             <MessageBarTitle>{s.failed}</MessageBarTitle>
             {state.message}

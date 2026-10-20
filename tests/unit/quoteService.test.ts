@@ -42,6 +42,7 @@ class FakeGateway implements WorkbookGateway {
   async listQuoteTables() {
     return [];
   }
+  async selectQuoteTable() {}
   async inspectAppend() {
     return this.appendInspection;
   }

@@ -128,7 +128,7 @@ const StorageProbePanel: React.FC = () => {
       )}
 
       {state.kind === "error" && (
-        <MessageBar intent="error" layout="multiline">
+        <MessageBar intent="error" layout="multiline" politeness="assertive">
           <MessageBarBody>
             <MessageBarTitle>{s.failed}</MessageBarTitle>
             {state.message}

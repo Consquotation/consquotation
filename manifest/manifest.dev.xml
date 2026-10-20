@@ -13,7 +13,7 @@
   xmlns:ov="http://schemas.microsoft.com/office/taskpaneappversionoverrides" xsi:type="TaskPaneApp">
   <Id>03040238-2423-498b-b0fe-30f0425b2ed2</Id>
   <!-- Trình kiểm tra manifest yêu cầu Version >= 1.0; tăng phiên bản này mỗi lần phát hành manifest mới. -->
-  <Version>1.0.0.0</Version>
+  <Version>1.1.0.0</Version>
   <ProviderName>ConsQuotation</ProviderName>
   <DefaultLocale>vi-VN</DefaultLocale>
   <DisplayName DefaultValue="ConsQuotation (Dev)"/>
@@ -39,6 +39,10 @@
       <Host xsi:type="Workbook">
         <DesktopFormFactor>
           <FunctionFile resid="Commands.Url"/>
+          <!--
+            Chỉ hiển thị lệnh đã có implementation (prompts/05_RIBBON_TASKPANE_UX.md).
+            Các nút dùng chung TaskpaneId: pane được giữ mở và nội dung thay bằng SourceLocation của nút.
+          -->
           <ExtensionPoint xsi:type="PrimaryCommandSurface">
             <CustomTab id="CQ.Tab">
               <Group id="CQ.Group.Main">
@@ -64,6 +68,46 @@
                     <SourceLocation resid="Taskpane.Url"/>
                   </Action>
                 </Control>
+                <Control xsi:type="Button" id="CQ.CreateQuote">
+                  <Label resid="CQ.CreateQuote.Label"/>
+                  <Supertip>
+                    <Title resid="CQ.CreateQuote.Label"/>
+                    <Description resid="CQ.CreateQuote.Tooltip"/>
+                  </Supertip>
+                  <Icon>
+                    <bt:Image size="16" resid="TableAdd.16x16"/>
+                    <bt:Image size="32" resid="TableAdd.32x32"/>
+                    <bt:Image size="80" resid="TableAdd.80x80"/>
+                  </Icon>
+                  <Action xsi:type="ShowTaskpane">
+                    <TaskpaneId>CQ.MainTaskpane</TaskpaneId>
+                    <SourceLocation resid="Taskpane.Quote.Url"/>
+                  </Action>
+                </Control>
+              </Group>
+              <Group id="CQ.Group.Help">
+                <Label resid="CQ.Group.Help.Label"/>
+                <Icon>
+                  <bt:Image size="16" resid="Help.16x16"/>
+                  <bt:Image size="32" resid="Help.32x32"/>
+                  <bt:Image size="80" resid="Help.80x80"/>
+                </Icon>
+                <Control xsi:type="Button" id="CQ.OpenHelp">
+                  <Label resid="CQ.OpenHelp.Label"/>
+                  <Supertip>
+                    <Title resid="CQ.OpenHelp.Label"/>
+                    <Description resid="CQ.OpenHelp.Tooltip"/>
+                  </Supertip>
+                  <Icon>
+                    <bt:Image size="16" resid="Help.16x16"/>
+                    <bt:Image size="32" resid="Help.32x32"/>
+                    <bt:Image size="80" resid="Help.80x80"/>
+                  </Icon>
+                  <Action xsi:type="ShowTaskpane">
+                    <TaskpaneId>CQ.MainTaskpane</TaskpaneId>
+                    <SourceLocation resid="Taskpane.Help.Url"/>
+                  </Action>
+                </Control>
               </Group>
               <Label resid="CQ.Tab.Label"/>
             </CustomTab>
@@ -76,18 +120,31 @@
         <bt:Image id="Icon.16x16" DefaultValue="https://localhost:3000/assets/icon-16.png"/>
         <bt:Image id="Icon.32x32" DefaultValue="https://localhost:3000/assets/icon-32.png"/>
         <bt:Image id="Icon.80x80" DefaultValue="https://localhost:3000/assets/icon-80.png"/>
+        <bt:Image id="TableAdd.16x16" DefaultValue="https://localhost:3000/assets/table-add-16.png"/>
+        <bt:Image id="TableAdd.32x32" DefaultValue="https://localhost:3000/assets/table-add-32.png"/>
+        <bt:Image id="TableAdd.80x80" DefaultValue="https://localhost:3000/assets/table-add-80.png"/>
+        <bt:Image id="Help.16x16" DefaultValue="https://localhost:3000/assets/help-16.png"/>
+        <bt:Image id="Help.32x32" DefaultValue="https://localhost:3000/assets/help-32.png"/>
+        <bt:Image id="Help.80x80" DefaultValue="https://localhost:3000/assets/help-80.png"/>
       </bt:Images>
       <bt:Urls>
         <bt:Url id="Commands.Url" DefaultValue="https://localhost:3000/commands.html"/>
         <bt:Url id="Taskpane.Url" DefaultValue="https://localhost:3000/taskpane.html"/>
+        <bt:Url id="Taskpane.Quote.Url" DefaultValue="https://localhost:3000/taskpane.html?view=quote"/>
+        <bt:Url id="Taskpane.Help.Url" DefaultValue="https://localhost:3000/taskpane.html?view=help"/>
       </bt:Urls>
       <bt:ShortStrings>
         <bt:String id="CQ.Tab.Label" DefaultValue="ConsQuotation (Dev)"/>
         <bt:String id="CQ.Group.Main.Label" DefaultValue="Báo giá"/>
         <bt:String id="CQ.OpenTaskpane.Label" DefaultValue="Mở ConsQuotation"/>
+        <bt:String id="CQ.CreateQuote.Label" DefaultValue="Tạo bảng báo giá"/>
+        <bt:String id="CQ.Group.Help.Label" DefaultValue="Trợ giúp"/>
+        <bt:String id="CQ.OpenHelp.Label" DefaultValue="Trợ giúp"/>
       </bt:ShortStrings>
       <bt:LongStrings>
-        <bt:String id="CQ.OpenTaskpane.Tooltip" DefaultValue="Mở bảng điều khiển ConsQuotation để lập báo giá và quản lý thư viện của bạn."/>
+        <bt:String id="CQ.OpenTaskpane.Tooltip" DefaultValue="Mở bảng điều khiển ConsQuotation: xem workbook hiện tại, tạo bảng báo giá và các lối tắt."/>
+        <bt:String id="CQ.CreateQuote.Tooltip" DefaultValue="Mở phần Tạo bảng báo giá: chọn sheet mới hoặc ô đang chọn, add-in kiểm tra vùng đích trước khi ghi."/>
+        <bt:String id="CQ.OpenHelp.Tooltip" DefaultValue="Mở hướng dẫn sử dụng ConsQuotation."/>
       </bt:LongStrings>
     </Resources>
   </VersionOverrides>

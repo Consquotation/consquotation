@@ -219,6 +219,23 @@ async function recordQuoteTable(context: Excel.RequestContext, tableName: string
   ]);
 }
 
+/** Vùng đang chọn và sheet chứa nó; undefined khi đang chọn thứ không phải ô (ví dụ biểu đồ). */
+async function loadSelection(
+  context: Excel.RequestContext
+): Promise<{ range: Excel.Range; sheetName: string } | undefined> {
+  try {
+    // Vùng chọn luôn nằm trên sheet đang hoạt động.
+    const range = context.workbook.getSelectedRange();
+    range.load("address");
+    const sheet = context.workbook.worksheets.getActiveWorksheet();
+    sheet.load("name");
+    await context.sync();
+    return { range, sheetName: sheet.name };
+  } catch {
+    return undefined;
+  }
+}
+
 interface AppendState {
   inspection: AppendInspection;
   table?: Excel.Table;
@@ -459,12 +476,39 @@ export class ExcelWorkbookGateway implements WorkbookGateway {
           return { name: table.name, sheet, header, rows };
         });
       await context.sync();
+
+      // Bảng nào chứa vùng đang chọn — để form "Thêm công tác" chọn sẵn (prompts/05: không bắt nhập lại).
+      const containing = new Set<string>();
+      const selection = await loadSelection(context);
+      if (selection) {
+        const checks = quoteTables
+          .filter((t) => t.sheet.name === selection.sheetName)
+          .map((t) => {
+            const table = context.workbook.tables.getItem(t.name);
+            const intersection = table.getRange().getIntersectionOrNullObject(selection.range);
+            intersection.load("address");
+            return { name: t.name, intersection };
+          });
+        await context.sync();
+        checks.filter((c) => !c.intersection.isNullObject).forEach((c) => containing.add(c.name));
+      }
+
       return quoteTables.map((t) => ({
         tableName: t.name,
         sheetName: t.sheet.name,
         dataRowCount: t.rows.count,
         headersMatch: hasQuoteHeaders((t.header.values[0] ?? []).map((v) => String(v))),
+        containsSelection: containing.has(t.name),
       }));
+    });
+  }
+
+  async selectQuoteTable(tableName: string): Promise<void> {
+    await Excel.run(async (context) => {
+      const table = context.workbook.tables.getItem(tableName);
+      table.worksheet.activate();
+      table.getRange().select();
+      await context.sync();
     });
   }
 
