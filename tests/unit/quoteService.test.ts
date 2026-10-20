@@ -50,6 +50,10 @@ class FakeGateway implements WorkbookGateway {
     return [];
   }
   async selectQuoteTable() {}
+  async wasLibraryUsed() {
+    return false;
+  }
+  async markLibraryUsed() {}
   async inspectAppend(_tableName: string, position: InsertPosition) {
     this.inspectedPositions.push(position);
     return this.appendInspection;

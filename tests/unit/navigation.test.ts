@@ -10,15 +10,16 @@ describe("parseInitialView", () => {
     ["?view=quote", "quote"],
     ["?view=settings", "settings"],
     ["?view=help", "help"],
-    ["?view=library", "overview"],
+    ["?view=library", "library"],
+    ["?view=import", "overview"],
     ["?view=QUOTE", "overview"],
     ["?other=1&view=quote", "quote"],
   ])("'%s' → %s", (search, view) => {
     expect(parseInitialView(search)).toBe(view);
   });
 
-  it("chưa có tab Thư viện vì tính năng chưa triển khai (prompts/05: chỉ hiện phần đã có)", () => {
-    expect(TAB_VIEWS).toEqual(["overview", "quote", "settings"]);
+  it("chỉ có các tab đã triển khai (prompts/05)", () => {
+    expect(TAB_VIEWS).toEqual(["overview", "quote", "library", "settings"]);
   });
 });
 
@@ -27,7 +28,7 @@ describe("manifest dev: lệnh Ribbon", () => {
 
   it("chỉ có các lệnh đã triển khai", () => {
     const controls = [...manifest.matchAll(/<Control xsi:type="Button" id="([^"]+)"/g)].map((m) => m[1]);
-    expect(controls).toEqual(["CQ.OpenTaskpane", "CQ.CreateQuote", "CQ.OpenHelp"]);
+    expect(controls).toEqual(["CQ.OpenTaskpane", "CQ.CreateQuote", "CQ.OpenLibrary", "CQ.OpenHelp"]);
   });
 
   it("mọi nút mở cùng một task pane và trỏ tới màn hình mà task pane hiểu được", () => {

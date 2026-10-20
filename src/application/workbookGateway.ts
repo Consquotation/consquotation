@@ -110,6 +110,12 @@ export interface WorkbookGateway {
   listQuoteTables(): Promise<QuoteTableInfo[]>;
   /** Kích hoạt sheet và chọn bảng (chỉ điều hướng, không ghi dữ liệu). */
   selectQuoteTable(tableName: string): Promise<void>;
+  /**
+   * Cờ trong workbook settings cho biết workbook này đã từng chèn công tác từ thư viện.
+   * Dùng để cảnh báo khi thư viện cục bộ trống bất thường (ADR-0003: cache Office bị xóa).
+   */
+  wasLibraryUsed(): Promise<boolean>;
+  markLibraryUsed(): Promise<void>;
   inspectAppend(tableName: string, position: InsertPosition): Promise<AppendInspection>;
   /** Chèn dòng tại insertIndex đã kiểm tra (null = cuối bảng); kiểm tra lại vân tay trong cùng batch. */
   appendRows(

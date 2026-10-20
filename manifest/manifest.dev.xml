@@ -13,7 +13,7 @@
   xmlns:ov="http://schemas.microsoft.com/office/taskpaneappversionoverrides" xsi:type="TaskPaneApp">
   <Id>03040238-2423-498b-b0fe-30f0425b2ed2</Id>
   <!-- Trình kiểm tra manifest yêu cầu Version >= 1.0; tăng phiên bản này mỗi lần phát hành manifest mới. -->
-  <Version>1.1.0.0</Version>
+  <Version>1.2.0.0</Version>
   <ProviderName>ConsQuotation</ProviderName>
   <DefaultLocale>vi-VN</DefaultLocale>
   <DisplayName DefaultValue="ConsQuotation (Dev)"/>
@@ -84,6 +84,22 @@
                     <SourceLocation resid="Taskpane.Quote.Url"/>
                   </Action>
                 </Control>
+                <Control xsi:type="Button" id="CQ.OpenLibrary">
+                  <Label resid="CQ.OpenLibrary.Label"/>
+                  <Supertip>
+                    <Title resid="CQ.OpenLibrary.Label"/>
+                    <Description resid="CQ.OpenLibrary.Tooltip"/>
+                  </Supertip>
+                  <Icon>
+                    <bt:Image size="16" resid="Library.16x16"/>
+                    <bt:Image size="32" resid="Library.32x32"/>
+                    <bt:Image size="80" resid="Library.80x80"/>
+                  </Icon>
+                  <Action xsi:type="ShowTaskpane">
+                    <TaskpaneId>CQ.MainTaskpane</TaskpaneId>
+                    <SourceLocation resid="Taskpane.Library.Url"/>
+                  </Action>
+                </Control>
               </Group>
               <Group id="CQ.Group.Help">
                 <Label resid="CQ.Group.Help.Label"/>
@@ -123,6 +139,9 @@
         <bt:Image id="TableAdd.16x16" DefaultValue="https://localhost:3000/assets/table-add-16.png"/>
         <bt:Image id="TableAdd.32x32" DefaultValue="https://localhost:3000/assets/table-add-32.png"/>
         <bt:Image id="TableAdd.80x80" DefaultValue="https://localhost:3000/assets/table-add-80.png"/>
+        <bt:Image id="Library.16x16" DefaultValue="https://localhost:3000/assets/library-16.png"/>
+        <bt:Image id="Library.32x32" DefaultValue="https://localhost:3000/assets/library-32.png"/>
+        <bt:Image id="Library.80x80" DefaultValue="https://localhost:3000/assets/library-80.png"/>
         <bt:Image id="Help.16x16" DefaultValue="https://localhost:3000/assets/help-16.png"/>
         <bt:Image id="Help.32x32" DefaultValue="https://localhost:3000/assets/help-32.png"/>
         <bt:Image id="Help.80x80" DefaultValue="https://localhost:3000/assets/help-80.png"/>
@@ -131,6 +150,7 @@
         <bt:Url id="Commands.Url" DefaultValue="https://localhost:3000/commands.html"/>
         <bt:Url id="Taskpane.Url" DefaultValue="https://localhost:3000/taskpane.html"/>
         <bt:Url id="Taskpane.Quote.Url" DefaultValue="https://localhost:3000/taskpane.html?view=quote"/>
+        <bt:Url id="Taskpane.Library.Url" DefaultValue="https://localhost:3000/taskpane.html?view=library"/>
         <bt:Url id="Taskpane.Help.Url" DefaultValue="https://localhost:3000/taskpane.html?view=help"/>
       </bt:Urls>
       <bt:ShortStrings>
@@ -138,12 +158,14 @@
         <bt:String id="CQ.Group.Main.Label" DefaultValue="Báo giá"/>
         <bt:String id="CQ.OpenTaskpane.Label" DefaultValue="Mở ConsQuotation"/>
         <bt:String id="CQ.CreateQuote.Label" DefaultValue="Tạo bảng báo giá"/>
+        <bt:String id="CQ.OpenLibrary.Label" DefaultValue="Thư viện của tôi"/>
         <bt:String id="CQ.Group.Help.Label" DefaultValue="Trợ giúp"/>
         <bt:String id="CQ.OpenHelp.Label" DefaultValue="Trợ giúp"/>
       </bt:ShortStrings>
       <bt:LongStrings>
         <bt:String id="CQ.OpenTaskpane.Tooltip" DefaultValue="Mở bảng điều khiển ConsQuotation: xem workbook hiện tại, tạo bảng báo giá và các lối tắt."/>
         <bt:String id="CQ.CreateQuote.Tooltip" DefaultValue="Mở phần Tạo bảng báo giá: chọn sheet mới hoặc ô đang chọn, add-in kiểm tra vùng đích trước khi ghi."/>
+        <bt:String id="CQ.OpenLibrary.Tooltip" DefaultValue="Quản lý công tác, tài nguyên, giá và định mức do bạn tự tạo; chèn công tác từ thư viện vào bảng báo giá."/>
         <bt:String id="CQ.OpenHelp.Tooltip" DefaultValue="Mở hướng dẫn sử dụng ConsQuotation."/>
       </bt:LongStrings>
     </Resources>

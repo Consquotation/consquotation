@@ -89,3 +89,10 @@ Chưa xác minh: Excel trên web.
 
 - https://learn.microsoft.com/en-us/office/dev/add-ins/develop/persisting-add-in-state-and-settings
 - https://learn.microsoft.com/en-us/office/dev/add-ins/testing/clear-cache
+
+**2026-10-20 — triển khai thư viện (prompts/08):**
+- Database `consquotation-library` (ghép partition key khi có), schema v1 với các store `workItems`, `resources`, `resourcePrices`, `norms`, `settings`. Gặp database của phiên bản mới hơn thì báo lỗi, không ghi đè (có test).
+- Xóa kèm phụ thuộc chạy trong một giao dịch: xóa công tác thì xóa định mức của nó, xóa tài nguyên thì xóa giá của nó. Tài nguyên còn được định mức dùng thì bị chặn xóa.
+- Kết nối tự đóng khi có `versionchange`, rồi tự mở lại và thử lại một lần. Kiểm chứng: xóa database khi 2 task pane đang mở thì không bị treo.
+- Cờ `ConsQuotation.libraryUsed` trong workbook settings được đặt khi chèn từ thư viện. Thư viện trống mà workbook có cờ thì hiện cảnh báo. Kiểm chứng trên Excel bằng cách mô phỏng xóa cache.
+- `navigator.storage.persist()` được gọi sau lần ghi đầu; WebView2 từ chối như đã xác minh. Backup ra file thuộc prompts/09.

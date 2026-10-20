@@ -11,7 +11,7 @@ import {
   makeStyles,
   tokens,
 } from "@fluentui/react-components";
-import AddWorkItemPanel from "./AddWorkItemPanel";
+import AddWorkItemPanel, { LibraryPrefill } from "./AddWorkItemPanel";
 import CreateQuotePanel from "./CreateQuotePanel";
 import EnvironmentPanel from "./EnvironmentPanel";
 import HelpView from "./HelpView";
@@ -19,12 +19,25 @@ import QuoteTablesPanel from "./QuoteTablesPanel";
 import StorageProbePanel from "./StorageProbePanel";
 import VersionPanel from "./VersionPanel";
 import WorkbookContextPanel from "./WorkbookContextPanel";
+import LibraryStoragePanel from "./library/LibraryStoragePanel";
+import LibraryView from "./library/LibraryView";
+import { LibraryService } from "../../application/libraryService";
 import { WorkbookGateway } from "../../application/workbookGateway";
+import { todayIso } from "../../domain/library/dates";
+import { draftFromWorkItem } from "../../domain/library/toQuote";
+import { WorkItem } from "../../domain/library/types";
+import { readPartitionKey } from "../../office/environment";
 import { ExcelWorkbookGateway } from "../../office/excelWorkbookGateway";
+import { IndexedDbLibraryRepository, libraryDatabaseName } from "../../storage/indexedDbLibraryRepository";
 import { STRINGS } from "../../shared/strings.vi";
 import { View, parseInitialView } from "../navigation";
 
-/* global document, window */
+/* global crypto, document, indexedDB, window */
+
+function createLibraryService(): LibraryService {
+  const repo = new IndexedDbLibraryRepository(indexedDB, libraryDatabaseName(readPartitionKey()));
+  return new LibraryService(repo, { now: () => new Date(), newId: () => crypto.randomUUID() });
+}
 
 const useStyles = makeStyles({
   root: {
@@ -50,6 +63,7 @@ const useStyles = makeStyles({
 const FOCUS_TARGET: Record<View, string> = {
   overview: "cq-context-title",
   quote: "cq-create-title",
+  library: "cq-library-title",
   settings: "cq-version-title",
   help: "cq-help-title",
 };
@@ -60,9 +74,15 @@ interface Navigation {
   focusId: string | null;
 }
 
-const App: React.FC<{ gateway?: WorkbookGateway }> = ({ gateway: injected }) => {
+const App: React.FC<{ gateway?: WorkbookGateway; libraryService?: LibraryService }> = ({
+  gateway: injected,
+  libraryService: injectedLibrary,
+}) => {
   const styles = useStyles();
   const gateway = React.useMemo(() => injected ?? new ExcelWorkbookGateway(), [injected]);
+  const libraryService = React.useMemo(() => injectedLibrary ?? createLibraryService(), [injectedLibrary]);
+  // Công tác vừa chọn "Chèn vào báo giá" ở thư viện; form Thêm công tác dùng một lần rồi xóa.
+  const [prefill, setPrefill] = React.useState<LibraryPrefill | null>(null);
   // Màn hình ban đầu do nút Ribbon chọn (taskpane.html?view=…); mở thường thì không chuyển focus.
   const [nav, setNav] = React.useState<Navigation>(() => ({
     view: parseInitialView(window.location.search),
@@ -89,6 +109,12 @@ const App: React.FC<{ gateway?: WorkbookGateway }> = ({ gateway: injected }) => 
     target?.focus();
   }, [nav]);
 
+  const insertFromLibrary = (item: WorkItem) => {
+    const { draft, warnings } = draftFromWorkItem(item, todayIso());
+    setPrefill({ nonce: Date.now(), code: item.code, draft, warnings });
+    go("quote", "cq-append-title");
+  };
+
   const s = STRINGS;
   return (
     <main className={styles.root}>
@@ -111,6 +137,7 @@ const App: React.FC<{ gateway?: WorkbookGateway }> = ({ gateway: injected }) => 
           >
             <Tab value="overview">{s.tabs.overview}</Tab>
             <Tab value="quote">{s.tabs.quote}</Tab>
+            <Tab value="library">{s.tabs.library}</Tab>
             <Tab value="settings">{s.tabs.settings}</Tab>
           </TabList>
 
@@ -126,6 +153,7 @@ const App: React.FC<{ gateway?: WorkbookGateway }> = ({ gateway: injected }) => 
                     {s.shortcuts.createQuote}
                   </Button>
                   <Button onClick={() => go("quote", "cq-append-title")}>{s.shortcuts.addWorkItem}</Button>
+                  <Button onClick={() => go("library")}>{s.shortcuts.library}</Button>
                   <Button onClick={() => go("help")}>{s.shortcuts.help}</Button>
                 </div>
               </section>
@@ -140,13 +168,26 @@ const App: React.FC<{ gateway?: WorkbookGateway }> = ({ gateway: injected }) => 
             <div className={styles.panel} role="tabpanel" aria-label={s.tabs.quote}>
               <WorkbookContextPanel gateway={gateway} />
               <CreateQuotePanel gateway={gateway} onCreated={bumpTables} />
-              <AddWorkItemPanel gateway={gateway} tablesVersion={tablesVersion} onAppended={bumpTables} />
+              <AddWorkItemPanel
+                gateway={gateway}
+                tablesVersion={tablesVersion}
+                onAppended={bumpTables}
+                prefill={prefill}
+                onPrefillConsumed={() => setPrefill(null)}
+              />
+            </div>
+          )}
+
+          {nav.view === "library" && (
+            <div className={styles.panel} role="tabpanel" aria-label={s.tabs.library}>
+              <LibraryView service={libraryService} gateway={gateway} onInsert={insertFromLibrary} />
             </div>
           )}
 
           {nav.view === "settings" && (
             <div className={styles.panel} role="tabpanel" aria-label={s.tabs.settings}>
               <VersionPanel />
+              <LibraryStoragePanel service={libraryService} />
               <EnvironmentPanel />
               <StorageProbePanel />
             </div>

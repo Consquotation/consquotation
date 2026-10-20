@@ -110,7 +110,7 @@ const CreateQuotePanel: React.FC<{ gateway: WorkbookGateway; onCreated: () => vo
       <Body1>{s.description}</Body1>
 
       {/* <form> để Enter trong ô số dòng gửi biểu mẫu (dùng được bằng bàn phím). */}
-      <form
+      <form noValidate
         className={styles.root}
         onSubmit={(event) => {
           event.preventDefault();

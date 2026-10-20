@@ -35,6 +35,7 @@ import { cellAddress, fitsInSheet, rangeAddress, stripSheetName } from "../share
 
 const SAMPLE_LIMIT = 5;
 const SETTINGS_KEY = "ConsQuotation.quoteTables";
+const LIBRARY_USED_KEY = "ConsQuotation.libraryUsed";
 const NEW_SHEET_FINGERPRINT = "new-sheet";
 
 interface QuoteTableRecord {
@@ -203,6 +204,22 @@ async function inspectInContext(
     fingerprint: hashString(`${sheetName}|${rowIndex}|${columnIndex}|${JSON.stringify(formulas)}`),
     skippedChecks,
   };
+}
+
+/**
+ * Chạy một bước phụ sau khi thao tác chính đã được Excel xác nhận; nuốt lỗi có chủ đích
+ * (bước phụ không được làm sai kết quả của thao tác chính).
+ */
+async function bestEffort(
+  context: Excel.RequestContext,
+  queue: () => void | Promise<void>
+): Promise<void> {
+  try {
+    await queue();
+    await context.sync();
+  } catch {
+    // Bỏ qua: chỉ là điều hướng/metadata.
+  }
 }
 
 async function recordQuoteTable(context: Excel.RequestContext, tableName: string): Promise<void> {
@@ -514,13 +531,22 @@ export class ExcelWorkbookGateway implements WorkbookGateway {
         QUOTE_COLUMNS.forEach((column, index) => {
           at(0, index).format.columnWidth = column.width;
         });
-        sheet.activate();
       }
-      table.getRange().select();
+      // Lệnh ghi phải được Excel xác nhận trước; các bước sau là phụ.
       await context.sync();
 
-      await recordQuoteTable(context, tableName);
-      await context.sync();
+      // Bước phụ (sau khi ghi đã thành công): ghi metadata và chuyển tới bảng vừa tạo.
+      // Lỗi ở đây (ví dụ cửa sổ workbook mất focus khi mở nhiều workbook) KHÔNG được làm
+      // báo thất bại, nếu không người dùng sẽ bấm lại và tạo trùng bảng (prompts/06, 13).
+      await bestEffort(context, async () => {
+        await recordQuoteTable(context, tableName);
+      });
+      await bestEffort(context, () => {
+        if (isNewSheet) {
+          sheet.activate();
+        }
+        table.getRange().select();
+      });
 
       return {
         sheetName: inspection.sheetName,
@@ -577,6 +603,22 @@ export class ExcelWorkbookGateway implements WorkbookGateway {
         containsSelection: selectedRows.has(t.name),
         selectedSheetRow: selectedRows.get(t.name) ?? null,
       }));
+    });
+  }
+
+  async wasLibraryUsed(): Promise<boolean> {
+    return Excel.run(async (context) => {
+      const setting = context.workbook.settings.getItemOrNullObject(LIBRARY_USED_KEY);
+      setting.load("value");
+      await context.sync();
+      return !setting.isNullObject && setting.value === true;
+    });
+  }
+
+  async markLibraryUsed(): Promise<void> {
+    await Excel.run(async (context) => {
+      context.workbook.settings.add(LIBRARY_USED_KEY, true);
+      await context.sync();
     });
   }
 
@@ -637,10 +679,13 @@ export class ExcelWorkbookGateway implements WorkbookGateway {
         insertIndex === null
           ? body.rowIndex + body.rowCount - rows.length
           : body.rowIndex + insertIndex;
-      table.worksheet
-        .getRangeByIndexes(firstNewRow, body.columnIndex, rows.length, body.columnCount)
-        .select();
-      await context.sync();
+      // Chọn dòng vừa thêm là bước phụ: lỗi (ví dụ workbook mất focus) không làm báo thất bại,
+      // vì dòng đã được ghi — báo sai sẽ khiến người dùng thêm lại thành dòng trùng.
+      await bestEffort(context, () => {
+        table.worksheet
+          .getRangeByIndexes(firstNewRow, body.columnIndex, rows.length, body.columnCount)
+          .select();
+      });
       return {
         tableName,
         sheetName: inspection.sheetName,

@@ -34,6 +34,9 @@ import {
 import { describeOfficeError } from "../../office/officeErrors";
 import { qualifiedAddress } from "../../shared/a1";
 import { STRINGS } from "../../shared/strings.vi";
+import { LIBRARY_STRINGS } from "../../shared/strings.library.vi";
+import { InsertWarning } from "../../domain/library/toQuote";
+import { formatIsoDate } from "../../domain/library/dates";
 import { useExclusive } from "../useExclusive";
 import { useSelectionChanged } from "../useSelectionChanged";
 
@@ -67,11 +70,32 @@ const FIELDS: { field: DraftField; label: string; wide?: boolean; numeric?: bool
   { field: "notes", label: STRINGS.append.notes, wide: true },
 ];
 
+/** Dữ liệu điền sẵn từ "Thư viện của tôi" (prompts/08); `nonce` đổi mỗi lần bấm Chèn. */
+export interface LibraryPrefill {
+  nonce: number;
+  code: string;
+  draft: WorkItemDraftInput;
+  warnings: InsertWarning[];
+}
+
+function describeInsertWarning(warning: InsertWarning): string {
+  switch (warning.kind) {
+    case "missingPrice":
+      return LIBRARY_STRINGS.insert.missingPrice;
+    case "expired":
+      return LIBRARY_STRINGS.insert.expired(formatIsoDate(warning.effectiveTo));
+    case "notYetEffective":
+      return LIBRARY_STRINGS.insert.notYetEffective(formatIsoDate(warning.effectiveFrom));
+  }
+}
+
 const AddWorkItemPanel: React.FC<{
   gateway: WorkbookGateway;
   tablesVersion: number;
   onAppended: () => void;
-}> = ({ gateway, tablesVersion, onAppended }) => {
+  prefill?: LibraryPrefill | null;
+  onPrefillConsumed?: () => void;
+}> = ({ gateway, tablesVersion, onAppended, prefill, onPrefillConsumed }) => {
   const styles = useStyles();
   const s = STRINGS.append;
   const [tables, setTables] = React.useState<QuoteTableInfo[] | null>(null);
@@ -83,6 +107,19 @@ const AddWorkItemPanel: React.FC<{
   const exclusive = useExclusive();
   const tableNameRef = React.useRef(tableName);
   tableNameRef.current = tableName;
+  const [fromLibrary, setFromLibrary] = React.useState<LibraryPrefill | null>(null);
+
+  // Bấm "Chèn vào báo giá" ở thư viện: điền sẵn form; người dùng nhập Khối lượng rồi bấm Thêm.
+  React.useEffect(() => {
+    if (prefill) {
+      setDraft(prefill.draft);
+      setErrors([]);
+      setPhase({ kind: "idle" });
+      setFromLibrary(prefill);
+      // Dùng một lần: quay lại tab Báo giá sau này không bị điền lại công tác cũ.
+      onPrefillConsumed?.();
+    }
+  }, [prefill?.nonce]);
 
   const loadTables = React.useCallback(async () => {
     try {
@@ -117,6 +154,11 @@ const AddWorkItemPanel: React.FC<{
       setPhase({ kind: "success", message: s.added(qualifiedAddress(result.rows.sheetName, result.rows.address)) });
       // Giữ Nhóm công tác và Đơn vị tính — thường lặp lại ở dòng kế tiếp.
       setDraft((d) => ({ ...EMPTY_DRAFT, group: d.group, unit: d.unit }));
+      if (fromLibrary) {
+        setFromLibrary(null);
+        // Đánh dấu workbook đã dùng thư viện để cảnh báo nếu sau này thư viện cục bộ trống bất thường.
+        gateway.markLibraryUsed().catch(() => undefined);
+      }
       onAppended();
     } catch (error) {
       setPhase({ kind: "error", message: describeOfficeError(error) });
@@ -163,6 +205,16 @@ const AddWorkItemPanel: React.FC<{
       </Subtitle2>
       <Body1>{s.description}</Body1>
 
+      {fromLibrary && (
+        <MessageBar intent={fromLibrary.warnings.length > 0 ? "warning" : "info"} layout="multiline" politeness="polite">
+          <MessageBarBody>
+            {LIBRARY_STRINGS.insert.prefilled(fromLibrary.code)}
+            {fromLibrary.warnings.map((w) => (
+              <div key={w.kind}>{describeInsertWarning(w)}</div>
+            ))}
+          </MessageBarBody>
+        </MessageBar>
+      )}
       {tables === null && <Spinner size="tiny" label={s.loadingTables} />}
       {tables !== null && tables.length === 0 && (
         <MessageBar intent="info">
@@ -172,7 +224,7 @@ const AddWorkItemPanel: React.FC<{
 
       {tables !== null && tables.length > 0 && (
         // <form> để Enter trong ô nhập gửi biểu mẫu (dùng được bằng bàn phím).
-        <form
+        <form noValidate
           className={styles.root}
           onSubmit={(event) => {
             event.preventDefault();

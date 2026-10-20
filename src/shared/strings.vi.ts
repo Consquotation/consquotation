@@ -16,7 +16,7 @@ export const STRINGS = {
   overview: {
     title: "Tổng quan",
     phaseNotice:
-      "Bản đang phát triển: đã có tạo bảng báo giá và thêm công tác thủ công (tab Báo giá). Thư viện cá nhân, nhập/xuất và kiểm tra báo giá sẽ được bổ sung ở các giai đoạn tiếp theo.",
+      "Bản đang phát triển: đã có tạo bảng báo giá, thêm công tác thủ công và Thư viện của tôi. Nhập/xuất thư viện và kiểm tra báo giá sẽ được bổ sung ở các giai đoạn tiếp theo.",
   },
 
   environment: {
@@ -65,6 +65,7 @@ export const STRINGS = {
     label: "Các phần của ConsQuotation",
     overview: "Tổng quan",
     quote: "Báo giá",
+    library: "Thư viện",
     settings: "Cài đặt",
   },
 
@@ -76,6 +77,7 @@ export const STRINGS = {
     title: "Lối tắt",
     createQuote: "Tạo bảng báo giá",
     addWorkItem: "Thêm công tác thủ công",
+    library: "Thư viện của tôi",
     help: "Xem hướng dẫn",
   },
 

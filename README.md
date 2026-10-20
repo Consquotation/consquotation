@@ -4,26 +4,34 @@ Microsoft Excel Add-in hỗ trợ lập báo giá thi công xây dựng **ngay t
 
 ## Trạng thái
 
-**Giai đoạn 2 — Workbook adapter** đã xong (theo [roadmap](prompts/18_IMPLEMENTATION_ROADMAP.md)).
+Đã triển khai theo bộ đặc tả trong `prompts/`: 04 (setup, manifest), 05 (Ribbon, task pane), 06 (workbook integration), 08 (thư viện cá nhân).
 
 Đã có:
-- Ribbon: tab **ConsQuotation** › nhóm **Báo giá** › nút **Mở ConsQuotation**.
-- Task pane tiếng Việt với 3 tab: **Tổng quan**, **Báo giá**, **Chẩn đoán**.
-- Hiển thị workbook, sheet, vùng chọn hiện tại; tự cập nhật khi đổi vùng chọn.
-- **Tạo bảng báo giá** trên sheet mới hoặc tại ô đang chọn: khối thông tin và Excel Table 9 cột (STT tự đánh số, Thành tiền = Khối lượng × Đơn giá để trống khi thiếu số liệu, dòng Tổng cộng dùng SUBTOTAL).
-  - Vùng có dữ liệu thì hỏi xác nhận ghi đè.
-  - Chặn khi sheet bị bảo vệ, chồng lên Table có sẵn, có ô gộp, hoặc vượt giới hạn sheet.
-  - Kiểm tra lại vùng đích ngay trước khi ghi.
-- **Thêm công tác thủ công** vào cuối bảng: kiểm tra số liệu, chữ bắt đầu bằng `= + - @` được lưu dạng chữ, hỏi xác nhận khi dữ liệu bên dưới bảng bị đẩy xuống.
+- **Ribbon**: tab **ConsQuotation** gồm nhóm **Báo giá** (Mở ConsQuotation, Tạo bảng báo giá, Thư viện của tôi) và nhóm **Trợ giúp**.
+- **Task pane** tiếng Việt với các tab Tổng quan, Báo giá, Thư viện, Cài đặt, cùng màn hình Trợ giúp.
+- **Tạo bảng báo giá** trên sheet mới (tự đặt tên) hoặc tại ô đang chọn:
+  - Gồm khối thông tin và Excel Table 9 cột.
+  - Kiểm tra vùng đích, hỏi xác nhận trước khi ghi đè.
+  - Chặn khi sheet bị bảo vệ, có Table chồng lên, có ô gộp, hoặc vượt giới hạn sheet.
+  - Dòng tổng không đẩy dữ liệu bên dưới.
+- **Thêm công tác** thủ công hoặc từ thư viện:
+  - Mặc định chèn ngay dưới dòng đang chọn.
+  - Chống bấm lặp tạo dòng trùng.
+  - Chữ bắt đầu bằng `= + - @` được lưu dạng chữ.
+- **Thư viện của tôi** (xem [docs/LIBRARY.md](docs/LIBRARY.md)):
+  - Gồm công tác, tài nguyên, giá có ngày hiệu lực và định mức.
+  - Thêm, sửa, sao chép, xóa (có xác nhận); tìm kiếm không cần gõ dấu.
+  - Kiểm tra thư viện: mã trùng, thiếu dữ liệu, liên kết hỏng, giá hết hạn, giá chồng thời gian.
+  - Chèn vào báo giá dưới dạng bản sao giá trị.
+  - Thư viện ban đầu **trống**, không có dữ liệu mẫu.
 - Thông báo "không tương thích" cho Excel dùng webview cũ (IE11/EdgeHTML) hoặc thiếu ExcelApi 1.8.
-- Công cụ kiểm tra lưu trữ cục bộ (tab Chẩn đoán).
 
-Chưa có: thư viện cá nhân, import/export, kiểm tra báo giá, định giá nâng cao, in ấn (giai đoạn 3–6).
+Chưa có: xuất/nhập (sao lưu) thư viện (prompts/09), kiểm tra báo giá, định giá theo định mức (prompts/10), in ấn (prompts/11).
 
 ### Hạn chế đã biết
 
 - **Thao tác ghi của add-in không hoàn tác được bằng Ctrl+Z.** Đã kiểm chứng trên Excel Microsoft 365 cho Windows, ngày 2026-10-20. Vì vậy add-in luôn kiểm tra và hỏi xác nhận trước khi ghi vào vùng có dữ liệu.
-- Dữ liệu cục bộ của add-in bị xóa khi xóa cache Office (ADR-0003).
+- **Thư viện cá nhân bị xóa khi xóa cache Office** và chưa có chức năng sao lưu ra file (sẽ có ở prompts/09). Xem [docs/LIBRARY.md](docs/LIBRARY.md).
 
 ## Công nghệ
 
@@ -33,7 +41,7 @@ Office.js · TypeScript (strict) · React 18 · Fluent UI React v9 · webpack 5 
 
 | Nền tảng | Mức hỗ trợ | Đã kiểm thử |
 |---|---|---|
-| Excel Microsoft 365 trên Windows | Chính | Có — giai đoạn 1 (2026-10-19) và giai đoạn 2 (2026-10-20), build 16.0.20430.20182 |
+| Excel Microsoft 365 trên Windows | Chính | Có — đặc tả 04, 05, 06, 08 (2026-10-19/20), build 16.0.20430.20182 |
 | Excel trên web | Phụ | Chưa |
 | Excel 2016/2019/2021/2024 bản retail trên Windows (WebView2) | Hỗ trợ | Chưa — không có máy kiểm thử |
 | Excel trên Mac | Chưa kiểm thử | Chưa |
