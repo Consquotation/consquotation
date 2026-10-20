@@ -11,6 +11,7 @@ import {
   AppendInspection,
   AppendedRows,
   CreatedQuote,
+  InsertPosition,
   OccupiedCells,
   QuoteTableInfo,
   TargetBlocker,
@@ -31,7 +32,6 @@ import {
 } from "../domain/quoteTemplate";
 import { cellAddress, fitsInSheet, rangeAddress, stripSheetName } from "../shared/a1";
 
-const NEW_SHEET_BASE_NAME = "Báo giá";
 const SAMPLE_LIMIT = 5;
 const SETTINGS_KEY = "ConsQuotation.quoteTables";
 const NEW_SHEET_FINGERPRINT = "new-sheet";
@@ -111,7 +111,7 @@ async function inspectInContext(
   columnCount: number
 ): Promise<TargetInspection> {
   if (target.kind === "newSheet") {
-    const sheetName = uniqueSheetName(NEW_SHEET_BASE_NAME, await loadSheetNames(context));
+    const sheetName = uniqueSheetName(target.baseName, await loadSheetNames(context));
     return {
       target,
       sheetName,
@@ -241,9 +241,43 @@ interface AppendState {
   table?: Excel.Table;
 }
 
+/**
+ * Chỉ số chèn (trong phần dữ liệu) cho "ngay dưới dòng đang chọn".
+ * - Chọn ở hàng tiêu đề → chèn lên đầu (0).
+ * - Chọn trong dữ liệu → chèn dưới hàng cuối của vùng chọn; nếu đó là hàng cuối → null (cuối bảng).
+ * - Chọn ở dòng tổng → null (cuối bảng).
+ * - Vùng chọn ngoài bảng hoặc khác sheet → "outside".
+ */
+async function resolveInsertIndex(
+  context: Excel.RequestContext,
+  table: Excel.Table,
+  sheetName: string,
+  full: Excel.Range
+): Promise<number | null | "outside"> {
+  const selection = await loadSelection(context);
+  if (!selection || selection.sheetName !== sheetName) {
+    return "outside";
+  }
+  const intersection = full.getIntersectionOrNullObject(selection.range);
+  intersection.load("rowIndex,rowCount");
+  const body = table.getDataBodyRange();
+  body.load("rowIndex,rowCount");
+  await context.sync();
+  if (intersection.isNullObject) {
+    return "outside";
+  }
+  const lastSelectedRow = intersection.rowIndex + intersection.rowCount - 1;
+  if (lastSelectedRow < body.rowIndex) {
+    return 0;
+  }
+  const afterIndex = lastSelectedRow - body.rowIndex + 1;
+  return afterIndex >= body.rowCount ? null : afterIndex;
+}
+
 async function inspectAppendInContext(
   context: Excel.RequestContext,
-  tableName: string
+  tableName: string,
+  position: InsertPosition
 ): Promise<AppendState> {
   const table = context.workbook.tables.getItemOrNullObject(tableName);
   table.load("name");
@@ -255,6 +289,7 @@ async function inspectAppendInContext(
         sheetName: "",
         cellsBelow: { count: 0, sample: [] },
         blockers: [{ kind: "tableMissing" }],
+        insertIndex: null,
         fingerprint: "",
       },
     };
@@ -297,6 +332,16 @@ async function inspectAppendInContext(
     blockers.push({ kind: "headersChanged" });
   }
 
+  let insertIndex: number | null = null;
+  if (position.kind === "belowSelection") {
+    const resolved = await resolveInsertIndex(context, table, sheet.name, full);
+    if (resolved === "outside") {
+      blockers.push({ kind: "selectionOutsideTable" });
+    } else {
+      insertIndex = resolved;
+    }
+  }
+
   return {
     table,
     inspection: {
@@ -304,6 +349,9 @@ async function inspectAppendInContext(
       sheetName: sheet.name,
       cellsBelow: below,
       blockers,
+      insertIndex,
+      // Không đưa vùng chọn vào vân tay: người dùng có thể click chỗ khác khi hộp xác nhận đang mở;
+      // vị trí chèn đã được cố định ở insertIndex.
       fingerprint: hashString(
         `${full.address}|${headers.join("\t")}|${JSON.stringify(belowFormulas)}`
       ),
@@ -399,9 +447,15 @@ export class ExcelWorkbookGateway implements WorkbookGateway {
       const at = (row: number, column: number, rows = 1, columns = 1) =>
         sheet.getRangeByIndexes(row0 + row, col0 + column, rows, columns);
 
-      // Người dùng đã xác nhận ghi đè (hoặc vùng trống): xóa nội dung cũ trong đúng vùng mẫu,
-      // giữ định dạng, để dữ liệu cũ không lọt vào bảng mới.
-      at(0, 0, layout.rowCount, layout.columnCount).clear(Excel.ClearApplyTo.contents);
+      // Người dùng đã xác nhận ghi đè (hoặc vùng trống): xóa nội dung cũ trong đúng vùng mẫu
+      // để dữ liệu cũ không lọt vào bảng mới, và đưa định dạng số về General để định dạng cũ
+      // (%, ngày…) không làm sai cách hiển thị mẫu (prompts/06: công thức/format đúng).
+      // Màu nền, viền… ngoài định dạng số được giữ nguyên.
+      const region = at(0, 0, layout.rowCount, layout.columnCount);
+      region.clear(Excel.ClearApplyTo.contents);
+      region.numberFormat = Array.from({ length: layout.rowCount }, () =>
+        Array.from({ length: layout.columnCount }, () => "General")
+      );
 
       const title = at(layout.titleCell.row, layout.titleCell.column);
       title.values = [[QUOTE_TITLE]];
@@ -512,19 +566,23 @@ export class ExcelWorkbookGateway implements WorkbookGateway {
     });
   }
 
-  async inspectAppend(tableName: string): Promise<AppendInspection> {
+  async inspectAppend(tableName: string, position: InsertPosition): Promise<AppendInspection> {
     return Excel.run(
-      async (context) => (await inspectAppendInContext(context, tableName)).inspection
+      async (context) => (await inspectAppendInContext(context, tableName, position)).inspection
     );
   }
 
   async appendRows(
     tableName: string,
     rows: (string | number)[][],
-    expectedFingerprint: string
+    expectedFingerprint: string,
+    insertIndex: number | null
   ): Promise<AppendedRows> {
     return Excel.run(async (context) => {
-      const { inspection, table } = await inspectAppendInContext(context, tableName);
+      // Kiểm tra lại bảng (không phụ thuộc vùng chọn hiện tại); vị trí chèn dùng insertIndex đã cố định.
+      const { inspection, table } = await inspectAppendInContext(context, tableName, {
+        kind: "end",
+      });
       if (
         !table ||
         inspection.blockers.length > 0 ||
@@ -532,12 +590,22 @@ export class ExcelWorkbookGateway implements WorkbookGateway {
       ) {
         throw new TargetChangedError();
       }
-      table.rows.add(undefined, rows);
+      const before = table.getDataBodyRange();
+      before.load("rowCount");
+      await context.sync();
+      if (insertIndex !== null && (insertIndex < 0 || insertIndex > before.rowCount)) {
+        throw new TargetChangedError();
+      }
+
+      table.rows.add(insertIndex ?? undefined, rows);
       const body = table.getDataBodyRange();
       body.load("rowIndex,columnIndex,rowCount,columnCount");
       await context.sync();
 
-      const firstNewRow = body.rowIndex + body.rowCount - rows.length;
+      const firstNewRow =
+        insertIndex === null
+          ? body.rowIndex + body.rowCount - rows.length
+          : body.rowIndex + insertIndex;
       table.worksheet
         .getRangeByIndexes(firstNewRow, body.columnIndex, rows.length, body.columnCount)
         .select();

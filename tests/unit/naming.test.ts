@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  checkSheetNameInput,
   isQuoteTableName,
   sanitizeSheetName,
   uniqueQuoteTableName,
@@ -43,5 +44,38 @@ describe("uniqueQuoteTableName", () => {
     expect(isQuoteTableName("CQ_Quote_12")).toBe(true);
     expect(isQuoteTableName("CQ_Quote_")).toBe(false);
     expect(isQuoteTableName("Table1")).toBe(false);
+  });
+});
+
+describe("prompts/06: tên sheet hợp lệ", () => {
+  it("không dùng tên Excel dành riêng 'History'", () => {
+    expect(uniqueSheetName("History", [])).toBe("History (2)");
+    expect(uniqueSheetName("history", [])).toBe("history (2)");
+  });
+
+  it("không để tên kết thúc bằng dấu nháy đơn sau khi cắt cho vừa 31 ký tự", () => {
+    const base = "Báo giá nhà ông O'Hara và công t'y";
+    const name = uniqueSheetName(base, [base.slice(0, 31)]);
+    expect(name.length).toBeLessThanOrEqual(31);
+    expect(name).not.toMatch(/' \(\d+\)$/);
+  });
+
+  it("checkSheetNameInput báo lỗi rõ thay vì tự sửa âm thầm", () => {
+    expect(checkSheetNameInput("  Báo giá A  ")).toEqual({ ok: true, name: "Báo giá A" });
+    expect(checkSheetNameInput("").ok).toBe(false);
+    expect(checkSheetNameInput("Báo/giá").ok).toBe(false);
+    expect(checkSheetNameInput("'Báo giá").ok).toBe(false);
+    expect(checkSheetNameInput("x".repeat(32)).ok).toBe(false);
+    expect(checkSheetNameInput("HISTORY").ok).toBe(false);
+  });
+});
+
+describe("uniqueSheetName: trường hợp biên khi cắt tên", () => {
+  it("phần bị cắt kết thúc bằng nháy đơn rồi khoảng trắng → bỏ cả hai", () => {
+    // 30 ký tự đầu là "x…x' " → sau khi cắt không được kết thúc bằng nháy đơn.
+    const base = "x".repeat(29) + "' " + "tail";
+    const name = uniqueSheetName(base, []);
+    expect(name.endsWith("'")).toBe(false);
+    expect(name.length).toBeLessThanOrEqual(31);
   });
 });

@@ -18,10 +18,12 @@ import ConfirmDialog from "./ConfirmDialog";
 import { describeBlocker } from "../../application/blockerMessages";
 import { Placement, TemplatePlan, executeTemplate, planTemplate } from "../../application/quoteService";
 import { TargetInspection, WorkbookGateway } from "../../application/workbookGateway";
+import { DEFAULT_QUOTE_SHEET_NAME, SHEET_NAME_MAX, checkSheetNameInput } from "../../domain/naming";
 import { DEFAULT_INITIAL_ROWS, MAX_INITIAL_ROWS, clampInitialRows } from "../../domain/quoteTemplate";
 import { describeOfficeError } from "../../office/officeErrors";
 import { qualifiedAddress } from "../../shared/a1";
 import { STRINGS } from "../../shared/strings.vi";
+import { useExclusive } from "../useExclusive";
 
 type Phase =
   | { kind: "idle" }
@@ -46,8 +48,12 @@ const CreateQuotePanel: React.FC<{ gateway: WorkbookGateway; onCreated: () => vo
   const s = STRINGS.create;
   const [placement, setPlacement] = React.useState<Placement>("newSheet");
   const [rowsText, setRowsText] = React.useState(String(DEFAULT_INITIAL_ROWS));
+  const [sheetName, setSheetName] = React.useState(DEFAULT_QUOTE_SHEET_NAME);
   const [phase, setPhase] = React.useState<Phase>({ kind: "idle" });
+  const exclusive = useExclusive();
   const initialRows = clampInitialRows(Number(rowsText));
+  const sheetNameCheck = checkSheetNameInput(sheetName);
+  const sheetNameInvalid = placement === "newSheet" && !sheetNameCheck.ok;
 
   const execute = async (plan: TemplatePlan) => {
     setPhase({ kind: "working" });
@@ -70,9 +76,17 @@ const CreateQuotePanel: React.FC<{ gateway: WorkbookGateway; onCreated: () => vo
   };
 
   const submit = async () => {
+    if (placement === "newSheet" && !sheetNameCheck.ok) {
+      return;
+    }
     setPhase({ kind: "working" });
     try {
-      const plan = await planTemplate(gateway, placement, initialRows);
+      const plan = await planTemplate(
+        gateway,
+        placement,
+        initialRows,
+        sheetNameCheck.ok ? sheetNameCheck.name : DEFAULT_QUOTE_SHEET_NAME
+      );
       if (plan.status === "blocked") {
         setPhase({ kind: "blocked", plan });
       } else if (plan.status === "ready") {
@@ -100,7 +114,7 @@ const CreateQuotePanel: React.FC<{ gateway: WorkbookGateway; onCreated: () => vo
         className={styles.root}
         onSubmit={(event) => {
           event.preventDefault();
-          void submit();
+          void exclusive(submit);
         }}
       >
         <Field label={s.placement}>
@@ -109,6 +123,21 @@ const CreateQuotePanel: React.FC<{ gateway: WorkbookGateway; onCreated: () => vo
             <Radio value="atSelection" label={s.atSelection} />
           </RadioGroup>
         </Field>
+
+        {placement === "newSheet" && (
+          <Field
+            label={s.sheetName}
+            required
+            hint={s.sheetNameHint}
+            validationMessage={sheetNameCheck.ok ? undefined : sheetNameCheck.message}
+          >
+            <Input
+              value={sheetName}
+              maxLength={SHEET_NAME_MAX}
+              onChange={(_e, data) => setSheetName(data.value)}
+            />
+          </Field>
+        )}
 
         <Field label={s.initialRows} hint={`1–${MAX_INITIAL_ROWS}`}>
           <Input
@@ -121,7 +150,7 @@ const CreateQuotePanel: React.FC<{ gateway: WorkbookGateway; onCreated: () => vo
         </Field>
 
         <div className={styles.actions}>
-          <Button type="submit" appearance="primary" disabled={phase.kind === "working"}>
+          <Button type="submit" appearance="primary" disabled={phase.kind === "working" || sheetNameInvalid}>
             {phase.kind === "working" ? s.working : s.submit}
           </Button>
           {phase.kind === "working" && <Spinner size="tiny" aria-label={s.working} />}
@@ -175,7 +204,7 @@ const CreateQuotePanel: React.FC<{ gateway: WorkbookGateway; onCreated: () => vo
           }
           confirmLabel={overwrite ? s.confirmOverwrite : s.confirmCreate}
           cancelLabel={s.cancel}
-          onConfirm={() => void execute(confirmPlan)}
+          onConfirm={() => void exclusive(() => execute(confirmPlan))}
           onCancel={() => setPhase({ kind: "idle" })}
         />
       )}

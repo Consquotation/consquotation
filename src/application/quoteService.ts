@@ -4,11 +4,13 @@
  * (prompts/06_WORKBOOK_INTEGRATION.md, 07_QUOTATION_WORKFLOW.md).
  */
 
+import { DEFAULT_QUOTE_SHEET_NAME } from "../domain/naming";
 import { buildQuoteLayout } from "../domain/quoteTemplate";
 import {
   AppendInspection,
   AppendedRows,
   CreatedQuote,
+  InsertPosition,
   TargetChangedError,
   TargetInspection,
   WorkbookGateway,
@@ -28,12 +30,17 @@ export type TemplatePlan =
 export async function planTemplate(
   gateway: WorkbookGateway,
   placement: Placement,
-  initialRows: number
+  initialRows: number,
+  sheetBaseName: string = DEFAULT_QUOTE_SHEET_NAME
 ): Promise<TemplatePlan> {
   const layout = buildQuoteLayout(initialRows);
   const inspection =
     placement === "newSheet"
-      ? await gateway.inspectTarget({ kind: "newSheet" }, layout.rowCount, layout.columnCount)
+      ? await gateway.inspectTarget(
+          { kind: "newSheet", baseName: sheetBaseName },
+          layout.rowCount,
+          layout.columnCount
+        )
       : await gateway.inspectAtSelection(layout.rowCount, layout.columnCount);
 
   if (inspection.blockers.length > 0) {
@@ -86,8 +93,12 @@ export type AppendPlan =
   | { status: "needsShiftConfirmation"; inspection: AppendInspection }
   | { status: "ready"; inspection: AppendInspection };
 
-export async function planAppend(gateway: WorkbookGateway, tableName: string): Promise<AppendPlan> {
-  const inspection = await gateway.inspectAppend(tableName);
+export async function planAppend(
+  gateway: WorkbookGateway,
+  tableName: string,
+  position: InsertPosition = { kind: "end" }
+): Promise<AppendPlan> {
+  const inspection = await gateway.inspectAppend(tableName, position);
   if (inspection.blockers.length > 0) {
     return { status: "blocked", inspection };
   }
@@ -115,7 +126,8 @@ export async function executeAppend(
     const appended = await gateway.appendRows(
       plan.inspection.tableName,
       rows,
-      plan.inspection.fingerprint
+      plan.inspection.fingerprint,
+      plan.inspection.insertIndex
     );
     return { status: "appended", rows: appended };
   } catch (error) {

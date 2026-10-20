@@ -7,6 +7,8 @@ import {
   MessageBar,
   MessageBarBody,
   MessageBarTitle,
+  Radio,
+  RadioGroup,
   Select,
   Spinner,
   Subtitle2,
@@ -17,7 +19,11 @@ import ConfirmDialog from "./ConfirmDialog";
 import { describeBlocker } from "../../application/blockerMessages";
 import { AppendPlan, executeAppend, planAppend } from "../../application/quoteService";
 import { preferredTable } from "../../application/quoteTableSelection";
-import { QuoteTableInfo, WorkbookGateway } from "../../application/workbookGateway";
+import {
+  InsertPosition,
+  QuoteTableInfo,
+  WorkbookGateway,
+} from "../../application/workbookGateway";
 import {
   DraftError,
   DraftField,
@@ -28,6 +34,8 @@ import {
 import { describeOfficeError } from "../../office/officeErrors";
 import { qualifiedAddress } from "../../shared/a1";
 import { STRINGS } from "../../shared/strings.vi";
+import { useExclusive } from "../useExclusive";
+import { useSelectionChanged } from "../useSelectionChanged";
 
 type Phase =
   | { kind: "idle" }
@@ -71,6 +79,8 @@ const AddWorkItemPanel: React.FC<{
   const [draft, setDraft] = React.useState<WorkItemDraftInput>(EMPTY_DRAFT);
   const [errors, setErrors] = React.useState<DraftError[]>([]);
   const [phase, setPhase] = React.useState<Phase>({ kind: "idle" });
+  const [position, setPosition] = React.useState<InsertPosition["kind"]>("end");
+  const exclusive = useExclusive();
 
   const loadTables = React.useCallback(async () => {
     try {
@@ -86,6 +96,8 @@ const AddWorkItemPanel: React.FC<{
   React.useEffect(() => {
     void loadTables();
   }, [loadTables, tablesVersion]);
+  // Bảng có thể bị đổi tên/xóa khi pane mở; vùng chọn đổi thì chọn sẵn lại bảng chứa nó.
+  useSelectionChanged(() => void loadTables());
 
   const execute = async (plan: AppendPlan, row: (string | number)[]) => {
     setPhase({ kind: "working" });
@@ -115,7 +127,7 @@ const AddWorkItemPanel: React.FC<{
     setErrors([]);
     setPhase({ kind: "working" });
     try {
-      const plan = await planAppend(gateway, tableName);
+      const plan = await planAppend(gateway, tableName, { kind: position });
       if (plan.status === "blocked") {
         setPhase({ kind: "blocked", plan });
       } else if (plan.status === "ready") {
@@ -150,7 +162,7 @@ const AddWorkItemPanel: React.FC<{
           className={styles.root}
           onSubmit={(event) => {
             event.preventDefault();
-            void submit();
+            void exclusive(submit);
           }}
         >
           <Field label={s.table}>
@@ -162,6 +174,16 @@ const AddWorkItemPanel: React.FC<{
                 </option>
               ))}
             </Select>
+          </Field>
+
+          <Field label={s.position} hint={position === "belowSelection" ? s.positionBelowHint : undefined}>
+            <RadioGroup
+              value={position}
+              onChange={(_e, data) => setPosition(data.value as InsertPosition["kind"])}
+            >
+              <Radio value="end" label={s.positionEnd} />
+              <Radio value="belowSelection" label={s.positionBelow} />
+            </RadioGroup>
           </Field>
 
           <div className={styles.grid}>
@@ -236,7 +258,7 @@ const AddWorkItemPanel: React.FC<{
           }
           confirmLabel={s.confirmShift}
           cancelLabel={STRINGS.create.cancel}
-          onConfirm={() => void execute(phase.plan, phase.row)}
+          onConfirm={() => void exclusive(() => execute(phase.plan, phase.row))}
           onCancel={() => setPhase({ kind: "idle" })}
         />
       )}

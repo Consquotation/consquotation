@@ -12,8 +12,12 @@ export interface WorkbookContext {
 
 /** Vị trí ghi đã được cố định sau khi kiểm tra, để bước ghi không phụ thuộc vùng chọn mới. */
 export type TemplateTarget =
-  | { kind: "newSheet" }
+  /** baseName: tên người dùng chọn; add-in thêm (2), (3)… nếu trùng. */
+  | { kind: "newSheet"; baseName: string }
   | { kind: "atCell"; sheetName: string; rowIndex: number; columnIndex: number };
+
+/** Nơi chèn công tác vào bảng báo giá (prompts/06: chèn tại vị trí đã chọn). */
+export type InsertPosition = { kind: "end" } | { kind: "belowSelection" };
 
 export interface OccupiedCells {
   count: number;
@@ -61,7 +65,18 @@ export interface AppendInspection {
   sheetName: string;
   /** Ô có dữ liệu nằm dưới bảng, trong phạm vi cột của bảng — sẽ bị Excel đẩy xuống khi thêm dòng. */
   cellsBelow: OccupiedCells;
-  blockers: (TargetBlocker | { kind: "tableMissing" } | { kind: "headersChanged" })[];
+  blockers: (
+    | TargetBlocker
+    | { kind: "tableMissing" }
+    | { kind: "headersChanged" }
+    /** Chọn "dưới dòng đang chọn" nhưng vùng chọn không nằm trong bảng. */
+    | { kind: "selectionOutsideTable" }
+  )[];
+  /**
+   * Chỉ số (tính từ 0, trong phần dữ liệu của bảng) mà dòng mới sẽ chiếm; null = cuối bảng.
+   * Cố định lúc kiểm tra để bước ghi không phụ thuộc vùng chọn mới.
+   */
+  insertIndex: number | null;
   fingerprint: string;
 }
 
@@ -93,11 +108,13 @@ export interface WorkbookGateway {
   listQuoteTables(): Promise<QuoteTableInfo[]>;
   /** Kích hoạt sheet và chọn bảng (chỉ điều hướng, không ghi dữ liệu). */
   selectQuoteTable(tableName: string): Promise<void>;
-  inspectAppend(tableName: string): Promise<AppendInspection>;
+  inspectAppend(tableName: string, position: InsertPosition): Promise<AppendInspection>;
+  /** Chèn dòng tại insertIndex đã kiểm tra (null = cuối bảng); kiểm tra lại vân tay trong cùng batch. */
   appendRows(
     tableName: string,
     rows: (string | number)[][],
-    expectedFingerprint: string
+    expectedFingerprint: string,
+    insertIndex: number | null
   ): Promise<AppendedRows>;
 }
 

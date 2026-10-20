@@ -127,6 +127,8 @@ export const STRINGS = {
     placement: "Vị trí tạo",
     newSheet: "Sheet mới (khuyến nghị — không ảnh hưởng dữ liệu có sẵn)",
     atSelection: "Tại ô đang chọn trên sheet hiện tại",
+    sheetName: "Tên sheet mới",
+    sheetNameHint: "Nếu trùng tên sheet có sẵn, add-in tự thêm (2), (3)…",
     initialRows: "Số dòng công tác ban đầu",
     submit: "Tạo bảng báo giá",
     working: "Đang kiểm tra và tạo…",
@@ -170,6 +172,10 @@ export const STRINGS = {
     notes: "Ghi chú",
     numberHint:
       "Để trống nếu chưa có. Dùng . hoặc , làm dấu thập phân, không dùng dấu phân cách hàng nghìn.",
+    position: "Vị trí chèn",
+    positionEnd: "Cuối bảng",
+    positionBelow: "Ngay dưới dòng đang chọn trong bảng",
+    positionBelowHint: "Chọn một ô trong bảng báo giá trên Excel trước khi bấm Thêm.",
     submit: "Thêm vào bảng",
     working: "Đang thêm…",
     confirmShiftTitle: "Dữ liệu bên dưới bảng sẽ bị đẩy xuống",
@@ -196,5 +202,7 @@ export const STRINGS = {
       "Bảng không còn tồn tại (có thể vừa bị đổi tên hoặc xóa). Tải lại danh sách bảng.",
     headersChanged:
       "Tiêu đề cột của bảng đã bị đổi so với mẫu nên add-in không chắc ghi đúng cột. Khôi phục tiêu đề cột hoặc gõ trực tiếp trong Excel.",
+    selectionOutsideTable:
+      "Vùng đang chọn không nằm trong bảng đã chọn. Chọn một ô trong bảng trên Excel, hoặc chọn vị trí Cuối bảng.",
   },
 } as const;

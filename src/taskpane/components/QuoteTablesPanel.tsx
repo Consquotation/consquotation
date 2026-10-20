@@ -14,6 +14,7 @@ import {
 import { QuoteTableInfo, WorkbookGateway } from "../../application/workbookGateway";
 import { describeOfficeError } from "../../office/officeErrors";
 import { STRINGS } from "../../shared/strings.vi";
+import { useSelectionChanged } from "../useSelectionChanged";
 
 type ListState =
   | { kind: "loading" }
@@ -43,18 +44,26 @@ const QuoteTablesPanel: React.FC<{ gateway: WorkbookGateway; version: number }> 
   const [state, setState] = React.useState<ListState>({ kind: "loading" });
   const [goError, setGoError] = React.useState<string | null>(null);
 
-  const load = React.useCallback(async () => {
-    setState({ kind: "loading" });
-    try {
-      setState({ kind: "ready", tables: await gateway.listQuoteTables() });
-    } catch (error) {
-      setState({ kind: "error", message: describeOfficeError(error) });
-    }
-  }, [gateway]);
+  // silent: làm mới nền (khi đổi vùng chọn/sheet) — giữ danh sách cũ trên màn hình, không nhấp nháy.
+  const load = React.useCallback(
+    async (silent = false) => {
+      if (!silent) {
+        setState({ kind: "loading" });
+      }
+      try {
+        setState({ kind: "ready", tables: await gateway.listQuoteTables() });
+      } catch (error) {
+        setState({ kind: "error", message: describeOfficeError(error) });
+      }
+    },
+    [gateway]
+  );
 
   React.useEffect(() => {
     void load();
   }, [load, version]);
+  // Sheet/bảng có thể bị đổi tên hoặc xóa trong lúc pane mở (prompts/06).
+  useSelectionChanged(() => void load(true));
 
   const goTo = async (tableName: string) => {
     setGoError(null);

@@ -12,17 +12,13 @@ import {
 import InfoList from "./InfoList";
 import { WorkbookContext, WorkbookGateway } from "../../application/workbookGateway";
 import { describeOfficeError } from "../../office/officeErrors";
-import { subscribeSelectionChanged } from "../../office/selectionEvents";
 import { STRINGS } from "../../shared/strings.vi";
-
-/* global clearTimeout, setTimeout */
+import { useSelectionChanged } from "../useSelectionChanged";
 
 type ContextState =
   | { kind: "loading" }
   | { kind: "ready"; context: WorkbookContext }
   | { kind: "error"; message: string };
-
-const REFRESH_DEBOUNCE_MS = 300;
 
 const useStyles = makeStyles({
   root: { display: "flex", flexDirection: "column", rowGap: tokens.spacingVerticalS },
@@ -42,21 +38,9 @@ function useWorkbookContext(gateway: WorkbookGateway) {
   }, [gateway]);
 
   React.useEffect(() => {
-    let timer: ReturnType<typeof setTimeout> | undefined;
     void refresh();
-    const unsubscribe = subscribeSelectionChanged(() => {
-      if (timer) {
-        clearTimeout(timer);
-      }
-      timer = setTimeout(() => void refresh(), REFRESH_DEBOUNCE_MS);
-    });
-    return () => {
-      if (timer) {
-        clearTimeout(timer);
-      }
-      unsubscribe();
-    };
   }, [refresh]);
+  useSelectionChanged(() => void refresh());
 
   return { state, refresh };
 }

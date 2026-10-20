@@ -20,5 +20,7 @@ export function describeBlocker(blocker: AnyBlocker): string {
       return s.tableMissing;
     case "headersChanged":
       return s.headersChanged;
+    case "selectionOutsideTable":
+      return s.selectionOutsideTable;
   }
 }

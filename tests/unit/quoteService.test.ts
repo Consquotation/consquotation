@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { executeAppend, executeTemplate, planAppend, planTemplate } from "../../src/application/quoteService";
 import {
   AppendInspection,
+  InsertPosition,
   TargetChangedError,
   TargetInspection,
   TemplateTarget,
@@ -11,13 +12,16 @@ import {
 /** Excel giả lập: ghi lại mọi lần gọi ghi để kiểm chứng "không ghi khi chưa xác nhận". */
 class FakeGateway implements WorkbookGateway {
   writes: { target: TemplateTarget; initialRows: number; fingerprint: string }[] = [];
-  appends: { tableName: string; rows: (string | number)[][] }[] = [];
+  appends: { tableName: string; rows: (string | number)[][]; insertIndex: number | null }[] = [];
+  inspectedPositions: InsertPosition[] = [];
+  inspectedNewSheetNames: string[] = [];
   selectionInspection: TargetInspection = inspection({ kind: "atCell", sheetName: "Sheet1", rowIndex: 1, columnIndex: 1 });
   appendInspection: AppendInspection = {
     tableName: "CQ_Quote_1",
     sheetName: "Báo giá",
     cellsBelow: { count: 0, sample: [] },
     blockers: [],
+    insertIndex: null,
     fingerprint: "fp-append",
   };
   /** Mô phỏng người dùng sửa sheet trong lúc hộp xác nhận đang mở. */
@@ -30,6 +34,9 @@ class FakeGateway implements WorkbookGateway {
     return this.selectionInspection;
   }
   async inspectTarget(target: TemplateTarget) {
+    if (target.kind === "newSheet") {
+      this.inspectedNewSheetNames.push(target.baseName);
+    }
     return target.kind === "newSheet" ? inspection(target, "Báo giá", "A1:I16") : this.selectionInspection;
   }
   async writeTemplate(target: TemplateTarget, initialRows: number, fingerprint: string) {
@@ -43,14 +50,20 @@ class FakeGateway implements WorkbookGateway {
     return [];
   }
   async selectQuoteTable() {}
-  async inspectAppend() {
+  async inspectAppend(_tableName: string, position: InsertPosition) {
+    this.inspectedPositions.push(position);
     return this.appendInspection;
   }
-  async appendRows(tableName: string, rows: (string | number)[][]) {
+  async appendRows(
+    tableName: string,
+    rows: (string | number)[][],
+    _fingerprint: string,
+    insertIndex: number | null
+  ) {
     if (this.changedBeforeWrite) {
       throw new TargetChangedError();
     }
-    this.appends.push({ tableName, rows });
+    this.appends.push({ tableName, rows, insertIndex });
     return { tableName, sheetName: "Báo giá", address: "A16:I16" };
   }
 }
@@ -147,7 +160,7 @@ describe("planAppend / executeAppend", () => {
     expect(plan.status).toBe("ready");
     const result = await executeAppend(gateway, plan, [row], { shift: false });
     expect(result.status).toBe("appended");
-    expect(gateway.appends).toEqual([{ tableName: "CQ_Quote_1", rows: [row] }]);
+    expect(gateway.appends).toEqual([{ tableName: "CQ_Quote_1", rows: [row], insertIndex: null }]);
   });
 
   it("có dữ liệu bên dưới bảng: cần xác nhận đẩy xuống", async () => {
@@ -175,5 +188,43 @@ describe("planAppend / executeAppend", () => {
     gateway.changedBeforeWrite = true;
     expect((await executeAppend(gateway, plan, [row], { shift: false })).status).toBe("changed");
     expect(gateway.appends).toHaveLength(0);
+  });
+});
+
+describe("prompts/06: tên sheet và vị trí chèn", () => {
+  it("sheet mới dùng tên người dùng chọn; mặc định là 'Báo giá'", async () => {
+    const gateway = new FakeGateway();
+    await planTemplate(gateway, "newSheet", 5, "Báo giá nhà xưởng");
+    await planTemplate(gateway, "newSheet", 5);
+    expect(gateway.inspectedNewSheetNames).toEqual(["Báo giá nhà xưởng", "Báo giá"]);
+  });
+
+  it("chèn dưới dòng đang chọn: hỏi đúng vị trí và ghi tại insertIndex đã cố định lúc kiểm tra", async () => {
+    const gateway = new FakeGateway();
+    gateway.appendInspection = { ...gateway.appendInspection, insertIndex: 2 };
+    const plan = await planAppend(gateway, "CQ_Quote_1", { kind: "belowSelection" });
+    expect(gateway.inspectedPositions).toEqual([{ kind: "belowSelection" }]);
+    // Người dùng click chỗ khác trước khi ghi — vị trí ghi vẫn là vị trí đã kiểm tra.
+    gateway.appendInspection = { ...gateway.appendInspection, insertIndex: 7 };
+    await executeAppend(gateway, plan, [["x"]], { shift: false });
+    expect(gateway.appends[0].insertIndex).toBe(2);
+  });
+
+  it("vùng chọn ngoài bảng khi chọn 'dưới dòng đang chọn': chặn, không ghi", async () => {
+    const gateway = new FakeGateway();
+    gateway.appendInspection = {
+      ...gateway.appendInspection,
+      blockers: [{ kind: "selectionOutsideTable" }],
+    };
+    const plan = await planAppend(gateway, "CQ_Quote_1", { kind: "belowSelection" });
+    expect(plan.status).toBe("blocked");
+    await expect(executeAppend(gateway, plan, [["x"]], { shift: true })).rejects.toThrow();
+    expect(gateway.appends).toHaveLength(0);
+  });
+
+  it("mặc định chèn cuối bảng", async () => {
+    const gateway = new FakeGateway();
+    await planAppend(gateway, "CQ_Quote_1");
+    expect(gateway.inspectedPositions).toEqual([{ kind: "end" }]);
   });
 });
