@@ -1,4 +1,4 @@
-import { QuoteTableInfo } from "./workbookGateway";
+import { InsertPosition, QuoteTableInfo } from "./workbookGateway";
 
 /**
  * Chọn sẵn bảng cho "Thêm công tác": ưu tiên bảng đang chứa vùng chọn trong Excel,
@@ -11,4 +11,12 @@ export function preferredTable(list: readonly QuoteTableInfo[], current: string)
     (list.find((t) => t.headersMatch) ?? list[0])?.tableName ??
     ""
   );
+}
+
+/**
+ * Vị trí chèn mặc định: người dùng đang chọn một ô trong bảng thì chèn ngay dưới dòng đó
+ * (prompts/06: chèn công tác tại vị trí đã chọn); không thì chèn cuối bảng.
+ */
+export function defaultInsertPosition(table: QuoteTableInfo | undefined): InsertPosition["kind"] {
+  return table?.containsSelection ? "belowSelection" : "end";
 }

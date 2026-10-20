@@ -175,7 +175,11 @@ export const STRINGS = {
     position: "Vị trí chèn",
     positionEnd: "Cuối bảng",
     positionBelow: "Ngay dưới dòng đang chọn trong bảng",
-    positionBelowHint: "Chọn một ô trong bảng báo giá trên Excel trước khi bấm Thêm.",
+    positionBelowHint:
+      "Vùng đang chọn không nằm trong bảng này. Chọn một ô trong bảng trên Excel, hoặc chọn Cuối bảng.",
+    positionBelowAt: (row: number) =>
+      `Sẽ chèn ngay dưới hàng ${row} (dòng đang chọn). Chọn ở hàng tiêu đề → chèn lên đầu bảng; chọn ở dòng tổng → chèn cuối bảng.`,
+    positionEndHint: "Sẽ chèn vào cuối bảng, ngay trên dòng Tổng cộng.",
     submit: "Thêm vào bảng",
     working: "Đang thêm…",
     confirmShiftTitle: "Dữ liệu bên dưới bảng sẽ bị đẩy xuống",

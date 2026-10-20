@@ -39,6 +39,7 @@ Bổ sung cho [phase-2-checklist.md](phase-2-checklist.md), vốn đã kiểm th
 | W12 | Có dữ liệu dưới bảng; chọn ô trong bảng, chèn để hiện hộp xác nhận đẩy xuống; click sang ô khác trong Excel; rồi bấm **Vẫn thêm dòng** | Dòng mới vẫn chèn đúng vị trí đã kiểm tra lúc đầu | Đạt (2026-10-20, tự động) |
 | W13 | Gõ `X` vào ô ngay bên phải bảng (cùng hàng với dòng 2), rồi chèn dưới dòng 2 | Excel tự nới Table thêm cột `Column1` chứa `X`; add-in **vẫn thêm được** công tác (ghi theo tên cột, để trống cột người dùng tự thêm) | Đạt (2026-10-20, tự động) |
 
+| W19 | Chọn một ô ở dòng 2 của bảng, mở tab Báo giá, **không đổi** Vị trí chèn, thêm công tác; sau đó click ra ngoài bảng | Vị trí tự chọn "Ngay dưới dòng đang chọn" kèm chú thích "Sẽ chèn ngay dưới hàng N"; dòng mới nằm ngay dưới dòng 2. Click ra ngoài bảng thì vị trí tự về "Cuối bảng" | Đạt (2026-10-20, tự động) |
 | W18 | Gõ `X` vào ô ngay dưới mép vùng mẫu (ví dụ A17 khi vùng là A1:I16) và các ô sát 4 cạnh, rồi tạo bảng tại A1 (Ghi đè) | **Mọi** ô kiểm chứng giữ nguyên vị trí, kể cả ô ngay dưới dòng tổng | Đạt (2026-10-20, tự động) |
 
 ## Sheet hoặc bảng bị đổi/xóa trong lúc task pane mở
@@ -61,3 +62,7 @@ Bổ sung cho [phase-2-checklist.md](phase-2-checklist.md), vốn đã kiểm th
    - Hiện tượng: gõ vào ô ngay bên phải bảng làm Excel tự thêm cột `Column1`. Sau đó add-in báo "Tiêu đề cột đã bị đổi" và chặn thao tác thêm.
    - Cách sửa: bảng hợp lệ khi có đủ 9 cột mẫu, mỗi tên đúng một lần. Dữ liệu được ghi theo tên cột; cột do người dùng thêm để trống.
    - Kiểm chứng: bước W13.
+3. **Chèn công tác vẫn vào cuối bảng dù đang chọn một dòng** (người dùng báo, 2026-10-20).
+   - Nguyên nhân: Vị trí chèn mặc định là "Cuối bảng"; phải tự đổi sang "Ngay dưới dòng đang chọn" mới chèn đúng chỗ.
+   - Cách sửa: vị trí chèn tự đi theo vùng chọn (chọn ô trong bảng → ngay dưới dòng đó; ngoài bảng → cuối bảng), kèm chú thích hàng sẽ chèn.
+   - Kiểm chứng: bước W19.

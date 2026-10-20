@@ -549,7 +549,8 @@ export class ExcelWorkbookGateway implements WorkbookGateway {
       await context.sync();
 
       // Bảng nào chứa vùng đang chọn — để form "Thêm công tác" chọn sẵn (prompts/05: không bắt nhập lại).
-      const containing = new Set<string>();
+      // Hàng cuối của vùng chọn nằm trong bảng — để form hiển thị "sẽ chèn dưới hàng N".
+      const selectedRows = new Map<string, number>();
       const selection = await loadSelection(context);
       if (selection) {
         const checks = quoteTables
@@ -557,11 +558,15 @@ export class ExcelWorkbookGateway implements WorkbookGateway {
           .map((t) => {
             const table = context.workbook.tables.getItem(t.name);
             const intersection = table.getRange().getIntersectionOrNullObject(selection.range);
-            intersection.load("address");
+            intersection.load("rowIndex,rowCount");
             return { name: t.name, intersection };
           });
         await context.sync();
-        checks.filter((c) => !c.intersection.isNullObject).forEach((c) => containing.add(c.name));
+        checks
+          .filter((c) => !c.intersection.isNullObject)
+          .forEach((c) =>
+            selectedRows.set(c.name, c.intersection.rowIndex + c.intersection.rowCount)
+          );
       }
 
       return quoteTables.map((t) => ({
@@ -569,7 +574,8 @@ export class ExcelWorkbookGateway implements WorkbookGateway {
         sheetName: t.sheet.name,
         dataRowCount: t.rows.count,
         headersMatch: hasQuoteHeaders((t.header.values[0] ?? []).map((v) => String(v))),
-        containsSelection: containing.has(t.name),
+        containsSelection: selectedRows.has(t.name),
+        selectedSheetRow: selectedRows.get(t.name) ?? null,
       }));
     });
   }

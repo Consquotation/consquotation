@@ -1,7 +1,7 @@
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import { TAB_VIEWS, parseInitialView } from "../../src/taskpane/navigation";
-import { preferredTable } from "../../src/application/quoteTableSelection";
+import { defaultInsertPosition, preferredTable } from "../../src/application/quoteTableSelection";
 import { QuoteTableInfo } from "../../src/application/workbookGateway";
 
 describe("parseInitialView", () => {
@@ -56,6 +56,7 @@ describe("preferredTable", () => {
     dataRowCount: 1,
     headersMatch: true,
     containsSelection: false,
+    selectedSheetRow: null,
     ...extra,
   });
 
@@ -70,5 +71,18 @@ describe("preferredTable", () => {
   it("mặc định chọn bảng đúng mẫu đầu tiên; danh sách rỗng → chuỗi rỗng", () => {
     expect(preferredTable([table("A", { headersMatch: false }), table("B")], "")).toBe("B");
     expect(preferredTable([], "A")).toBe("");
+  });
+});
+
+describe("defaultInsertPosition", () => {
+  const base = { tableName: "A", sheetName: "S", dataRowCount: 3, headersMatch: true };
+
+  it("đang chọn ô trong bảng → chèn ngay dưới dòng đang chọn", () => {
+    expect(defaultInsertPosition({ ...base, containsSelection: true, selectedSheetRow: 13 })).toBe("belowSelection");
+  });
+
+  it("vùng chọn ngoài bảng hoặc chưa có bảng → cuối bảng", () => {
+    expect(defaultInsertPosition({ ...base, containsSelection: false, selectedSheetRow: null })).toBe("end");
+    expect(defaultInsertPosition(undefined)).toBe("end");
   });
 });

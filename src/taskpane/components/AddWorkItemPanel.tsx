@@ -18,7 +18,7 @@ import {
 import ConfirmDialog from "./ConfirmDialog";
 import { describeBlocker } from "../../application/blockerMessages";
 import { AppendPlan, executeAppend, planAppend } from "../../application/quoteService";
-import { preferredTable } from "../../application/quoteTableSelection";
+import { defaultInsertPosition, preferredTable } from "../../application/quoteTableSelection";
 import {
   InsertPosition,
   QuoteTableInfo,
@@ -81,12 +81,17 @@ const AddWorkItemPanel: React.FC<{
   const [phase, setPhase] = React.useState<Phase>({ kind: "idle" });
   const [position, setPosition] = React.useState<InsertPosition["kind"]>("end");
   const exclusive = useExclusive();
+  const tableNameRef = React.useRef(tableName);
+  tableNameRef.current = tableName;
 
   const loadTables = React.useCallback(async () => {
     try {
       const list = await gateway.listQuoteTables();
+      const next = preferredTable(list, tableNameRef.current);
       setTables(list);
-      setTableName((current) => preferredTable(list, current));
+      setTableName(next);
+      // Mỗi khi vùng chọn đổi: đang chọn ô trong bảng → chèn ngay dưới dòng đó; không thì cuối bảng.
+      setPosition(defaultInsertPosition(list.find((t) => t.tableName === next)));
     } catch (error) {
       setTables([]);
       setPhase({ kind: "error", message: describeOfficeError(error) });
@@ -142,6 +147,15 @@ const AddWorkItemPanel: React.FC<{
 
   const errorFor = (field: DraftField) => errors.find((e) => e.field === field)?.message;
 
+  // Cho người dùng thấy trước dòng mới sẽ nằm ở đâu (prompts/05: hiển thị rõ vị trí ghi).
+  const selectedTable = tables?.find((t) => t.tableName === tableName);
+  const positionHint: { kind: "hint" | "warning"; text: string } =
+    position === "end"
+      ? { kind: "hint", text: s.positionEndHint }
+      : selectedTable?.selectedSheetRow
+        ? { kind: "hint", text: s.positionBelowAt(selectedTable.selectedSheetRow) }
+        : { kind: "warning", text: s.positionBelowHint };
+
   return (
     <section className={styles.root} aria-labelledby="cq-append-title">
       <Subtitle2 as="h2" id="cq-append-title" tabIndex={-1}>
@@ -166,7 +180,13 @@ const AddWorkItemPanel: React.FC<{
           }}
         >
           <Field label={s.table}>
-            <Select value={tableName} onChange={(_e, data) => setTableName(data.value)}>
+            <Select
+              value={tableName}
+              onChange={(_e, data) => {
+                setTableName(data.value);
+                setPosition(defaultInsertPosition(tables.find((t) => t.tableName === data.value)));
+              }}
+            >
               {tables.map((t) => (
                 <option key={t.tableName} value={t.tableName}>
                   {s.tableOption(t.tableName, t.sheetName, t.dataRowCount)}
@@ -176,7 +196,12 @@ const AddWorkItemPanel: React.FC<{
             </Select>
           </Field>
 
-          <Field label={s.position} hint={position === "belowSelection" ? s.positionBelowHint : undefined}>
+          <Field
+            label={s.position}
+            hint={positionHint.kind === "hint" ? positionHint.text : undefined}
+            validationState={positionHint.kind === "warning" ? "warning" : "none"}
+            validationMessage={positionHint.kind === "warning" ? positionHint.text : undefined}
+          >
             <RadioGroup
               value={position}
               onChange={(_e, data) => setPosition(data.value as InsertPosition["kind"])}

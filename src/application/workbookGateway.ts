@@ -58,6 +58,8 @@ export interface QuoteTableInfo {
   headersMatch: boolean;
   /** Vùng đang chọn trong Excel nằm trong bảng này. */
   containsSelection: boolean;
+  /** Số hàng trên sheet (tính từ 1) của hàng cuối vùng chọn nằm trong bảng; null nếu không nằm trong bảng. */
+  selectedSheetRow: number | null;
 }
 
 export interface AppendInspection {
