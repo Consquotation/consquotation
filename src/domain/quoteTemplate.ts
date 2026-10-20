@@ -135,10 +135,30 @@ export function buildQuoteLayout(initialRows: number): QuoteLayout {
   };
 }
 
-/** Kiểm tra Table có đúng các cột mẫu theo thứ tự (người dùng có thể đã đổi tên cột). */
+/**
+ * Bảng vẫn dùng được khi có đủ 9 cột mẫu, mỗi tên đúng một lần. Cho phép người dùng thêm cột
+ * riêng hoặc đổi thứ tự cột — Excel tự nới Table khi gõ vào ô ngay bên phải bảng.
+ * Không dùng được khi một cột mẫu bị đổi tên/xóa hoặc bị trùng tên.
+ */
 export function hasQuoteHeaders(headers: readonly string[]): boolean {
-  return (
-    headers.length === QUOTE_COLUMNS.length &&
-    QUOTE_COLUMNS.every((column, index) => headers[index] === column.header)
+  return QUOTE_COLUMNS.every(
+    (column) => headers.filter((header) => header === column.header).length === 1
   );
+}
+
+/**
+ * Sắp một dòng giá trị theo thứ tự QUOTE_COLUMNS sang đúng thứ tự cột thực tế của bảng
+ * (khớp theo tên cột); cột người dùng tự thêm được để trống. Trả về null nếu thiếu cột mẫu.
+ */
+export function alignRowToHeaders(
+  headers: readonly string[],
+  templateRow: readonly (string | number)[]
+): (string | number)[] | null {
+  if (!hasQuoteHeaders(headers) || templateRow.length !== QUOTE_COLUMNS.length) {
+    return null;
+  }
+  return headers.map((header) => {
+    const index = QUOTE_COLUMNS.findIndex((column) => column.header === header);
+    return index >= 0 ? templateRow[index] : "";
+  });
 }

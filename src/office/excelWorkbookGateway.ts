@@ -25,6 +25,7 @@ import { isQuoteTableName, uniqueQuoteTableName, uniqueSheetName } from "../doma
 import {
   QUOTE_COLUMNS,
   QUOTE_TITLE,
+  alignRowToHeaders,
   buildQuoteLayout,
   hasQuoteHeaders,
   quoteColumnFormulas,
@@ -487,7 +488,23 @@ export class ExcelWorkbookGateway implements WorkbookGateway {
         }
       });
 
+      // Bật dòng tổng: Excel CHÈN một hàng dưới bảng (trong phạm vi cột của bảng) và đẩy mọi ô
+      // bên dưới xuống 1 hàng, kể cả khi hàng đó trống (đã kiểm chứng trên Excel 16.0.20430).
+      // Hàng bị đẩy xuống ngay dưới dòng tổng là hàng cuối của vùng mẫu (đã xóa trống ở trên);
+      // xóa nó và kéo ô bên dưới lên để dữ liệu ngoài vùng mẫu về đúng vị trí cũ (prompts/06).
       table.showTotals = true;
+      await context.sync();
+      const pushedDown = at(layout.totalRow + 1, 0, 1, layout.columnCount);
+      pushedDown.load("formulas");
+      await context.sync();
+      if (!(pushedDown.formulas as unknown[][]).every((row) => row.every(isEmptyCell))) {
+        // Không phải hàng trống của vùng mẫu như dự kiến: không xóa gì, báo lỗi để người dùng kiểm tra.
+        throw new Error(
+          "Excel đã chèn dòng tổng nhưng hàng ngay bên dưới không trống như dự kiến; add-in dừng lại và không xóa gì thêm."
+        );
+      }
+      pushedDown.delete(Excel.DeleteShiftDirection.up);
+
       const totalRow = table.getTotalRowRange();
       totalRow.formulas = [totalRowFormulas(tableName)];
       totalRow.numberFormat = [QUOTE_COLUMNS.map((c) => c.numberFormat ?? "General")];
@@ -592,12 +609,20 @@ export class ExcelWorkbookGateway implements WorkbookGateway {
       }
       const before = table.getDataBodyRange();
       before.load("rowCount");
+      const header = table.getHeaderRowRange();
+      header.load("values");
       await context.sync();
       if (insertIndex !== null && (insertIndex < 0 || insertIndex > before.rowCount)) {
         throw new TargetChangedError();
       }
+      // Ghi theo tên cột: bảng có thể có thêm cột của người dùng hoặc đã đổi thứ tự cột.
+      const headers = (header.values[0] ?? []).map((v) => String(v));
+      const aligned = rows.map((row) => alignRowToHeaders(headers, row));
+      if (aligned.some((row) => row === null)) {
+        throw new TargetChangedError();
+      }
 
-      table.rows.add(insertIndex ?? undefined, rows);
+      table.rows.add(insertIndex ?? undefined, aligned as (string | number)[][]);
       const body = table.getDataBodyRange();
       body.load("rowIndex,columnIndex,rowCount,columnCount");
       await context.sync();

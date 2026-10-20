@@ -5,6 +5,7 @@ import {
   QUOTE_COLUMNS,
   buildQuoteLayout,
   clampInitialRows,
+  alignRowToHeaders,
   hasQuoteHeaders,
   quoteColumnFormulas,
   totalRowFormulas,
@@ -82,11 +83,36 @@ describe("công thức", () => {
 });
 
 describe("hasQuoteHeaders", () => {
-  it("chấp nhận đúng tiêu đề mẫu, từ chối khi bị đổi tên hoặc đổi thứ tự", () => {
-    const headers = QUOTE_COLUMNS.map((c) => c.header);
+  const headers = QUOTE_COLUMNS.map((c) => c.header);
+
+  it("chấp nhận đủ 9 cột mẫu, kể cả khi có thêm cột của người dùng hoặc đổi thứ tự", () => {
     expect(hasQuoteHeaders(headers)).toBe(true);
+    // Excel tự nới Table khi gõ vào ô ngay bên phải bảng → thêm "Column1".
+    expect(hasQuoteHeaders([...headers, "Column1"])).toBe(true);
+    expect(hasQuoteHeaders([headers[1], headers[0], ...headers.slice(2)])).toBe(true);
+  });
+
+  it("từ chối khi cột mẫu bị đổi tên, bị xóa hoặc bị trùng", () => {
     expect(hasQuoteHeaders([...headers.slice(0, 8), "Note"])).toBe(false);
-    expect(hasQuoteHeaders([headers[1], headers[0], ...headers.slice(2)])).toBe(false);
     expect(hasQuoteHeaders(headers.slice(0, 8))).toBe(false);
+    expect(hasQuoteHeaders([...headers, "Ghi chú"])).toBe(false);
+  });
+});
+
+describe("alignRowToHeaders", () => {
+  const headers = QUOTE_COLUMNS.map((c) => c.header);
+  const row = ["stt", "code", "group", "desc", "unit", 1, 2, "amount", "notes"];
+
+  it("giữ nguyên khi bảng đúng mẫu", () => {
+    expect(alignRowToHeaders(headers, row)).toEqual(row);
+  });
+
+  it("để trống cột người dùng tự thêm và khớp theo tên khi đổi thứ tự", () => {
+    const custom = ["Column1", ...headers.slice().reverse()];
+    expect(alignRowToHeaders(custom, row)).toEqual(["", ...row.slice().reverse()]);
+  });
+
+  it("trả về null khi thiếu cột mẫu", () => {
+    expect(alignRowToHeaders(headers.slice(1), row)).toBeNull();
   });
 });
