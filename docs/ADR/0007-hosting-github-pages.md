@@ -42,9 +42,22 @@ ADR-0005 yêu cầu host file tĩnh trên HTTPS với **origin cố định và 
 
 ## Cần xác minh
 
-- [ ] Workflow deploy thành công; `taskpane.html`, `help.html`, icon và `manifest.prod.xml` trả về HTTP 200 qua HTTPS.
+- [x] Workflow deploy thành công; `taskpane.html`, `help.html`, icon và `manifest.prod.xml` trả về HTTP 200 qua HTTPS.
 - [ ] Cài `manifest.prod.xml` vào Excel trên Windows; tab và task pane hoạt động từ GitHub Pages.
-- [ ] Header `Cache-Control` của icon không chứa `no-cache` / `no-store`.
+- [x] Header `Cache-Control` của icon không chứa `no-cache` / `no-store`.
+
+## Kết quả xác minh
+
+**2026-10-20:**
+
+- Tổ chức `Consquotation`, repo public `Consquotation/consquotation`. URL production: `https://consquotation.github.io/consquotation/`.
+- Lần deploy đầu bị từ chối với thông báo *Branch "master" is not allowed to deploy to github-pages due to environment protection rules*. Nguyên nhân: khi bật Pages trên repo còn trống, GitHub tạo environment `github-pages` chỉ cho phép nhánh `main`. Cách sửa đã áp dụng: thêm quy tắc nhánh `master` vào environment, rồi chạy lại job deploy, lần này thành công.
+- Sau khi deploy:
+  - `taskpane.html`, `help.html`, `compat-gate.js`, `commands.html`, `taskpane.js`, icon và `manifest.prod.xml` đều trả HTTP 200 qua HTTPS.
+  - Truy cập bằng HTTP bị chuyển hướng 301 sang HTTPS.
+  - Icon có header `Cache-Control: max-age=600`.
+  - `manifest.prod.xml` không chứa `localhost`.
+- Lịch sử commit dùng email ẩn danh của GitHub (`…@users.noreply.github.com`) để không lộ email cá nhân trên repo public.
 
 ## Nguồn
 

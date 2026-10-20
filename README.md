@@ -77,4 +77,7 @@ Hướng dẫn đầy đủ (chứng chỉ HTTPS, Excel trên web, xóa cache, m
 
 Bản production được host trên GitHub Pages của một GitHub Organization dành riêng ([ADR-0007](docs/ADR/0007-hosting-github-pages.md)), deploy tự động bằng GitHub Actions khi push lên `master`. Hướng dẫn: [docs/DEPLOY.md](docs/DEPLOY.md).
 
-Trạng thái: workflow đã sẵn sàng, **chưa deploy** (chưa có repo GitHub).
+- Repo: https://github.com/Consquotation/consquotation
+- Địa chỉ production: https://consquotation.github.io/consquotation/
+- Manifest production: https://consquotation.github.io/consquotation/manifest.prod.xml
+- Trạng thái: đã deploy (2026-10-20); chưa thử cài bản production vào Excel.

@@ -14,7 +14,9 @@ URL production: `https://<to-chuc>.github.io/consquotation/`
 4. **Đặt biến URL production:** repo › **Settings** › **Secrets and variables** › **Actions** › tab **Variables** › **New repository variable**:
    - Name: `CQ_PROD_URL`
    - Value: `https://<to-chuc>.github.io/consquotation/`
-5. Không bật Pages cho repo nào khác trong tổ chức này, để origin luôn dành riêng.
+5. **Cho phép nhánh `master` deploy:** repo › **Settings** › **Environments** › `github-pages` › **Deployment branches and tags** › **Add deployment branch or tag rule**, nhập `master`, rồi bấm **Add rule**. Khi bật Pages trên repo trống, GitHub chỉ cho phép nhánh `main`; thiếu bước này thì job deploy bị từ chối.
+6. Không bật Pages cho repo nào khác trong tổ chức này, để origin luôn dành riêng.
+7. Repo public sẽ hiện email tác giả commit. Nên dùng email ẩn danh của GitHub: `git config user.email "<id>+<tài-khoản>@users.noreply.github.com"`.
 
 ## 2. Đẩy mã nguồn
 
