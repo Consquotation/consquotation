@@ -4,17 +4,19 @@
   - Trỏ tới webpack dev server trên máy (cổng 3000).
   - Manifest production được sinh khi build production bằng cách thay URL dev
     bằng biến môi trường CQ_PROD_URL (xem webpack.config.js, ADR-0005).
+  - Bản dev có Id và tên riêng ("ConsQuotation (Dev)") để cài song song với bản production;
+    build production thay về Id và tên chính thức.
 -->
 <OfficeApp xmlns="http://schemas.microsoft.com/office/appforoffice/1.1"
   xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
   xmlns:bt="http://schemas.microsoft.com/office/officeappbasictypes/1.0"
   xmlns:ov="http://schemas.microsoft.com/office/taskpaneappversionoverrides" xsi:type="TaskPaneApp">
-  <Id>33062f3c-8903-4bb1-b8f1-ba7907ac7632</Id>
+  <Id>03040238-2423-498b-b0fe-30f0425b2ed2</Id>
   <!-- Trình kiểm tra manifest yêu cầu Version >= 1.0; tăng phiên bản này mỗi lần phát hành manifest mới. -->
   <Version>1.0.0.0</Version>
   <ProviderName>ConsQuotation</ProviderName>
   <DefaultLocale>vi-VN</DefaultLocale>
-  <DisplayName DefaultValue="ConsQuotation"/>
+  <DisplayName DefaultValue="ConsQuotation (Dev)"/>
   <Description DefaultValue="Lập báo giá thi công xây dựng ngay trong Excel, với thư viện công tác và đơn giá do chính bạn quản lý."/>
   <IconUrl DefaultValue="https://localhost:3000/assets/icon-32.png"/>
   <HighResolutionIconUrl DefaultValue="https://localhost:3000/assets/icon-64.png"/>
@@ -80,7 +82,7 @@
         <bt:Url id="Taskpane.Url" DefaultValue="https://localhost:3000/taskpane.html"/>
       </bt:Urls>
       <bt:ShortStrings>
-        <bt:String id="CQ.Tab.Label" DefaultValue="ConsQuotation"/>
+        <bt:String id="CQ.Tab.Label" DefaultValue="ConsQuotation (Dev)"/>
         <bt:String id="CQ.Group.Main.Label" DefaultValue="Báo giá"/>
         <bt:String id="CQ.OpenTaskpane.Label" DefaultValue="Mở ConsQuotation"/>
       </bt:ShortStrings>

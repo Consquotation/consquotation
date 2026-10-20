@@ -42,7 +42,7 @@ Mở trong trình duyệt. Tất cả phải hiển thị qua HTTPS:
 
 ## 4. Cài add-in bản production vào Excel
 
-Trên máy phát triển, chạy `npm stop` trước. Manifest dev và prod dùng chung Id nên không cài cùng lúc.
+Bản dev (tab **ConsQuotation (Dev)**) và bản production (tab **ConsQuotation**) có Id riêng nên có thể cài cùng lúc trên máy phát triển.
 
 1. Tải `manifest.prod.xml` từ URL ở mục 3 về máy.
 2. Cài theo một trong hai cách:

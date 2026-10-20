@@ -6,9 +6,15 @@ const HtmlWebpackPlugin = require("html-webpack-plugin");
 
 const urlDev = "https://localhost:3000/";
 
+// Bản dev có Id/tên riêng để cài song song với bản production (manifest/manifest.dev.xml).
+const DEV_ADDIN_ID = "03040238-2423-498b-b0fe-30f0425b2ed2";
+const PROD_ADDIN_ID = "33062f3c-8903-4bb1-b8f1-ba7907ac7632";
+const DEV_NAME = "ConsQuotation (Dev)";
+const PROD_NAME = "ConsQuotation";
+
 /**
- * URL production lấy từ biến môi trường CQ_PROD_URL (ADR-0005). Nhà cung cấp hosting chưa chốt,
- * nên khi biến này chưa đặt, build production vẫn chạy nhưng KHÔNG sinh manifest production.
+ * URL production lấy từ biến môi trường CQ_PROD_URL (ADR-0005, ADR-0007).
+ * Khi biến này chưa đặt, build production vẫn chạy nhưng KHÔNG sinh manifest production.
  */
 function getProdUrl() {
   const value = process.env.CQ_PROD_URL;
@@ -25,9 +31,22 @@ function getProdUrl() {
 }
 
 function toProdManifest(content, urlProd) {
-  const result = content.toString().replace(new RegExp(urlDev, "g"), urlProd);
+  const result = content
+    .toString()
+    .split(urlDev)
+    .join(urlProd)
+    .split(DEV_ADDIN_ID)
+    .join(PROD_ADDIN_ID)
+    .split(DEV_NAME)
+    .join(PROD_NAME);
   if (/localhost/i.test(result)) {
     throw new Error("Manifest production vẫn chứa 'localhost'. Kiểm tra lại manifest/manifest.dev.xml.");
+  }
+  if (result.includes(DEV_ADDIN_ID) || result.includes(DEV_NAME)) {
+    throw new Error("Manifest production vẫn chứa Id hoặc tên của bản dev.");
+  }
+  if (!result.includes(`<Id>${PROD_ADDIN_ID}</Id>`)) {
+    throw new Error("Manifest production không có Id chính thức.");
   }
   return result;
 }

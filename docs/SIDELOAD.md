@@ -42,7 +42,7 @@ npm start
 Lệnh này build bản development, chạy dev server tại `https://localhost:3000`, đăng ký manifest dev với Excel và mở Excel.
 
 - Lần đầu có thể được hỏi "Allow localhost loopback for Microsoft Edge WebView?" — nhập `Y` (cần quyền quản trị).
-- Trong Excel: tab **ConsQuotation** › **Mở ConsQuotation**. Nếu tab chưa hiện: **Home** › **Add-ins** › chọn ConsQuotation.
+- Trong Excel: tab **ConsQuotation (Dev)** › **Mở ConsQuotation**. Nếu tab chưa hiện: **Home** › **Add-ins** › chọn ConsQuotation.
 - Sửa HTML/JS: bấm vào task pane rồi nhấn `Ctrl+F5` để tải lại. Sửa manifest: dừng, xóa cache (mục 7) rồi chạy lại.
 
 Dừng và gỡ add-in đã sideload:

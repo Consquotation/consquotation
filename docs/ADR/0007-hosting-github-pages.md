@@ -59,6 +59,11 @@ ADR-0005 yêu cầu host file tĩnh trên HTTPS với **origin cố định và 
   - `manifest.prod.xml` không chứa `localhost`.
 - Lịch sử commit dùng email ẩn danh của GitHub (`…@users.noreply.github.com`) để không lộ email cá nhân trên repo public.
 
+**2026-10-20 (giai đoạn 2):** Hệ quả "dev và prod dùng chung Id" ở trên đã được khắc phục.
+- Manifest dev có Id riêng `03040238-…` và tên "ConsQuotation (Dev)".
+- Build production thay về Id chính thức `33062f3c-…` và tên "ConsQuotation", và thất bại nếu còn sót Id hoặc tên của bản dev.
+- Hai bản giờ cài song song được.
+
 ## Nguồn
 
 - https://docs.github.com/en/pages/getting-started-with-github-pages/about-github-pages
