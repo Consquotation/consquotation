@@ -68,6 +68,7 @@ Manifest sideload trên web được lưu trong bộ nhớ trình duyệt; xóa 
 
 | Lệnh | Việc làm |
 |---|---|
+| `npm run dev` | Chỉ chạy dev server `https://localhost:3000`, không mở Excel (dùng khi đã sideload thủ công hoặc trên Mac) |
 | `npm run typecheck` | TypeScript strict, không sinh file |
 | `npm run lint` | ESLint + Prettier theo cấu hình `office-addin-lint` |
 | `npm test` | Vitest (unit test) |

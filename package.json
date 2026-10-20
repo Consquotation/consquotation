@@ -10,6 +10,7 @@
   "scripts": {
     "build": "webpack --mode production",
     "build:dev": "webpack --mode development",
+    "dev": "webpack serve --mode development",
     "dev-server": "webpack serve --mode development",
     "start": "office-addin-debugging start manifest/manifest.dev.xml",
     "start:web": "office-addin-debugging start manifest/manifest.dev.xml web",

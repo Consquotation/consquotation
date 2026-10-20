@@ -47,13 +47,27 @@ Trên máy phát triển, chạy `npm stop` trước. Manifest dev và prod dùn
 1. Tải `manifest.prod.xml` từ URL ở mục 3 về máy.
 2. Cài theo một trong hai cách:
    - **Excel trên web:** **Home** › **Add-ins** › **More Settings** › **Upload My Add-in** › chọn `manifest.prod.xml`.
-   - **Excel trên Windows:** dùng thư mục chia sẻ làm catalog tin cậy:
+   - **Excel trên Windows (chỉ để thử nghiệm):** dùng thư mục chia sẻ làm catalog tin cậy. Microsoft ghi rõ cách này *không được hỗ trợ cho add-in production*: chỉ chạy trên Windows, và mỗi lần đổi Ribbon người dùng phải cài lại. Để phân phối thật trên Windows, dùng Centralized Deployment (mục 3) hoặc Microsoft Marketplace.
      1. Đặt `manifest.prod.xml` vào một thư mục chia sẻ mạng.
      2. Trong Excel: **File** › **Options** › **Trust Center** › **Trust Center Settings** › **Trusted Add-in Catalogs**, thêm đường dẫn thư mục chia sẻ (dạng `\\may\thu-muc`), tick **Show in Menu**, rồi khởi động lại Excel.
      3. **Home** › **Add-ins** › **More Add-ins** › **SHARED FOLDER** › ConsQuotation.
 3. Với tổ chức có Microsoft 365: quản trị viên có thể triển khai tập trung (Centralized Deployment) qua Microsoft 365 admin center.
 
-## 5. Cập nhật phiên bản
+## 5. Gỡ cài đặt bản production
+
+| Cách đã cài | Cách gỡ |
+|---|---|
+| Excel trên web (Upload My Add-in) | **Home** › **Add-ins** › **More Settings** › tab **My Add-ins** › menu `…` của ConsQuotation › **Remove** |
+| Excel trên Windows từ thư mục chia sẻ | Đóng Excel, chạy `npx office-addin-cache clear` (xóa cache Office; **mọi** add-in mất dữ liệu cục bộ, xem ADR-0003) |
+| Centralized Deployment | Quản trị viên gỡ trong Microsoft 365 admin center |
+
+Gỡ hẳn thư mục catalog thử nghiệm trên Windows:
+
+1. Bỏ tin cậy catalog: Excel › **File** › **Options** › **Trust Center** › **Trust Center Settings** › **Trusted Add-in Catalogs** › chọn đường dẫn › **Remove**. Cách khác là xóa khóa tương ứng trong `HKEY_CURRENT_USER\Software\Microsoft\Office\16.0\WEF\TrustedCatalogs`.
+2. Ngừng chia sẻ thư mục, cần quyền quản trị: `Remove-SmbShare -Name ConsQuotationCatalog` (PowerShell), hoặc vào **Properties** › **Sharing** › **Advanced Sharing** của thư mục.
+3. Xóa thư mục catalog nếu không dùng nữa.
+
+## 6. Cập nhật phiên bản
 
 - Thay đổi HTML/JS/icon: chỉ cần push. Excel tải bản mới khi mở lại task pane. Cache trình duyệt có thể giữ bản cũ khoảng 10 phút.
 - Thay đổi manifest (nút Ribbon, quyền, tên): tăng `<Version>` trong `manifest/manifest.dev.xml`, push, rồi người dùng cài lại manifest mới.
