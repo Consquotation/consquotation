@@ -25,7 +25,7 @@ import {
   Paper,
   PrintOptions,
 } from "../../../domain/printLayout";
-import { describeOfficeError } from "../../../office/officeErrors";
+import { describeOfficeError, describeWriteError } from "../../../office/officeErrors";
 import { PRINT_STRINGS } from "../../../shared/strings.print.vi";
 import { useExclusive } from "../../useExclusive";
 
@@ -74,7 +74,7 @@ const PrintSetupPanel: React.FC<{ layout: LayoutGateway; tableName: string; vers
         await load();
         setMessage({ intent: "success", text: s.applied(result.printArea) });
       } catch (e) {
-        setMessage({ intent: "error", text: describeOfficeError(e) });
+        setMessage({ intent: "error", text: describeWriteError(e) });
       } finally {
         setWorking(false);
       }
@@ -93,6 +93,11 @@ const PrintSetupPanel: React.FC<{ layout: LayoutGateway; tableName: string; vers
       {state && !state.supported && (
         <MessageBar intent="warning" layout="multiline">
           <MessageBarBody>{s.unsupported}</MessageBarBody>
+        </MessageBar>
+      )}
+      {state?.sheetProtected && (
+        <MessageBar intent="warning" layout="multiline">
+          <MessageBarBody>{s.protected}</MessageBarBody>
         </MessageBar>
       )}
       {state && (
@@ -146,7 +151,7 @@ const PrintSetupPanel: React.FC<{ layout: LayoutGateway; tableName: string; vers
           <Checkbox checked={options.centerHorizontally} label={s.center} onChange={(_e, d) => set("centerHorizontally", !!d.checked)} />
           <Checkbox checked={options.wrapLongText} label={s.wrap} onChange={(_e, d) => set("wrapLongText", !!d.checked)} />
           <div className={styles.row}>
-            <Button appearance="primary" disabled={working} onClick={() => setConfirming(true)}>
+            <Button appearance="primary" disabled={working || state?.sheetProtected} onClick={() => setConfirming(true)}>
               {s.apply}
             </Button>
             {working && <Spinner size="tiny" />}

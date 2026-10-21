@@ -357,3 +357,74 @@ describe("công thức mẫu với Excel đã viết lại", () => {
     expect(ALL_RULES).toContainEqual({ mode: "roundUp", digits: 6 });
   });
 });
+
+describe("kiểm tra báo giá — bổ sung prompts/13", () => {
+  const headers = QUOTE_COLUMNS.map((c) => c.header);
+  const amount = quoteColumnFormulas("CQ_Quote_1").amount!;
+  const row = (values: unknown[]): SheetRow => ({
+    values,
+    formulas: values.map((v, i) => (i === 7 ? amount : v)),
+    types: values.map((v) => (typeof v === "number" ? "Double" : v === "" ? "Empty" : String(v).startsWith("#") ? "Error" : "String")),
+  });
+  const snap = (rows: SheetRow[]): QuoteSnapshot => ({
+    quote: { name: "CQ_Quote_1", sheetName: "S", headers, firstRowIndex: 10, firstColumnIndex: 0, rows, totals: null },
+    summary: null,
+    analysis: null,
+    amountRule: NO_ROUNDING,
+  });
+  const stamp = { createdAt: "", updatedAt: "" };
+  const library: LibrarySnapshot = {
+    workItems: [
+      { id: "w", code: "BT-01", name: "", group: "", unit: "m3", description: "", pricingMethod: "direct", unitPrice: 1200, currency: "VND", source: "", effectiveFrom: null, effectiveTo: null, notes: "", ...stamp },
+    ],
+    resources: [],
+    resourcePrices: [],
+    norms: [],
+  };
+
+  it("thiếu đơn vị tính; giá trị lớn bất thường; mọi vấn đề có hướng khắc phục", () => {
+    const result = checkQuote(snap([row([1, "A", "", "X", "", 2, 2e11, 4e11, ""]), row([2, "B", "", "Y", "m3", 2e7, 1, 2e7, ""])]));
+    const by = (address: string) => result.issues.find((i) => i.address === address)!;
+    expect(by("E11").message).toBe("Thiếu đơn vị tính.");
+    expect(by("G11").message).toContain("lớn bất thường");
+    expect(by("F12").message).toContain("lớn bất thường");
+    expect(result.issues.every((i) => i.hint && i.hint.length > 0)).toBe(true);
+  });
+
+  it("lỗi công thức có hướng khắc phục theo loại lỗi", () => {
+    const result = checkQuote(snap([row([1, "A", "", "X", "m3", 1, "#DIV/0!", "#DIV/0!", ""])]));
+    expect(result.issues[0].hint).toContain("mẫu số");
+  });
+
+  it("dòng lấy từ thư viện: báo khi đơn giá khác thư viện hiện tại hoặc mã không còn", () => {
+    const rows = [
+      row([1, "BT-01", "", "X", "m3", 1, 1000, 1000, "Thư viện: BT-01; nguồn giá: A"]),
+      row([2, "XX", "", "Y", "m3", 1, 5, 5, "Thư viện: XX"]),
+      row([3, "BT-01", "", "Z", "m3", 1, 1200, 1200, "Thư viện: BT-01"]),
+    ];
+    const result = checkQuote(snap(rows), { library });
+    const priceIssues = result.issues.filter((i) => i.address.startsWith("G"));
+    expect(priceIssues.map((i) => i.message)).toEqual([
+      "Đơn giá 1.000 khác đơn giá hiện tại trong thư viện 1.200.",
+      'Không còn công tác mã "XX" trong thư viện trên máy này.',
+    ]);
+    // Không có thư viện → không so.
+    expect(checkQuote(snap(rows)).issues.filter((i) => i.address.startsWith("G"))).toEqual([]);
+  });
+});
+
+describe("kiểm tra báo giá — cột mẫu bị đổi (lỗi tìm thấy khi chạy regression)", () => {
+  it("không crash; báo lỗi chặn nêu đúng cột", () => {
+    const headers = QUOTE_COLUMNS.map((c) => c.header);
+    headers[6] = "1000000";
+    const result = checkQuote({
+      quote: { name: "CQ_Quote_4", sheetName: "S", headers, firstRowIndex: 10, firstColumnIndex: 0, rows: [{ values: [1, "A", "", "X", "m3", 1, 2, 2, ""], formulas: [], types: [] }], totals: null },
+      summary: null,
+      analysis: null,
+      amountRule: NO_ROUNDING,
+    });
+    expect(result.issues).toHaveLength(1);
+    expect(result.issues[0]).toMatchObject({ severity: "error", address: "A10" });
+    expect(result.issues[0].message).toContain("Đơn giá");
+  });
+});

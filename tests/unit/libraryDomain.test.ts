@@ -302,3 +302,22 @@ describe("draftFromWorkItem (chèn vào báo giá)", () => {
     expect(traceNote(workItem({ id: "x", code: "X", unitPrice: null, currency: "" }))).toBe("Thư viện: X");
   });
 });
+
+describe("kiểm tra thư viện — giá bằng 0 (prompts/13)", () => {
+  it("cảnh báo đơn giá 0, phân biệt với chưa có giá", () => {
+    const stamp = { createdAt: "", updatedAt: "" };
+    const issues = libraryIssues(
+      {
+        workItems: [
+          { id: "a", code: "A", name: "A", group: "", unit: "m3", description: "", pricingMethod: "direct", unitPrice: 0, currency: "VND", source: "", effectiveFrom: null, effectiveTo: null, notes: "", ...stamp },
+        ],
+        resources: [{ id: "r", code: "R", name: "R", type: "material", unit: "kg", notes: "", ...stamp }],
+        resourcePrices: [{ id: "p", resourceId: "r", price: 0, unit: "kg", currency: "VND", effectiveFrom: null, effectiveTo: null, source: "", status: "active", notes: "", ...stamp }],
+        norms: [],
+      },
+      "2026-10-21"
+    );
+    expect(issues.filter((i) => i.kind === "zeroPrice").map((i) => i.entity)).toEqual(["workItem", "price"]);
+    expect(issues.some((i) => i.kind === "missingPrice")).toBe(false);
+  });
+});

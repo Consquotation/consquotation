@@ -4,7 +4,7 @@ Microsoft Excel Add-in hỗ trợ lập báo giá thi công xây dựng **ngay t
 
 ## Trạng thái
 
-Đã triển khai theo bộ đặc tả trong `prompts/`: 04 (setup, manifest), 05 (Ribbon, task pane), 06 (workbook integration), 08 (thư viện cá nhân), 09 (nhập/xuất, sao lưu thư viện), 10 (tính đơn giá và thành tiền), 07 (quy trình báo giá), 11 (mẫu báo giá và in ấn).
+Đã triển khai theo bộ đặc tả trong `prompts/`: 04 (setup, manifest), 05 (Ribbon, task pane), 06 (workbook integration), 08 (thư viện cá nhân), 09 (nhập/xuất, sao lưu thư viện), 10 (tính đơn giá và thành tiền), 07 (quy trình báo giá), 11 (mẫu báo giá và in ấn), 13–17 (kiểm tra lỗi, tương thích, bảo mật, kiểm thử, hiệu năng).
 
 Đã có:
 - **Ribbon**: tab **ConsQuotation** gồm nhóm **Báo giá** (Mở ConsQuotation, Tạo bảng báo giá, Thư viện của tôi) và nhóm **Trợ giúp**.
@@ -45,7 +45,9 @@ Microsoft Excel Add-in hỗ trợ lập báo giá thi công xây dựng **ngay t
   - **Kiểm tra báo giá**: lỗi công thức, thiếu dữ liệu, đơn giá bằng 0, công thức bị sửa tay, đơn giá lệch sheet phân tích. Có nút Đi tới và đề xuất cập nhật (cần xác nhận).
 - Thông báo "không tương thích" cho Excel dùng webview cũ (IE11/EdgeHTML) hoặc thiếu ExcelApi 1.8.
 
-Chưa có: các đặc tả 12–21 (lưu trữ/quyền riêng tư, xác thực lỗi, tương thích, bảo mật, kiểm thử chấp nhận…).
+Chưa làm: đặc tả 12 (lưu trữ và quyền riêng tư) và 18–21.
+
+Tài liệu thêm: [tương thích](docs/COMPATIBILITY.md) · [bảo mật](docs/SECURITY.md) · [hiệu năng](docs/PERFORMANCE.md) · [regression](tests/manual/regression-checklist.md).
 
 ### Hạn chế đã biết
 
@@ -61,7 +63,7 @@ Office.js · TypeScript (strict) · React 18 · Fluent UI React v9 · webpack 5 
 
 | Nền tảng | Mức hỗ trợ | Đã kiểm thử |
 |---|---|---|
-| Excel Microsoft 365 trên Windows | Chính | Có — đặc tả 04–11 (2026-10-19/21), build 16.0.20430.20182 |
+| Excel Microsoft 365 trên Windows | Chính | Có — đặc tả 04–11, 13–17 (2026-10-19/21), build 16.0.20430.20182 |
 | Excel trên web | Phụ | Chưa |
 | Excel 2016/2019/2021/2024 bản retail trên Windows (WebView2) | Hỗ trợ | Chưa — không có máy kiểm thử |
 | Excel trên Mac | Chưa kiểm thử | Chưa |

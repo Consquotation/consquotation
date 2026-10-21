@@ -126,11 +126,12 @@ export const PRICING_STRINGS = {
     written: "Đã ghi bảng tổng hợp.",
     removed: "Đã xóa bảng tổng hợp.",
     blocked: {
-      tableMissing: "Không tìm thấy bảng báo giá.",
+      tableMissing:
+        "Không tìm thấy bảng báo giá (có thể vừa bị xóa hoặc đổi tên). Bấm Tải lại danh sách.",
       headersChanged: "Bảng báo giá đã bị đổi tên cột mẫu.",
       noTotals:
         "Bảng báo giá không bật dòng tổng (Table Design › Total Row) nên không có giá trị để tổng hợp.",
-      protected: "Sheet đang được bảo vệ.",
+      protected: "Sheet đang được bảo vệ. Bỏ bảo vệ (Review › Unprotect Sheet) rồi thử lại.",
       occupied: (sample: string) =>
         `Vùng cần cho bảng tổng hợp (dưới dòng tổng của bảng báo giá) đang có dữ liệu ở ${sample}. Add-in không ghi đè — hãy di chuyển dữ liệu đó rồi thử lại.`,
     },
@@ -151,6 +152,7 @@ export const PRICING_STRINGS = {
     error: "Lỗi",
     warning: "Cảnh báo",
     goTo: "Đi tới",
+    hint: (text: string) => `Cách sửa: ${text}`,
     checkedAt: (time: string) =>
       `Kết quả lúc ${time}. Nếu bạn sửa sheet sau đó, hãy bấm Kiểm tra lại — add-in không dùng kết quả cũ để ghi.`,
     circularNote:

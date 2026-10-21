@@ -21,9 +21,20 @@ export const FEATURE_REQUIREMENTS = {
   nullObjectsAndSettings: { name: "ExcelApi", version: "1.4" },
   worksheetEvents: { name: "ExcelApi", version: "1.7" },
   createWorkbook: { name: "ExcelApi", version: "1.8" },
+  dataValidation: { name: "ExcelApi", version: "1.8" },
+  /** Thiết lập trang in (prompts/11). Không có → hướng dẫn thao tác trong Excel. */
+  pageLayout: { name: "ExcelApi", version: "1.9" },
+  /** Kiểm tra ô gộp khi tạo mẫu (prompts/06). Không có → bỏ qua kiểm tra này và báo rõ. */
+  mergedAreas: { name: "ExcelApi", version: "1.13" },
 } as const satisfies Record<string, RequirementSet>;
 
 export type Feature = keyof typeof FEATURE_REQUIREMENTS;
+
+/**
+ * Tính năng vượt mức tối thiểu lúc chạy: add-in vẫn chạy khi thiếu, và có đường thay thế
+ * (hướng dẫn thao tác trong Excel hoặc bỏ qua kiểm tra kèm thông báo) — prompts/14.
+ */
+export const OPTIONAL_FEATURES: readonly Feature[] = ["pageLayout", "mergedAreas"];
 
 export type IsSetSupported = (name: string, version: string) => boolean;
 

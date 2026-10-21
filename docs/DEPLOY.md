@@ -67,7 +67,21 @@ Gỡ hẳn thư mục catalog thử nghiệm trên Windows:
 2. Ngừng chia sẻ thư mục, cần quyền quản trị: `Remove-SmbShare -Name ConsQuotationCatalog` (PowerShell), hoặc vào **Properties** › **Sharing** › **Advanced Sharing** của thư mục.
 3. Xóa thư mục catalog nếu không dùng nữa.
 
-## 6. Cập nhật phiên bản
+## 6. Chọn cách triển khai cho tổ chức
+
+ConsQuotation dùng nội bộ, không phát hành công khai. Chọn theo chính sách của tổ chức:
+
+| Cách | Phù hợp | Ghi chú |
+|---|---|---|
+| **Centralized Deployment** (Microsoft 365 admin center › Settings › Integrated apps › Upload custom apps) | **Khuyên dùng cho triển khai nội bộ chính thức** | Cần quản trị viên Microsoft 365. Gán cho người/nhóm; chạy trên Excel Windows, Mac và web. Cập nhật manifest tự đến người dùng (có thể mất tới 24 giờ). Không cần thư mục chia sẻ hay sửa registry |
+| **Thư mục chia sẻ (catalog tin cậy)** | Thử nghiệm, nhóm nhỏ trên Excel Windows | Mỗi máy phải thêm catalog trong Trust Center. Không dùng được cho Excel trên web/Mac |
+| **Upload My Add-in** (Excel trên web) | Một người tự dùng/thử | Mỗi người tự tải manifest lên |
+| **Sideload** (`npm start`) | **Chỉ để phát triển** | Dùng manifest dev và `localhost`; không phải cách phát hành |
+| AppSource | Không áp dụng | Là kênh phát hành công khai |
+
+Dù chọn cách nào, manifest production chỉ trỏ tới `https://consquotation.github.io/consquotation/` (bản build kiểm tra để không còn `localhost`) và chỉ xin quyền `ReadWriteDocument`.
+
+## 7. Cập nhật phiên bản
 
 - Thay đổi HTML/JS/icon: chỉ cần push. Excel tải bản mới khi mở lại task pane. Cache trình duyệt có thể giữ bản cũ khoảng 10 phút.
 - Thay đổi manifest (nút Ribbon, quyền, tên): tăng `<Version>` trong `manifest/manifest.dev.xml`, push, rồi người dùng cài lại manifest mới.

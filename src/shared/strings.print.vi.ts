@@ -27,8 +27,9 @@ export const PRINT_STRINGS = {
     changedOnSheet:
       "Khu vực ghi chú trên sheet vừa được sửa sau khi panel tải. Add-in chưa ghi gì và đã tải lại nội dung mới nhất — hãy xem lại rồi bấm Ghi.",
     blocked: {
-      tableMissing: "Không tìm thấy bảng báo giá.",
-      protected: "Sheet đang được bảo vệ.",
+      tableMissing:
+        "Không tìm thấy bảng báo giá (có thể vừa bị xóa hoặc đổi tên). Bấm Tải lại danh sách.",
+      protected: "Sheet đang được bảo vệ. Bỏ bảo vệ (Review › Unprotect Sheet) rồi thử lại.",
       occupied: (sample: string) =>
         `Vùng cần cho khu vực ghi chú đang có dữ liệu (${sample}). Add-in không ghi đè — hãy di chuyển dữ liệu đó rồi thử lại.`,
     },
@@ -38,6 +39,8 @@ export const PRINT_STRINGS = {
     title: "Thiết lập trang in",
     intro:
       "Add-in chỉ đặt các thiết lập mà Excel cho phép qua add-in. Xem trước, in và xuất PDF dùng chức năng có sẵn của Excel.",
+    protected:
+      "Sheet đang được bảo vệ — không đặt được thiết lập in. Bỏ bảo vệ (Review › Unprotect Sheet) rồi bấm Tải lại danh sách.",
     unsupported:
       "Excel này chưa cho add-in đặt trang in (cần ExcelApi 1.9). Hãy làm trong Excel theo hướng dẫn bên dưới.",
     area: (area: string, sheet: string) => `Vùng báo giá sẽ in: ${area} trên sheet "${sheet}".`,

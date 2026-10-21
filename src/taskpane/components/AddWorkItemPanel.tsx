@@ -31,7 +31,7 @@ import {
   WorkItemDraftInput,
   validateWorkItemDraft,
 } from "../../domain/workItemDraft";
-import { describeOfficeError } from "../../office/officeErrors";
+import { describeOfficeError, describeWriteError } from "../../office/officeErrors";
 import { qualifiedAddress } from "../../shared/a1";
 import { STRINGS } from "../../shared/strings.vi";
 import { LIBRARY_STRINGS } from "../../shared/strings.library.vi";
@@ -244,7 +244,7 @@ const AddWorkItemPanel: React.FC<{
       }
       onAppended();
     } catch (error) {
-      setPhase({ kind: "error", message: describeOfficeError(error) });
+      setPhase({ kind: "error", message: describeWriteError(error) });
     }
   };
 

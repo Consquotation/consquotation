@@ -22,7 +22,7 @@ import {
   RoundingMode,
   describeRule,
 } from "../../../domain/pricing/rounding";
-import { describeOfficeError } from "../../../office/officeErrors";
+import { describeOfficeError, describeWriteError } from "../../../office/officeErrors";
 import { PRICING_STRINGS } from "../../../shared/strings.pricing.vi";
 import { useExclusive } from "../../useExclusive";
 
@@ -74,7 +74,7 @@ const RoundingPanel: React.FC<{ pricing: PricingGateway }> = ({ pricing }) => {
         setSaved(config);
         setMessage({ intent: "success", text: s.applied(result.updatedCells, result.keptCells) });
       } catch (error) {
-        setMessage({ intent: "error", text: describeOfficeError(error) });
+        setMessage({ intent: "error", text: describeWriteError(error) });
       } finally {
         setWorking(false);
       }

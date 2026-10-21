@@ -9,6 +9,7 @@ import { QuoteTableInfo, WorkbookGateway } from "../../../application/workbookGa
 import { describeOfficeError } from "../../../office/officeErrors";
 import { PRICING_STRINGS } from "../../../shared/strings.pricing.vi";
 import { STRINGS } from "../../../shared/strings.vi";
+import { LibrarySnapshot } from "../../../domain/library/types";
 
 const useStyles = makeStyles({
   root: { display: "flex", flexDirection: "column", rowGap: tokens.spacingVerticalXL },
@@ -16,11 +17,12 @@ const useStyles = makeStyles({
 });
 
 /** Tab "Tính giá" (prompts/10): kiểm tra báo giá, tổng hợp (chiết khấu/thuế), quy tắc làm tròn. */
-const PricingView: React.FC<{ gateway: WorkbookGateway; pricing: PricingGateway; tablesVersion: number }> = ({
-  gateway,
-  pricing,
-  tablesVersion,
-}) => {
+const PricingView: React.FC<{
+  gateway: WorkbookGateway;
+  pricing: PricingGateway;
+  tablesVersion: number;
+  loadLibrary?: () => Promise<LibrarySnapshot>;
+}> = ({ gateway, pricing, tablesVersion, loadLibrary }) => {
   const styles = useStyles();
   const [tables, setTables] = React.useState<QuoteTableInfo[] | null>(null);
   const [tableName, setTableName] = React.useState("");
@@ -73,7 +75,7 @@ const PricingView: React.FC<{ gateway: WorkbookGateway; pricing: PricingGateway;
           </Button>
         </div>
       )}
-      {tableName && <QuoteCheckPanel pricing={pricing} tableName={tableName} />}
+      {tableName && <QuoteCheckPanel pricing={pricing} tableName={tableName} loadLibrary={loadLibrary} />}
       {tableName && <Divider />}
       {tableName && <SummaryPanel pricing={pricing} tableName={tableName} />}
       <Divider />

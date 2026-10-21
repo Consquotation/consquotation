@@ -24,6 +24,8 @@ export interface PrintSetupState {
   /** Vùng báo giá sẽ được đặt làm vùng in (tiêu đề → hết khu vực điều khoản). */
   quoteArea: string;
   headerRow: number;
+  /** Sheet đang được bảo vệ: không đặt được thiết lập in. */
+  sheetProtected: boolean;
   /** Thiết lập đang có trên sheet (null nếu chưa đặt hoặc không đọc được). */
   current: {
     printArea: string | null;

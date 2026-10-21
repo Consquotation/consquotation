@@ -24,7 +24,7 @@ import {
   validateAdjustments,
 } from "../../../domain/pricing/adjustments";
 import { parseDecimalInput } from "../../../domain/workItemDraft";
-import { describeOfficeError } from "../../../office/officeErrors";
+import { describeOfficeError, describeWriteError } from "../../../office/officeErrors";
 import { PRICING_STRINGS } from "../../../shared/strings.pricing.vi";
 import { STRINGS } from "../../../shared/strings.vi";
 import { useExclusive } from "../../useExclusive";
@@ -160,7 +160,7 @@ const SummaryPanel: React.FC<{ pricing: PricingGateway; tableName: string }> = (
         setPhase({
           kind: "message",
           intent: error instanceof TargetChangedError ? "warning" : "error",
-          text: error instanceof TargetChangedError ? STRINGS.create.changed : describeOfficeError(error),
+          text: error instanceof TargetChangedError ? STRINGS.create.changed : describeWriteError(error),
         });
       }
     });
@@ -173,7 +173,7 @@ const SummaryPanel: React.FC<{ pricing: PricingGateway; tableName: string }> = (
         await load();
         setPhase({ kind: "message", intent: "success", text: s.removed });
       } catch (error) {
-        setPhase({ kind: "message", intent: "error", text: describeOfficeError(error) });
+        setPhase({ kind: "message", intent: "error", text: describeWriteError(error) });
       }
     });
 

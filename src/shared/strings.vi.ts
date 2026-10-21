@@ -27,6 +27,10 @@ export const STRINGS = {
     baseline: (name: string, version: string) => `Mức API tối thiểu (${name} ${version})`,
     supported: "Đạt",
     notSupported: "Không đạt",
+    pageLayout: "Thiết lập trang in (ExcelApi 1.9)",
+    pageLayoutMissing: "Không có — đặt trang in trong Excel (Page Layout)",
+    mergedAreas: "Kiểm tra ô gộp khi tạo mẫu (ExcelApi 1.13)",
+    mergedAreasMissing: "Không có — bỏ qua kiểm tra này (được báo khi tạo mẫu)",
   },
 
   storage: {
@@ -109,6 +113,14 @@ export const STRINGS = {
     development: "Phát triển (dev)",
     production: "Chính thức (production)",
     unavailableNote: "Sao lưu, khôi phục và nhập/xuất thư viện: mở Thư viện › Nhập/Xuất.",
+  },
+
+  diagnostics: {
+    title: "Nhật ký lỗi kỹ thuật (phiên này)",
+    privacy:
+      "Chỉ ghi thời điểm, thao tác và mã lỗi — không ghi nội dung ô, dữ liệu báo giá hay thư viện; không gửi đi đâu và mất khi đóng task pane.",
+    empty: "Chưa có lỗi nào trong phiên này.",
+    clear: "Xóa nhật ký",
   },
 
   context: {

@@ -4,6 +4,7 @@ import {
   RUNTIME_BASELINE,
   checkRuntimeSupport,
   isFeatureSupported,
+  OPTIONAL_FEATURES,
 } from "../../src/office/capabilities";
 
 /** Giả lập Office.context.requirements.isSetSupported cho một Excel hỗ trợ tới ExcelApi `max`. */
@@ -33,10 +34,10 @@ describe("checkRuntimeSupport", () => {
 });
 
 describe("isFeatureSupported", () => {
-  it("mọi tính năng cốt lõi đều nằm trong mức tối thiểu lúc chạy", () => {
+  it("mọi tính năng cốt lõi đều nằm trong mức tối thiểu lúc chạy; tính năng tùy chọn thì vượt mức đó", () => {
     const baseline = excelUpTo(RUNTIME_BASELINE.version);
     for (const feature of Object.keys(FEATURE_REQUIREMENTS) as (keyof typeof FEATURE_REQUIREMENTS)[]) {
-      expect(isFeatureSupported(feature, baseline), feature).toBe(true);
+      expect(isFeatureSupported(feature, baseline), feature).toBe(!OPTIONAL_FEATURES.includes(feature));
     }
   });
 

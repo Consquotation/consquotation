@@ -13,7 +13,8 @@ export const WORKFLOW_STRINGS = {
     noChange: "Không có thay đổi để ghi.",
     changed:
       "Thông tin trên sheet vừa thay đổi kể từ lúc tải. Add-in chưa ghi gì: các mục bạn đã sửa được giữ, các mục khác đã lấy giá trị mới trên sheet. Kiểm tra lại rồi bấm Lưu.",
-    protected: "Sheet đang được bảo vệ — không ghi được thông tin.",
+    protected:
+      "Sheet đang được bảo vệ — không ghi được thông tin. Bỏ bảo vệ (Review › Unprotect Sheet) rồi bấm Tải lại từ sheet.",
     expired: (date: string) => `Báo giá đã hết hiệu lực từ ${date}.`,
     errors: "Hãy sửa các lỗi được đánh dấu.",
     noTables: "Chưa có bảng báo giá. Hãy tạo bảng báo giá trước.",

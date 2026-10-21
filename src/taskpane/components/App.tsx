@@ -13,6 +13,7 @@ import {
 } from "@fluentui/react-components";
 import AddWorkItemPanel, { LibraryPrefill } from "./AddWorkItemPanel";
 import CreateQuotePanel from "./CreateQuotePanel";
+import DiagnosticsPanel from "./DiagnosticsPanel";
 import EnvironmentPanel from "./EnvironmentPanel";
 import HelpView from "./HelpView";
 import QuoteTablesPanel from "./QuoteTablesPanel";
@@ -39,13 +40,14 @@ import { readPartitionKey } from "../../office/environment";
 import { ExcelWorkbookGateway } from "../../office/excelWorkbookGateway";
 import { IndexedDbLibraryRepository, libraryDatabaseName } from "../../storage/indexedDbLibraryRepository";
 import { STRINGS } from "../../shared/strings.vi";
+import { randomId } from "../../shared/uuid";
 import { View, parseInitialView } from "../navigation";
 
-/* global clearTimeout, crypto, document, indexedDB, setTimeout, window */
+/* global clearTimeout, document, indexedDB, performance, setTimeout, window */
 
 function createLibraryService(): LibraryService {
   const repo = new IndexedDbLibraryRepository(indexedDB, libraryDatabaseName(readPartitionKey()));
-  return new LibraryService(repo, { now: () => new Date(), newId: () => crypto.randomUUID() });
+  return new LibraryService(repo, { now: () => new Date(), newId: randomId });
 }
 
 const useStyles = makeStyles({
@@ -96,6 +98,7 @@ const App: React.FC<{
   const pricing = React.useMemo(() => injectedPricing ?? new ExcelPricingGateway(), [injectedPricing]);
   const layout = React.useMemo(() => injectedLayout ?? new ExcelLayoutGateway(), [injectedLayout]);
   const libraryService = React.useMemo(() => injectedLibrary ?? createLibraryService(), [injectedLibrary]);
+  const loadLibrary = React.useCallback(() => libraryService.load(), [libraryService]);
   // Công tác vừa chọn "Chèn vào báo giá" ở thư viện; form Thêm công tác dùng một lần rồi xóa.
   const [prefill, setPrefill] = React.useState<LibraryPrefill | null>(null);
   // Màn hình ban đầu do nút Ribbon chọn (taskpane.html?view=…); mở thường thì không chuyển focus.
@@ -114,6 +117,11 @@ const App: React.FC<{
     }
     setNav({ view, focusId });
   };
+
+  React.useEffect(() => {
+    // Mốc đo: lần render đầu của task pane đã xong (prompts/17).
+    performance.mark("cq-app-rendered");
+  }, []);
 
   React.useEffect(() => {
     if (!nav.focusId) {
@@ -230,7 +238,12 @@ const App: React.FC<{
 
           {nav.view === "pricing" && (
             <div className={styles.panel} role="tabpanel" aria-label={s.tabs.pricing}>
-              <PricingView gateway={gateway} pricing={pricing} tablesVersion={tablesVersion} />
+              <PricingView
+                gateway={gateway}
+                pricing={pricing}
+                tablesVersion={tablesVersion}
+                loadLibrary={loadLibrary}
+              />
             </div>
           )}
 
@@ -256,6 +269,7 @@ const App: React.FC<{
               <LibraryStoragePanel service={libraryService} />
               <EnvironmentPanel />
               <StorageProbePanel />
+              <DiagnosticsPanel />
             </div>
           )}
         </>

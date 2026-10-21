@@ -1,6 +1,7 @@
 import * as React from "react";
 import { LibraryService } from "../../../application/libraryService";
 import { LibrarySnapshot } from "../../../domain/library/types";
+import { recordError } from "../../../shared/diagnostics";
 
 export type LibraryState =
   | { kind: "loading" }
@@ -15,6 +16,7 @@ export function useLibrary(service: LibraryService) {
     try {
       setState({ kind: "ready", library: await service.load() });
     } catch (error) {
+      recordError("thư viện", error);
       setState({ kind: "error", message: error instanceof Error ? error.message : String(error) });
     }
   }, [service]);

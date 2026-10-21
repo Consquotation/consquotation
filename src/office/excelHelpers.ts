@@ -7,6 +7,7 @@ import { summaryTableName } from "../domain/pricing/adjustments";
 import { RoundingConfig, normalizeRounding } from "../domain/pricing/rounding";
 import { termsNameFor } from "../domain/terms";
 import { cellAddress } from "../shared/a1";
+import { recordError } from "../shared/diagnostics";
 
 /** Cấu hình tính giá của workbook (lưu trong workbook settings, đi theo file). */
 export const PRICING_SETTINGS_KEY = "ConsQuotation.pricing";
@@ -91,8 +92,10 @@ export async function bestEffort(
   try {
     await queue();
     await context.sync();
-  } catch {
-    // Bỏ qua: chỉ là điều hướng/metadata.
+  } catch (error) {
+    // Không làm hỏng kết quả thao tác chính (chỉ là điều hướng/metadata), nhưng không nuốt im lặng:
+    // ghi mã lỗi vào nhật ký phiên.
+    recordError("bước phụ sau khi ghi", error);
   }
 }
 

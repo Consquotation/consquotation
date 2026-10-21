@@ -23,7 +23,7 @@ import {
   termsToWrite,
   validateTerms,
 } from "../../../domain/terms";
-import { describeOfficeError } from "../../../office/officeErrors";
+import { describeOfficeError, describeWriteError } from "../../../office/officeErrors";
 import { PRINT_STRINGS } from "../../../shared/strings.print.vi";
 import { STRINGS } from "../../../shared/strings.vi";
 import { useExclusive } from "../../useExclusive";
@@ -121,7 +121,7 @@ const TermsPanel: React.FC<{ layout: LayoutGateway; tableName: string; onChanged
         setPhase({
           kind: "message",
           intent: e instanceof TargetChangedError ? "warning" : "error",
-          text: e instanceof TargetChangedError ? STRINGS.create.changed : describeOfficeError(e),
+          text: e instanceof TargetChangedError ? STRINGS.create.changed : describeWriteError(e),
         });
       }
     });
@@ -135,7 +135,7 @@ const TermsPanel: React.FC<{ layout: LayoutGateway; tableName: string; onChanged
         onChanged();
         setPhase({ kind: "message", intent: "success", text: s.removed });
       } catch (e) {
-        setPhase({ kind: "message", intent: "error", text: describeOfficeError(e) });
+        setPhase({ kind: "message", intent: "error", text: describeWriteError(e) });
       }
     });
 

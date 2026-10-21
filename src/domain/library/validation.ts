@@ -309,6 +309,7 @@ export type IssueKind =
   | "duplicateResourceCode"
   | "missingRequired"
   | "missingPrice"
+  | "zeroPrice"
   | "expiredPrice"
   | "notYetEffectivePrice"
   | "brokenNormWorkItem"
@@ -395,6 +396,17 @@ export function libraryIssues(library: LibrarySnapshot, today: string): LibraryI
         detail: "Công tác chưa có đơn giá.",
       });
     }
+    if (w.unitPrice === 0) {
+      issues.push({
+        kind: "zeroPrice",
+        severity: "warning",
+        entity: "workItem",
+        entityId: w.id,
+        label: w.code,
+        detail:
+          "Đơn giá bằng 0 (khác với chưa có giá) — kiểm tra lại; nếu chưa có giá hãy để trống.",
+      });
+    }
     const validity = validityOn(w.effectiveFrom, w.effectiveTo, today);
     if (w.unitPrice !== null && validity === "expired") {
       issues.push({
@@ -472,6 +484,16 @@ export function libraryIssues(library: LibrarySnapshot, today: string): LibraryI
         detail: "Giá trỏ tới tài nguyên không còn tồn tại.",
       });
       continue;
+    }
+    if (p.price === 0) {
+      issues.push({
+        kind: "zeroPrice",
+        severity: "warning",
+        entity: "price",
+        entityId: p.id,
+        label: resource.code,
+        detail: `Giá của "${resource.code}" bằng 0 — kiểm tra lại.`,
+      });
     }
     if (normalizeCode(p.unit) !== normalizeCode(resource.unit)) {
       issues.push({

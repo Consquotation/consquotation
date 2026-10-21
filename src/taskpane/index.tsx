@@ -6,7 +6,7 @@ import UnsupportedScreen, { UnsupportedReason } from "./components/UnsupportedSc
 import { checkRuntimeSupport } from "../office/capabilities";
 import { officeIsSetSupported } from "../office/environment";
 
-/* global document, Office, window */
+/* global document, Office, performance, window */
 
 declare global {
   interface Window {
@@ -34,6 +34,8 @@ function resolveUnsupportedReason(host: Office.HostType | null): UnsupportedReas
 // compat-gate.js đã hiện thông báo cho webview cũ; không render đè lên.
 if (!window.__CQ_UNSUPPORTED_WEBVIEW__) {
   Office.onReady((info) => {
+    // Mốc đo hiệu năng (prompts/17): xem bằng performance.getEntriesByType("mark") trong DevTools.
+    performance.mark("cq-office-ready");
     const reason = resolveUnsupportedReason(info.host);
     render(reason ? <UnsupportedScreen reason={reason} /> : <App />);
   });

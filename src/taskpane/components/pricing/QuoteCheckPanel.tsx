@@ -15,9 +15,10 @@ import ConfirmDialog from "../ConfirmDialog";
 import { PricingGateway } from "../../../application/pricingGateway";
 import { TargetChangedError } from "../../../application/workbookGateway";
 import { PriceMethod, QuoteCheckResult, QuoteSnapshot, checkQuote } from "../../../domain/pricing/quoteCheck";
-import { describeOfficeError } from "../../../office/officeErrors";
+import { describeOfficeError, describeWriteError } from "../../../office/officeErrors";
 import { PRICING_STRINGS } from "../../../shared/strings.pricing.vi";
 import { useExclusive } from "../../useExclusive";
+import { LibrarySnapshot } from "../../../domain/library/types";
 
 const MAX_SHOWN = 200;
 
@@ -43,7 +44,12 @@ type State =
   | { kind: "error"; message: string };
 
 /** Kiểm tra báo giá (prompts/10, 13): đọc trực tiếp sheet, chỉ báo; sửa cần xác nhận. */
-const QuoteCheckPanel: React.FC<{ pricing: PricingGateway; tableName: string }> = ({ pricing, tableName }) => {
+const QuoteCheckPanel: React.FC<{
+  pricing: PricingGateway;
+  tableName: string;
+  /** Đọc thư viện hiện tại để so đơn giá các dòng lấy từ thư viện (không bắt buộc). */
+  loadLibrary?: () => Promise<LibrarySnapshot>;
+}> = ({ pricing, tableName, loadLibrary }) => {
   const styles = useStyles();
   const s = PRICING_STRINGS.check;
   const [state, setState] = React.useState<State>({ kind: "idle" });
@@ -58,11 +64,13 @@ const QuoteCheckPanel: React.FC<{ pricing: PricingGateway; tableName: string }> 
     setState({ kind: "running" });
     try {
       const snapshot = await pricing.readQuoteSnapshot(tableName);
-      setState({ kind: "done", snapshot, result: checkQuote(snapshot), at: new Date().toLocaleTimeString("vi-VN") });
+      // Thư viện lỗi/không đọc được thì vẫn kiểm tra phần còn lại (không chặn).
+      const library = loadLibrary ? await loadLibrary().catch(() => undefined) : undefined;
+      setState({ kind: "done", snapshot, result: checkQuote(snapshot, { library }), at: new Date().toLocaleTimeString("vi-VN") });
     } catch (error) {
       setState({ kind: "error", message: describeOfficeError(error) });
     }
-  }, [pricing, tableName]);
+  }, [pricing, tableName, loadLibrary]);
 
   React.useEffect(() => {
     setState({ kind: "idle" });
@@ -90,7 +98,7 @@ const QuoteCheckPanel: React.FC<{ pricing: PricingGateway; tableName: string }> 
       } catch (error) {
         setNotice({
           intent: "warning",
-          text: error instanceof TargetChangedError ? s.changed : describeOfficeError(error),
+          text: error instanceof TargetChangedError ? s.changed : describeWriteError(error),
         });
       }
       await run();
@@ -160,6 +168,7 @@ const QuoteCheckPanel: React.FC<{ pricing: PricingGateway; tableName: string }> 
                     {issue.sheetName} · {issue.location} · {issue.address}
                   </Caption1>
                   <Body1>{issue.message}</Body1>
+                  {issue.hint && <Caption1>{s.hint(issue.hint)}</Caption1>}
                 </div>
                 <Button size="small" onClick={() => void goTo(issue.sheetName, issue.address)}>
                   {s.goTo}

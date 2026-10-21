@@ -276,7 +276,9 @@ export class ExcelLayoutGateway implements LayoutGateway {
     return Excel.run(async (context) => {
       const geo = await geometry(context, quoteTableName);
       if (!geo) {
-        throw new Error("Không tìm thấy bảng báo giá.");
+        throw new Error(
+          "Không tìm thấy bảng báo giá (có thể vừa bị xóa hoặc đổi tên). Bấm Tải lại danh sách rồi chọn lại bảng."
+        );
       }
       const area = boundingRect(
         [
@@ -291,6 +293,7 @@ export class ExcelLayoutGateway implements LayoutGateway {
         sheetName: geo.sheetName,
         quoteArea: rangeAddress(area.rowIndex, area.columnIndex, area.rowCount, area.columnCount),
         headerRow: geo.headerRow,
+        sheetProtected: geo.sheetProtected,
         current: null,
       };
       if (!state.supported) {
@@ -327,6 +330,12 @@ export class ExcelLayoutGateway implements LayoutGateway {
       throw new Error("Excel này chưa hỗ trợ thiết lập trang in qua add-in (cần ExcelApi 1.9).");
     }
     const state = await this.readPrintSetup(quoteTableName);
+    if (state.sheetProtected) {
+      // Kiểm tra trước: không để Excel từ chối giữa chừng sau khi đã ghi một phần thiết lập.
+      throw new Error(
+        `Sheet "${state.sheetName}" đang được bảo vệ. Bỏ bảo vệ (Review › Unprotect Sheet) rồi thử lại.`
+      );
+    }
     await Excel.run(async (context) => {
       const table = context.workbook.tables.getItem(quoteTableName);
       const sheet = context.workbook.tables.getItem(quoteTableName).worksheet;

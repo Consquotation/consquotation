@@ -22,7 +22,7 @@ import {
   planInfoWrites,
   summarizeInfo,
 } from "../../domain/quoteInfo";
-import { describeOfficeError } from "../../office/officeErrors";
+import { describeOfficeError, describeWriteError } from "../../office/officeErrors";
 import { STRINGS } from "../../shared/strings.vi";
 import { WORKFLOW_STRINGS } from "../../shared/strings.workflow.vi";
 import { useExclusive } from "../useExclusive";
@@ -137,7 +137,7 @@ const QuoteInfoPanel: React.FC<{ gateway: WorkbookGateway; tablesVersion: number
           await loadInfo(edited);
           setMessage({ intent: "warning", text: s.changed });
         } else {
-          setMessage({ intent: "error", text: describeOfficeError(error) });
+          setMessage({ intent: "error", text: describeWriteError(error) });
         }
       } finally {
         setBusy(false);

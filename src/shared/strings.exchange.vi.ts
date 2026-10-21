@@ -22,7 +22,7 @@ export const EXCHANGE_STRINGS = {
     template: "Mở file mẫu trống",
     templateHint: "Workbook chỉ có tiêu đề cột theo schema, để điền dữ liệu rồi nhập.",
     jsonDone: (fileName: string) =>
-      `Đã tải "${fileName}". File thường nằm trong thư mục Downloads (Tải về). Hãy chép sang nơi an toàn.`,
+      `Đã gửi file "${fileName}" cho Excel tải về — add-in không xác nhận được việc lưu file, hãy kiểm tra file đã có trong thư mục Downloads (Tải về) rồi chép sang nơi an toàn.`,
     workbookDone:
       "Excel đã mở workbook mới chứa thư viện. Hãy lưu bằng File › Save As — workbook chưa được lưu sẽ mất khi đóng.",
     templateDone: "Excel đã mở workbook mẫu trống. Điền dữ liệu, rồi dùng phần Nhập bên dưới.",
