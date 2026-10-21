@@ -62,6 +62,7 @@ import {
   hashString,
   isEmptyCell,
   loadSheetNames,
+  ownBlocksBelow,
   readRounding,
 } from "./excelHelpers";
 
@@ -189,6 +190,9 @@ interface SummaryArea {
   left: number;
   quote?: Excel.Table;
   existing?: Excel.Table;
+  /** Khu vực điều khoản của add-in nằm ngay dưới: chèn nguyên hàng để dời nó xuống trước khi ghi. */
+  shiftRows: number;
+  termsTop: number;
 }
 
 async function inspectSummaryArea(
@@ -202,7 +206,13 @@ async function inspectSummaryArea(
   existing.load("name");
   await context.sync();
   if (quote.isNullObject) {
-    return { check: { ok: false, reason: "tableMissing" }, top: 0, left: 0 };
+    return {
+      check: { ok: false, reason: "tableMissing" },
+      top: 0,
+      left: 0,
+      shiftRows: 0,
+      termsTop: 0,
+    };
   }
   const sheet = quote.worksheet;
   sheet.load("name");
@@ -222,6 +232,8 @@ async function inspectSummaryArea(
     check: { ok: false, reason },
     top: 0,
     left: 0,
+    shiftRows: 0,
+    termsTop: 0,
   });
   if (!hasQuoteHeaders((header.values[0] ?? []).map((v) => String(v)))) {
     return fail("headersChanged");
@@ -239,6 +251,11 @@ async function inspectSummaryArea(
     ? existingRange.columnIndex
     : full.columnIndex + SUMMARY_FIRST_COLUMN_OFFSET;
   const ownRows = existingRange ? existingRange.rowCount : 0;
+  // Khu vực ghi chú/điều khoản (của add-in) bên dưới: không tính là "có dữ liệu"; nếu chồng lên vùng
+  // cần ghi (kể cả 1 hàng trống ngăn cách) thì sẽ chèn nguyên hàng để dời nó xuống.
+  const terms = (await ownBlocksBelow(context, quoteTableName)).terms;
+  const termsBelow = terms !== undefined && terms.rowIndex >= top;
+  const shiftRows = termsBelow ? Math.max(0, top + needed + 1 - terms.rowIndex) : 0;
   // Chỉ kiểm tra các hàng mới phải chiếm thêm (vùng của bảng tổng hợp cũ là của add-in).
   let formulas: unknown[][] = [];
   if (needed > ownRows) {
@@ -246,7 +263,7 @@ async function inspectSummaryArea(
     extra.load("formulas");
     await context.sync();
     formulas = extra.formulas as unknown[][];
-    const occupied = findOccupied(formulas, top + ownRows, left);
+    const occupied = findOccupied(formulas, top + ownRows, left, termsBelow ? terms : undefined);
     if (occupied.count > 0) {
       return {
         check: {
@@ -257,6 +274,8 @@ async function inspectSummaryArea(
         },
         top,
         left,
+        shiftRows: 0,
+        termsTop: 0,
       };
     }
   }
@@ -272,6 +291,8 @@ async function inspectSummaryArea(
     left,
     quote,
     existing: existing.isNullObject ? undefined : existing,
+    shiftRows,
+    termsTop: termsBelow ? terms.rowIndex : 0,
   };
 }
 
@@ -547,6 +568,15 @@ export class ExcelPricingGateway implements PricingGateway {
       }
       const rounding = await readRounding(context);
       const sheet = area.quote.worksheet;
+      if (area.shiftRows > 0) {
+        // Chèn nguyên hàng ngay trên khu vực điều khoản: mọi thứ bên dưới dời xuống đồng đều,
+        // không lệch cột nào (tên CQ_Terms_n và vùng in tự cập nhật theo).
+        sheet
+          .getRangeByIndexes(area.termsTop, 0, area.shiftRows, 1)
+          .getEntireRow()
+          .insert(Excel.InsertShiftDirection.down);
+        await context.sync();
+      }
       if (area.existing) {
         // Bảng tổng hợp là của add-in: xóa (kèm nội dung) rồi tạo lại đúng chỗ cũ.
         area.existing.delete();

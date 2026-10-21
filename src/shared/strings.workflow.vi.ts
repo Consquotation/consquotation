@@ -57,7 +57,7 @@ export const WORKFLOW_STRINGS = {
       summaryTotal: (total: string) => `Tổng cộng sau điều chỉnh: ${total}.`,
       summaryError: (error: string) => `Tổng cộng đang lỗi ${error}.`,
       finish:
-        "Lưu bằng Excel (Ctrl+S hoặc File › Save). In hoặc xuất PDF bằng File › Print / File › Export. ConsQuotation không tự gửi báo giá cho ai.",
+        "Ghi chú/điều khoản và thiết lập trang in ở tab In ấn. Lưu bằng Excel (Ctrl+S); in hoặc xuất PDF bằng File › Print / File › Export. ConsQuotation không tự gửi báo giá cho ai.",
     },
     actions: {
       create: "Tạo bảng báo giá",
@@ -65,6 +65,7 @@ export const WORKFLOW_STRINGS = {
       items: "Thêm công tác",
       check: "Mở Kiểm tra báo giá",
       summary: "Thiết lập tổng hợp",
+      print: "Mở In ấn",
       goTo: "Đi tới bảng",
     },
     noStatus:

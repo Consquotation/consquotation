@@ -4,10 +4,17 @@
  * Màn hình của task pane (prompts/05_RIBBON_TASKPANE_UX.md).
  * Chỉ có các màn hình đã có implementation.
  */
-export type View = "overview" | "quote" | "pricing" | "library" | "settings" | "help";
+export type View = "overview" | "quote" | "pricing" | "print" | "library" | "settings" | "help";
 
 /** Các tab hiển thị trên TabList; "help" mở từ Ribbon hoặc nút Trợ giúp, không phải tab. */
-export const TAB_VIEWS: readonly View[] = ["overview", "quote", "pricing", "library", "settings"];
+export const TAB_VIEWS: readonly View[] = [
+  "overview",
+  "quote",
+  "pricing",
+  "print",
+  "library",
+  "settings",
+];
 
 const ALL_VIEWS: readonly View[] = [...TAB_VIEWS, "help"];
 

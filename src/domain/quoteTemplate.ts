@@ -23,6 +23,8 @@ export interface QuoteColumn {
   numberFormat?: string;
   /** Độ rộng gợi ý (point) — chỉ áp dụng khi tạo trên sheet mới. */
   width: number;
+  /** Xuống dòng trong ô: chữ dài không bị cắt khi in (prompts/11, đã kiểm chứng qua PDF). */
+  wrap?: boolean;
 }
 
 /** Cột báo giá mặc định (prompts/02_PRODUCT_REQUIREMENTS.md). */
@@ -30,12 +32,12 @@ export const QUOTE_COLUMNS: readonly QuoteColumn[] = [
   { key: "stt", header: "STT", width: 36 },
   { key: "code", header: "Mã công tác", width: 80 },
   { key: "group", header: "Nhóm công tác", width: 100 },
-  { key: "description", header: "Nội dung công việc", width: 260 },
+  { key: "description", header: "Nội dung công việc", width: 260, wrap: true },
   { key: "unit", header: "Đơn vị tính", width: 60 },
   { key: "quantity", header: "Khối lượng", numberFormat: "General", width: 70 },
   { key: "unitPrice", header: "Đơn giá", numberFormat: "#,##0", width: 90 },
   { key: "amount", header: "Thành tiền", numberFormat: "#,##0", width: 100 },
-  { key: "notes", header: "Ghi chú", width: 120 },
+  { key: "notes", header: "Ghi chú", width: 120, wrap: true },
 ];
 
 export const QUOTE_TITLE = "BẢNG BÁO GIÁ";

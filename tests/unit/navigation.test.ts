@@ -12,6 +12,7 @@ describe("parseInitialView", () => {
     ["?view=help", "help"],
     ["?view=library", "library"],
     ["?view=pricing", "pricing"],
+    ["?view=print", "print"],
     ["?view=import", "overview"],
     ["?view=QUOTE", "overview"],
     ["?other=1&view=quote", "quote"],
@@ -20,7 +21,7 @@ describe("parseInitialView", () => {
   });
 
   it("chỉ có các tab đã triển khai (prompts/05)", () => {
-    expect(TAB_VIEWS).toEqual(["overview", "quote", "pricing", "library", "settings"]);
+    expect(TAB_VIEWS).toEqual(["overview", "quote", "pricing", "print", "library", "settings"]);
   });
 });
 

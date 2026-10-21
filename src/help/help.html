@@ -16,7 +16,7 @@
   <p>ConsQuotation là Excel Add-in hỗ trợ lập báo giá thi công xây dựng ngay trong workbook Excel. Excel vẫn là bảng tính chính; add-in bổ sung tab <strong>ConsQuotation</strong> trên Ribbon và bảng điều khiển (task pane).</p>
 
   <h2>Phiên bản hiện tại</h2>
-  <p>Bản đang phát triển. Đã có: tạo bảng báo giá; thêm công tác (thủ công hoặc từ thư viện); <strong>Thư viện của tôi</strong> cùng nhập/xuất và sao lưu; <strong>Tính giá</strong> (đơn giá phân tích từ định mức, chiết khấu/phụ phí/thuế, làm tròn, kiểm tra báo giá). Chưa có: in ấn.</p>
+  <p>Bản đang phát triển. Đã có: tạo bảng báo giá; thêm công tác (thủ công hoặc từ thư viện); <strong>Thư viện của tôi</strong> cùng nhập/xuất và sao lưu; <strong>Tính giá</strong> (đơn giá phân tích từ định mức, chiết khấu/phụ phí/thuế, làm tròn, kiểm tra báo giá). Thêm: tab <strong>In ấn</strong> (ghi chú/điều khoản, thiết lập trang in).</p>
 
   <h2>Quy trình báo giá</h2>
   <ol>
@@ -57,6 +57,13 @@
     <li><strong>Tổng hợp</strong>: chiết khấu, phụ phí, thuế do bạn tự thêm, áp dụng theo thứ tự từ trên xuống (theo % lũy kế, % giá trị báo giá hoặc số tiền). Add-in không có tỷ lệ mặc định nào.</li>
     <li><strong>Làm tròn</strong> (cho cả workbook): chọn kiểu (ROUND, ROUNDUP, ROUNDDOWN) và độ chính xác cho từng cấp — đơn giá phân tích, thành tiền, khoản tổng hợp. Mặc định không làm tròn.</li>
     <li><strong>Kiểm tra báo giá</strong> báo lỗi công thức, ô thiếu, đơn giá bằng 0, chữ trong ô số, công thức bị sửa tay, đơn giá lệch sheet phân tích; nút <strong>Đi tới</strong> chọn đúng ô. Tham chiếu vòng do Excel tự cảnh báo.</li>
+  </ul>
+
+  <h2>Ghi chú, điều khoản và in ấn</h2>
+  <ul>
+    <li><strong>In ấn › Ghi chú và điều khoản</strong>: chọn mục cần có (phạm vi công việc, giả định, phần loại trừ, điều khoản thương mại, ghi chú) và tự nhập nội dung — add-in không soạn sẵn điều khoản. Khu vực được ghi dưới bảng tổng hợp và tự dời theo khi thêm dòng.</li>
+    <li><strong>In ấn › Thiết lập trang in</strong>: đặt vùng in (từ tiêu đề tới hết ghi chú), lặp dòng tiêu đề bảng mỗi trang, khổ/hướng giấy, co giãn vừa chiều ngang, số trang ở chân trang, xuống dòng cho cột chữ dài. Cần Excel hỗ trợ ExcelApi 1.9; nếu không, làm trong Excel: Page Layout › Print Area / Print Titles / Orientation / Size / Scale to Fit.</li>
+    <li>Xem trước và in: File › Print (Ctrl+P). Xuất PDF: File › Export › Create PDF/XPS. Khi co giãn, Excel có thể ngắt chữ khác màn hình — kiểm tra bản xem trước và kéo cao dòng nếu thấy chữ bị cắt.</li>
   </ul>
 
   <h2>Lưu ý khi ghi vào workbook</h2>

@@ -171,7 +171,7 @@ const WorkflowPanel: React.FC<{
       case "summary":
         return status?.table ? { label: a.summary, run: () => onNavigate("pricing", "cq-summary-title") } : null;
       case "finish":
-        return null;
+        return status?.table ? { label: a.print, run: () => onNavigate("print", "cq-terms-title") } : null;
     }
   };
 

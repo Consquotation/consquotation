@@ -66,6 +66,7 @@ export const STRINGS = {
     overview: "Tổng quan",
     quote: "Báo giá",
     pricing: "Tính giá",
+    print: "In ấn",
     library: "Thư viện",
     settings: "Cài đặt",
   },

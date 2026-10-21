@@ -12,6 +12,7 @@ Mỗi ADR ghi một quyết định kiến trúc quan trọng: bối cảnh, quy
 | [0006](0006-cong-nghe-ui-va-cong-cu.md) | Công nghệ UI và công cụ phát triển | Chấp nhận | 2026-10-19 |
 | [0007](0007-hosting-github-pages.md) | Hosting production trên GitHub Pages | Chấp nhận | 2026-10-19 |
 | [0008](0008-tinh-don-gia-va-thanh-tien.md) | Tính đơn giá và thành tiền | Chấp nhận | 2026-10-21 |
+| [0009](0009-mau-bao-gia-va-in-an.md) | Mẫu báo giá, ghi chú/điều khoản và in ấn | Chấp nhận | 2026-10-21 |
 
 Trạng thái có thể là: Đề xuất · Chấp nhận · Thay thế bởi ADR-xxxx · Hủy bỏ.
 

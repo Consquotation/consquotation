@@ -44,10 +44,10 @@ import {
   hashString,
   isEmptyCell,
   loadSheetNames,
+  ownBlocksBelow,
   readRounding,
   supports,
 } from "./excelHelpers";
-import { summaryTableName } from "../domain/pricing/adjustments";
 import {
   INFO_DATE_FORMAT,
   INFO_FIELDS,
@@ -293,18 +293,10 @@ async function inspectAppendInContext(
   full.load("address,rowIndex,columnIndex,rowCount,columnCount");
   const used = sheet.getUsedRangeOrNullObject(true);
   used.load("rowIndex,rowCount");
-  // Bảng tổng hợp (chiết khấu/thuế) của chính bảng này nằm bên dưới và được Excel đẩy xuống cùng
-  // khi chèn dòng (đã kiểm chứng) — không tính là "dữ liệu bên dưới" cần hỏi xác nhận.
-  const summary = context.workbook.tables.getItemOrNullObject(summaryTableName(tableName));
-  summary.load("name");
   await context.sync();
-  let summaryRect: CellRect | undefined;
-  if (!summary.isNullObject) {
-    const range = summary.getRange();
-    range.load("rowIndex,columnIndex,rowCount,columnCount");
-    await context.sync();
-    summaryRect = range;
-  }
+  // Bảng tổng hợp và khu vực điều khoản của chính bảng này được Excel dời cùng khi chèn dòng.
+  const own = await ownBlocksBelow(context, tableName);
+  const ownRects = [own.summary, own.terms].filter((r): r is CellRect => r !== undefined);
 
   const lastRow = full.rowIndex + full.rowCount - 1;
   const usedLastRow = used.isNullObject ? -1 : used.rowIndex + used.rowCount - 1;
@@ -320,7 +312,7 @@ async function inspectAppendInContext(
     belowRange.load("formulas");
     await context.sync();
     belowFormulas = belowRange.formulas as unknown[][];
-    below = findOccupied(belowFormulas, lastRow + 1, full.columnIndex, summaryRect);
+    below = findOccupied(belowFormulas, lastRow + 1, full.columnIndex, ownRects);
   }
 
   const headers = (header.values[0] ?? []).map((v) => String(v));
@@ -593,6 +585,9 @@ export class ExcelWorkbookGateway implements WorkbookGateway {
           body.numberFormat = Array.from({ length: layout.dataRowCount }, () => [
             column.numberFormat as string,
           ]);
+        }
+        if (column.wrap) {
+          body.format.wrapText = true;
         }
       });
 

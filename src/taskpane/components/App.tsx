@@ -24,6 +24,9 @@ import LibraryView from "./library/LibraryView";
 import PricingView from "./pricing/PricingView";
 import QuoteInfoPanel from "./QuoteInfoPanel";
 import WorkflowPanel from "./WorkflowPanel";
+import PrintView from "./print/PrintView";
+import { LayoutGateway } from "../../application/layoutGateway";
+import { ExcelLayoutGateway } from "../../office/excelLayoutGateway";
 import { compositionLines } from "../../domain/pricing/composition";
 import { ExcelPricingGateway } from "../../office/excelPricingGateway";
 import { PricingGateway } from "../../application/pricingGateway";
@@ -70,6 +73,7 @@ const FOCUS_TARGET: Record<View, string> = {
   overview: "cq-context-title",
   quote: "cq-create-title",
   pricing: "cq-check-title",
+  print: "cq-terms-title",
   library: "cq-library-title",
   settings: "cq-version-title",
   help: "cq-help-title",
@@ -84,11 +88,13 @@ interface Navigation {
 const App: React.FC<{
   gateway?: WorkbookGateway;
   pricing?: PricingGateway;
+  layout?: LayoutGateway;
   libraryService?: LibraryService;
-}> = ({ gateway: injected, pricing: injectedPricing, libraryService: injectedLibrary }) => {
+}> = ({ gateway: injected, pricing: injectedPricing, layout: injectedLayout, libraryService: injectedLibrary }) => {
   const styles = useStyles();
   const gateway = React.useMemo(() => injected ?? new ExcelWorkbookGateway(), [injected]);
   const pricing = React.useMemo(() => injectedPricing ?? new ExcelPricingGateway(), [injectedPricing]);
+  const layout = React.useMemo(() => injectedLayout ?? new ExcelLayoutGateway(), [injectedLayout]);
   const libraryService = React.useMemo(() => injectedLibrary ?? createLibraryService(), [injectedLibrary]);
   // Công tác vừa chọn "Chèn vào báo giá" ở thư viện; form Thêm công tác dùng một lần rồi xóa.
   const [prefill, setPrefill] = React.useState<LibraryPrefill | null>(null);
@@ -171,6 +177,7 @@ const App: React.FC<{
             <Tab value="overview">{s.tabs.overview}</Tab>
             <Tab value="quote">{s.tabs.quote}</Tab>
             <Tab value="pricing">{s.tabs.pricing}</Tab>
+            <Tab value="print">{s.tabs.print}</Tab>
             <Tab value="library">{s.tabs.library}</Tab>
             <Tab value="settings">{s.tabs.settings}</Tab>
           </TabList>
@@ -224,6 +231,12 @@ const App: React.FC<{
           {nav.view === "pricing" && (
             <div className={styles.panel} role="tabpanel" aria-label={s.tabs.pricing}>
               <PricingView gateway={gateway} pricing={pricing} tablesVersion={tablesVersion} />
+            </div>
+          )}
+
+          {nav.view === "print" && (
+            <div className={styles.panel} role="tabpanel" aria-label={s.tabs.print}>
+              <PrintView gateway={gateway} layout={layout} tablesVersion={tablesVersion} />
             </div>
           )}
 

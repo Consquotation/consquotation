@@ -3,7 +3,9 @@
 /** Tiện ích Office.js dùng chung cho các adapter trong src/office/ (ADR-0006). */
 
 import { OccupiedCells } from "../application/workbookGateway";
+import { summaryTableName } from "../domain/pricing/adjustments";
 import { RoundingConfig, normalizeRounding } from "../domain/pricing/rounding";
+import { termsNameFor } from "../domain/terms";
 import { cellAddress } from "../shared/a1";
 
 /** Cấu hình tính giá của workbook (lưu trong workbook settings, đi theo file). */
@@ -31,9 +33,8 @@ export interface CellRect {
   columnCount: number;
 }
 
-function inside(rect: CellRect | undefined, row: number, column: number): boolean {
+function insideOne(rect: CellRect, row: number, column: number): boolean {
   return (
-    rect !== undefined &&
     row >= rect.rowIndex &&
     row < rect.rowIndex + rect.rowCount &&
     column >= rect.columnIndex &&
@@ -41,12 +42,17 @@ function inside(rect: CellRect | undefined, row: number, column: number): boolea
   );
 }
 
-/** Đếm ô có nội dung; bỏ qua các ô thuộc vùng exclude (ví dụ bảng tổng hợp của chính add-in). */
+function inside(rects: CellRect | CellRect[] | undefined, row: number, column: number): boolean {
+  const list = rects === undefined ? [] : Array.isArray(rects) ? rects : [rects];
+  return list.some((rect) => insideOne(rect, row, column));
+}
+
+/** Đếm ô có nội dung; bỏ qua các ô thuộc vùng exclude (các khối của chính add-in). */
 export function findOccupied(
   formulas: unknown[][],
   rowIndex: number,
   columnIndex: number,
-  exclude?: CellRect
+  exclude?: CellRect | CellRect[]
 ): OccupiedCells {
   let count = 0;
   const sample: string[] = [];
@@ -97,4 +103,35 @@ export async function readRounding(context: Excel.RequestContext): Promise<Round
   await context.sync();
   const value = setting.isNullObject ? undefined : (setting.value as { rounding?: unknown } | null);
   return normalizeRounding(value?.rounding);
+}
+
+/**
+ * Các khối của chính add-in nằm dưới bảng báo giá: bảng tổng hợp (CQ_Summary_n) và khu vực
+ * ghi chú/điều khoản (tên CQ_Terms_n). Excel dời chúng cùng khi chèn dòng vào bảng báo giá
+ * (đã kiểm chứng) nên không tính là "dữ liệu bên dưới" cần hỏi xác nhận.
+ */
+export async function ownBlocksBelow(
+  context: Excel.RequestContext,
+  quoteTableName: string
+): Promise<{ summary?: CellRect; terms?: CellRect }> {
+  const summary = context.workbook.tables.getItemOrNullObject(summaryTableName(quoteTableName));
+  summary.load("name");
+  const name = context.workbook.names.getItemOrNullObject(termsNameFor(quoteTableName));
+  name.load("name");
+  await context.sync();
+  const summaryRange = summary.isNullObject ? undefined : summary.getRange();
+  summaryRange?.load("rowIndex,columnIndex,rowCount,columnCount");
+  const termsRange = name.isNullObject ? undefined : name.getRangeOrNullObject();
+  termsRange?.load("rowIndex,columnIndex,rowCount,columnCount");
+  await context.sync();
+  const rect = (r: Excel.Range): CellRect => ({
+    rowIndex: r.rowIndex,
+    columnIndex: r.columnIndex,
+    rowCount: r.rowCount,
+    columnCount: r.columnCount,
+  });
+  return {
+    summary: summaryRange ? rect(summaryRange) : undefined,
+    terms: termsRange && !termsRange.isNullObject ? rect(termsRange) : undefined,
+  };
 }

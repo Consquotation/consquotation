@@ -230,10 +230,8 @@ export function buildComposition(
 export const COMPOSITION_NOTE_PREFIX = "Phân tích định mức:";
 
 export function compositionNote(item: WorkItem, resourceCount: number, currency: string): string {
-  const parts = [
-    `${COMPOSITION_NOTE_PREFIX} ${item.code} (sheet "${ANALYSIS_SHEET_NAME}")`,
-    `${resourceCount} tài nguyên`,
-  ];
+  // Ngắn gọn để ít dòng khi in; chi tiết nằm ở sheet phân tích.
+  const parts = [`${COMPOSITION_NOTE_PREFIX} ${item.code}`, `${resourceCount} tài nguyên`];
   if (currency) {
     parts.push(`tiền tệ: ${currency}`);
   }

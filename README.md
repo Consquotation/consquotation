@@ -4,7 +4,7 @@ Microsoft Excel Add-in hỗ trợ lập báo giá thi công xây dựng **ngay t
 
 ## Trạng thái
 
-Đã triển khai theo bộ đặc tả trong `prompts/`: 04 (setup, manifest), 05 (Ribbon, task pane), 06 (workbook integration), 08 (thư viện cá nhân), 09 (nhập/xuất, sao lưu thư viện), 10 (tính đơn giá và thành tiền), 07 (quy trình báo giá).
+Đã triển khai theo bộ đặc tả trong `prompts/`: 04 (setup, manifest), 05 (Ribbon, task pane), 06 (workbook integration), 08 (thư viện cá nhân), 09 (nhập/xuất, sao lưu thư viện), 10 (tính đơn giá và thành tiền), 07 (quy trình báo giá), 11 (mẫu báo giá và in ấn).
 
 Đã có:
 - **Ribbon**: tab **ConsQuotation** gồm nhóm **Báo giá** (Mở ConsQuotation, Tạo bảng báo giá, Thư viện của tôi) và nhóm **Trợ giúp**.
@@ -34,6 +34,10 @@ Microsoft Excel Add-in hỗ trợ lập báo giá thi công xây dựng **ngay t
   - Tab Tổng quan hiện tình trạng 9 bước. Tình trạng đọc trực tiếp từ workbook mỗi lần kiểm tra, kèm nút chuyển tới đúng chỗ.
   - Panel **Thông tin báo giá** đọc và ghi khối thông tin trên sheet: tìm lại nhãn mỗi lần đọc, ghi ngày thành ngày Excel, cảnh báo báo giá hết hiệu lực.
   - Không có trạng thái nháp/đã phát hành. Trước mọi lần ghi, add-in đọc lại sheet; nếu sheet vừa bị sửa thì dừng và cho người dùng xem lại.
+- **In ấn** (prompts/11; xem [ADR-0009](docs/ADR/0009-mau-bao-gia-va-in-an.md)):
+  - Khu vực **ghi chú và điều khoản** theo cấu hình (phạm vi, giả định, loại trừ, điều khoản thương mại, ghi chú). Nội dung do người dùng nhập; khu vực tự dời theo khi thêm dòng.
+  - **Thiết lập trang in** qua PageLayout (ExcelApi 1.9): vùng in, lặp tiêu đề, khổ/hướng giấy, co giãn, số trang, xuống dòng. Không hỗ trợ thì có hướng dẫn thao tác trong Excel.
+  - In và xuất PDF bằng chức năng có sẵn của Excel.
 - **Tính giá** (tab mới; xem [ADR-0008](docs/ADR/0008-tinh-don-gia-va-thanh-tien.md)):
   - Đơn giá có thể nhập trực tiếp, lấy từ thư viện, hoặc **phân tích từ định mức**. Phần phân tích nằm ở sheet "Phân tích đơn giá" bằng công thức Excel, nên truy vết được từng tài nguyên.
   - Chiết khấu, phụ phí, thuế do người dùng cấu hình và áp dụng theo thứ tự. Không có tỷ lệ mặc định.
@@ -41,7 +45,7 @@ Microsoft Excel Add-in hỗ trợ lập báo giá thi công xây dựng **ngay t
   - **Kiểm tra báo giá**: lỗi công thức, thiếu dữ liệu, đơn giá bằng 0, công thức bị sửa tay, đơn giá lệch sheet phân tích. Có nút Đi tới và đề xuất cập nhật (cần xác nhận).
 - Thông báo "không tương thích" cho Excel dùng webview cũ (IE11/EdgeHTML) hoặc thiếu ExcelApi 1.8.
 
-Chưa có: in ấn (prompts/11).
+Chưa có: các đặc tả 12–21 (lưu trữ/quyền riêng tư, xác thực lỗi, tương thích, bảo mật, kiểm thử chấp nhận…).
 
 ### Hạn chế đã biết
 
@@ -57,7 +61,7 @@ Office.js · TypeScript (strict) · React 18 · Fluent UI React v9 · webpack 5 
 
 | Nền tảng | Mức hỗ trợ | Đã kiểm thử |
 |---|---|---|
-| Excel Microsoft 365 trên Windows | Chính | Có — đặc tả 04–10 (2026-10-19/21), build 16.0.20430.20182 |
+| Excel Microsoft 365 trên Windows | Chính | Có — đặc tả 04–11 (2026-10-19/21), build 16.0.20430.20182 |
 | Excel trên web | Phụ | Chưa |
 | Excel 2016/2019/2021/2024 bản retail trên Windows (WebView2) | Hỗ trợ | Chưa — không có máy kiểm thử |
 | Excel trên Mac | Chưa kiểm thử | Chưa |
