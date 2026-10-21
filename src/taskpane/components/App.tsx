@@ -22,6 +22,8 @@ import WorkbookContextPanel from "./WorkbookContextPanel";
 import LibraryStoragePanel from "./library/LibraryStoragePanel";
 import LibraryView from "./library/LibraryView";
 import PricingView from "./pricing/PricingView";
+import QuoteInfoPanel from "./QuoteInfoPanel";
+import WorkflowPanel from "./WorkflowPanel";
 import { compositionLines } from "../../domain/pricing/composition";
 import { ExcelPricingGateway } from "../../office/excelPricingGateway";
 import { PricingGateway } from "../../application/pricingGateway";
@@ -36,7 +38,7 @@ import { IndexedDbLibraryRepository, libraryDatabaseName } from "../../storage/i
 import { STRINGS } from "../../shared/strings.vi";
 import { View, parseInitialView } from "../navigation";
 
-/* global crypto, document, indexedDB, window */
+/* global clearTimeout, crypto, document, indexedDB, setTimeout, window */
 
 function createLibraryService(): LibraryService {
   const repo = new IndexedDbLibraryRepository(indexedDB, libraryDatabaseName(readPartitionKey()));
@@ -111,9 +113,22 @@ const App: React.FC<{
     if (!nav.focusId) {
       return;
     }
-    const target = document.getElementById(nav.focusId);
-    target?.scrollIntoView({ block: "start" });
-    target?.focus();
+    // Một số phần chỉ hiện sau khi tải dữ liệu (ví dụ tab Tính giá chờ danh sách bảng):
+    // thử lại trong thời gian ngắn thay vì bỏ qua.
+    const focusId = nav.focusId;
+    let attempts = 0;
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    const tryFocus = () => {
+      const target = document.getElementById(focusId);
+      if (target) {
+        target.scrollIntoView({ block: "start" });
+        target.focus();
+      } else if (attempts++ < 30) {
+        timer = setTimeout(tryFocus, 100);
+      }
+    };
+    tryFocus();
+    return () => clearTimeout(timer);
   }, [nav]);
 
   const insertFromLibrary = async (item: WorkItem) => {
@@ -163,6 +178,12 @@ const App: React.FC<{
           {nav.view === "overview" && (
             <div className={styles.panel} role="tabpanel" aria-label={s.tabs.overview}>
               <WorkbookContextPanel gateway={gateway} />
+              <WorkflowPanel
+                gateway={gateway}
+                pricing={pricing}
+                tablesVersion={tablesVersion}
+                onNavigate={(view, focusId) => go(view, focusId)}
+              />
               <section aria-labelledby="cq-shortcuts-title">
                 <Subtitle2 as="h2" id="cq-shortcuts-title">
                   {s.shortcuts.title}
@@ -188,6 +209,7 @@ const App: React.FC<{
             <div className={styles.panel} role="tabpanel" aria-label={s.tabs.quote}>
               <WorkbookContextPanel gateway={gateway} />
               <CreateQuotePanel gateway={gateway} onCreated={bumpTables} />
+              <QuoteInfoPanel gateway={gateway} tablesVersion={tablesVersion} />
               <AddWorkItemPanel
                 gateway={gateway}
                 pricing={pricing}

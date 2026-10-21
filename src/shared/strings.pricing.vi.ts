@@ -39,6 +39,8 @@ export const PRICING_STRINGS = {
       "Phân tích còn thiếu đơn giá nguồn nên Đơn giá trong báo giá để trống. Nhập đơn giá nguồn trên sheet phân tích, rồi dùng Tính giá › Kiểm tra báo giá để cập nhật.",
     addedError: (error: string) =>
       `Đơn giá phân tích đang lỗi (${error}) nên Đơn giá trong báo giá để trống. Kiểm tra sheet phân tích.`,
+    existsUsed: (code: string) =>
+      `Mã "${code}" vừa có phân tích trên sheet (được thêm ở nơi khác) nên add-in đã dùng phân tích có sẵn thay cho lựa chọn giá của bạn.`,
     analysisWrittenButChanged:
       "Đã ghi phân tích nhưng bảng báo giá vừa thay đổi nên chưa thêm dòng. Hãy bấm Thêm lần nữa — phân tích có sẵn sẽ được dùng lại.",
   },
@@ -133,6 +135,8 @@ export const PRICING_STRINGS = {
         `Vùng cần cho bảng tổng hợp (dưới dòng tổng của bảng báo giá) đang có dữ liệu ở ${sample}. Add-in không ghi đè — hãy di chuyển dữ liệu đó rồi thử lại.`,
     },
     errors: "Hãy sửa các lỗi được đánh dấu.",
+    changedOnSheet:
+      "Bảng tổng hợp trên sheet vừa được sửa sau khi panel tải. Add-in chưa ghi gì và đã tải lại giá trị mới nhất — hãy xem lại rồi bấm Áp dụng.",
   },
 
   check: {
@@ -147,6 +151,8 @@ export const PRICING_STRINGS = {
     error: "Lỗi",
     warning: "Cảnh báo",
     goTo: "Đi tới",
+    checkedAt: (time: string) =>
+      `Kết quả lúc ${time}. Nếu bạn sửa sheet sau đó, hãy bấm Kiểm tra lại — add-in không dùng kết quả cũ để ghi.`,
     circularNote:
       "Tham chiếu vòng: Excel tự cảnh báo trên thanh trạng thái; add-in không đọc được trạng thái này.",
     fixAll: (n: number) => `Cập nhật ${n} đơn giá theo sheet phân tích`,

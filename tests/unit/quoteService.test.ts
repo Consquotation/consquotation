@@ -61,6 +61,10 @@ class FakeGateway implements WorkbookGateway {
     return { table: { label: sheetName, firstRowNumber: 1, firstColumnIndex: 0, rows: [] }, totalRows: 0 };
   }
   async openNewWorkbook() {}
+  async readQuoteInfo() {
+    return { sheetName: "S", sheetProtected: false, cells: [], fingerprint: "" };
+  }
+  async writeQuoteInfo() {}
   async inspectAppend(_tableName: string, position: InsertPosition) {
     this.inspectedPositions.push(position);
     return this.appendInspection;

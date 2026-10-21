@@ -220,6 +220,7 @@ const AddWorkItemPanel: React.FC<{
         incomplete = price.kind !== "value";
         note = [
           p.analysisSheet(written.sheetName),
+          written.status === "exists" && existingAnalysis === null ? p.existsUsed(composition.item.code) : "",
           price.kind === "missing" ? p.addedMissing : price.kind === "error" ? p.addedError(price.error) : "",
         ]
           .filter(Boolean)

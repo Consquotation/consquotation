@@ -13,6 +13,7 @@ import {
   CreatedQuote,
   InsertPosition,
   OccupiedCells,
+  QuoteInfoRead,
   SheetRead,
   SheetSummary,
   QuoteTableInfo,
@@ -25,6 +26,7 @@ import {
 } from "../application/workbookGateway";
 import { isQuoteTableName, uniqueQuoteTableName, uniqueSheetName } from "../domain/naming";
 import {
+  INFO_VALUE_COLUMN_OFFSET,
   QUOTE_COLUMNS,
   QUOTE_TITLE,
   alignRowToHeaders,
@@ -46,6 +48,15 @@ import {
   supports,
 } from "./excelHelpers";
 import { summaryTableName } from "../domain/pricing/adjustments";
+import {
+  INFO_DATE_FORMAT,
+  INFO_FIELDS,
+  INFO_SCAN_ROWS,
+  InfoCell,
+  InfoWrite,
+  labelMatches,
+} from "../domain/quoteInfo";
+import { asLiteralText } from "../domain/workItemDraft";
 import { RawCell, excelSerialToIso, isDateNumberFormat } from "../domain/library/exchange/cells";
 
 const SETTINGS_KEY = "ConsQuotation.quoteTables";
@@ -348,7 +359,115 @@ async function inspectAppendInContext(
   };
 }
 
+interface InfoScan {
+  read: QuoteInfoRead;
+  sheet: Excel.Worksheet;
+}
+
+/** Dò nhãn thông tin báo giá trong các dòng phía trên tiêu đề bảng (cột đầu của bảng). */
+async function scanQuoteInfo(context: Excel.RequestContext, tableName: string): Promise<InfoScan> {
+  const table = context.workbook.tables.getItem(tableName);
+  const sheet = context.workbook.tables.getItem(tableName).worksheet;
+  sheet.load("name");
+  sheet.protection.load("protected");
+  const header = table.getHeaderRowRange();
+  header.load("rowIndex,columnIndex");
+  await context.sync();
+  const first = Math.max(0, header.rowIndex - INFO_SCAN_ROWS);
+  const count = header.rowIndex - first;
+  const cells: InfoCell[] = INFO_FIELDS.map((f) => ({
+    key: f.key,
+    found: false,
+    address: "",
+    value: "",
+    text: "",
+    numberFormat: "General",
+  }));
+  if (count <= 0) {
+    return {
+      sheet,
+      read: {
+        sheetName: sheet.name,
+        sheetProtected: sheet.protection.protected,
+        cells,
+        fingerprint: "",
+      },
+    };
+  }
+  const labels = sheet.getRangeByIndexes(first, header.columnIndex, count, 1);
+  labels.load("values");
+  const values = sheet.getRangeByIndexes(
+    first,
+    header.columnIndex + INFO_VALUE_COLUMN_OFFSET,
+    count,
+    1
+  );
+  values.load("values,text,numberFormat,formulas");
+  await context.sync();
+  const labelValues = labels.values;
+  const cellValues = values.values;
+  const cellText = values.text;
+  const cellFormats = values.numberFormat;
+  INFO_FIELDS.forEach((field, i) => {
+    const r = labelValues.findIndex((row) => labelMatches(row[0], field.label));
+    if (r >= 0) {
+      cells[i] = {
+        key: field.key,
+        found: true,
+        address: cellAddress(first + r, header.columnIndex + INFO_VALUE_COLUMN_OFFSET),
+        value: cellValues[r][0],
+        text: String(cellText[r][0] ?? ""),
+        numberFormat: String(cellFormats[r][0] ?? "General"),
+      };
+    }
+  });
+  return {
+    sheet,
+    read: {
+      sheetName: sheet.name,
+      sheetProtected: sheet.protection.protected,
+      cells,
+      fingerprint: hashString(
+        `${first}|${JSON.stringify(labelValues)}|${JSON.stringify(values.formulas)}`
+      ),
+    },
+  };
+}
+
 export class ExcelWorkbookGateway implements WorkbookGateway {
+  async readQuoteInfo(tableName: string): Promise<QuoteInfoRead> {
+    return Excel.run(async (context) => (await scanQuoteInfo(context, tableName)).read);
+  }
+
+  async writeQuoteInfo(
+    tableName: string,
+    writes: InfoWrite[],
+    expectedFingerprint: string
+  ): Promise<void> {
+    await Excel.run(async (context) => {
+      const { read, sheet } = await scanQuoteInfo(context, tableName);
+      if (read.fingerprint !== expectedFingerprint) {
+        throw new TargetChangedError();
+      }
+      for (const write of writes) {
+        const cell = read.cells.find((c) => c.key === write.key);
+        if (!cell?.found) {
+          throw new TargetChangedError();
+        }
+        const range = sheet.getRange(cell.address);
+        if (write.kind === "clear") {
+          range.clear(Excel.ClearApplyTo.contents);
+        } else if (write.kind === "date") {
+          range.numberFormat = [[INFO_DATE_FORMAT]];
+          range.values = [[write.serial]];
+        } else {
+          range.values = [[asLiteralText(write.text)]];
+        }
+      }
+      await context.sync();
+    });
+  }
+
   async readContext(): Promise<WorkbookContext> {
     return Excel.run(async (context) => {
       const sheet = context.workbook.worksheets.getActiveWorksheet();

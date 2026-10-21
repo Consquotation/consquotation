@@ -127,6 +127,14 @@ const SummaryPanel: React.FC<{ pricing: PricingGateway; tableName: string }> = (
       }
       setPhase({ kind: "working" });
       try {
+        // Người dùng có thể đã sửa bảng tổng hợp trực tiếp trên sheet sau khi panel tải (prompts/07):
+        // so với lần đọc trước; khác thì tải lại thay vì ghi đè thay đổi đó.
+        const now = await pricing.readSummary(tableName);
+        if (JSON.stringify(now.adjustments) !== JSON.stringify(state?.adjustments ?? []) || now.exists !== (state?.exists ?? false)) {
+          await load();
+          setPhase({ kind: "message", intent: "warning", text: s.changedOnSheet });
+          return;
+        }
         const check = await pricing.inspectSummary(tableName, adjustments.length);
         if (!check.ok) {
           const b = s.blocked;

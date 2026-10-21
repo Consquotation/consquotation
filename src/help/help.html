@@ -18,6 +18,20 @@
   <h2>Phiên bản hiện tại</h2>
   <p>Bản đang phát triển. Đã có: tạo bảng báo giá; thêm công tác (thủ công hoặc từ thư viện); <strong>Thư viện của tôi</strong> cùng nhập/xuất và sao lưu; <strong>Tính giá</strong> (đơn giá phân tích từ định mức, chiết khấu/phụ phí/thuế, làm tròn, kiểm tra báo giá). Chưa có: in ấn.</p>
 
+  <h2>Quy trình báo giá</h2>
+  <ol>
+    <li>Mở workbook và ConsQuotation (tab <strong>ConsQuotation</strong> trên Ribbon).</li>
+    <li>Tạo bảng báo giá mới, hoặc dùng bảng đã có trong workbook.</li>
+    <li>Chọn sheet/vị trí ghi — add-in kiểm tra và hỏi trước khi ghi vào vùng có dữ liệu.</li>
+    <li>Nhập thông tin báo giá (tab Báo giá › <strong>Thông tin báo giá</strong>, hoặc gõ thẳng trên sheet). Tất cả đều tùy chọn.</li>
+    <li>Thêm công tác thủ công hoặc từ Thư viện của tôi.</li>
+    <li>Nhập khối lượng, chọn cách xác định đơn giá.</li>
+    <li>Tính toán và kiểm tra: tab <strong>Tính giá</strong> › Kiểm tra báo giá.</li>
+    <li>Sửa lỗi/cảnh báo (nút <strong>Đi tới</strong> chọn đúng ô), rồi kiểm tra lại.</li>
+    <li>Lưu workbook bằng Excel (Ctrl+S); in hoặc xuất PDF bằng File › Print / Export. ConsQuotation không tự gửi báo giá.</li>
+  </ol>
+  <p>Tab <strong>Tổng quan › Quy trình báo giá</strong> cho biết tình trạng từng bước, đọc trực tiếp từ workbook mỗi lần kiểm tra. Add-in không lưu trạng thái nháp/đã kiểm tra/đã phát hành: bạn có thể sửa sheet bất kỳ lúc nào, và trước khi ghi add-in luôn đọc lại dữ liệu hiện tại — nếu sheet vừa bị sửa, add-in dừng và cho bạn xem lại.</p>
+
   <h2>Thư viện của tôi</h2>
   <ul>
     <li>Thư viện do bạn tự tạo: công tác, tài nguyên, giá (có ngày hiệu lực) và định mức. ConsQuotation không kèm sẵn dữ liệu nào.</li>

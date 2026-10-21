@@ -13,7 +13,7 @@
   xmlns:ov="http://schemas.microsoft.com/office/taskpaneappversionoverrides" xsi:type="TaskPaneApp">
   <Id>03040238-2423-498b-b0fe-30f0425b2ed2</Id>
   <!-- Trình kiểm tra manifest yêu cầu Version >= 1.0; tăng phiên bản này mỗi lần phát hành manifest mới. -->
-  <Version>1.4.0.0</Version>
+  <Version>1.5.0.0</Version>
   <ProviderName>ConsQuotation</ProviderName>
   <DefaultLocale>vi-VN</DefaultLocale>
   <DisplayName DefaultValue="ConsQuotation (Dev)"/>

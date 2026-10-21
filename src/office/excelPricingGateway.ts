@@ -214,7 +214,7 @@ async function inspectSummaryArea(
   let existingRange: Excel.Range | undefined;
   if (!existing.isNullObject) {
     existingRange = existing.getRange();
-    existingRange.load("address,rowIndex,columnIndex,rowCount");
+    existingRange.load("address,rowIndex,columnIndex,rowCount,formulas");
   }
   await context.sync();
 
@@ -265,7 +265,7 @@ async function inspectSummaryArea(
       ok: true,
       address: rangeAddress(top, left, needed, SUMMARY_WIDTH),
       fingerprint: hashString(
-        `${full.address}|${existingRange?.address ?? ""}|${JSON.stringify(formulas)}`
+        `${full.address}|${existingRange?.address ?? ""}|${JSON.stringify(existingRange?.formulas ?? [])}|${JSON.stringify(formulas)}`
       ),
     },
     top,

@@ -4,6 +4,7 @@
  */
 
 import type { SourceTable } from "../domain/library/exchange/source";
+import type { InfoCell, InfoWrite } from "../domain/quoteInfo";
 
 export interface WorkbookContext {
   workbookName: string | null;
@@ -103,6 +104,15 @@ export interface SheetRead {
   totalRows: number;
 }
 
+/** Khối thông tin báo giá đọc trực tiếp từ sheet (prompts/07 bước 4). */
+export interface QuoteInfoRead {
+  sheetName: string;
+  sheetProtected: boolean;
+  cells: InfoCell[];
+  /** Vân tay vùng nhãn/giá trị lúc đọc: khác lúc ghi → dừng, không ghi đè thay đổi mới của người dùng. */
+  fingerprint: string;
+}
+
 export interface WorkbookGateway {
   readContext(): Promise<WorkbookContext>;
   /** Kiểm tra vùng mẫu sẽ chiếm tại ô đầu tiên của vùng đang chọn trên sheet hiện tại. */
@@ -131,6 +141,13 @@ export interface WorkbookGateway {
    */
   wasLibraryUsed(): Promise<boolean>;
   markLibraryUsed(): Promise<void>;
+  readQuoteInfo(tableName: string): Promise<QuoteInfoRead>;
+  /** Ghi các mục thông tin đã đổi; kiểm tra lại vân tay trong cùng lượt ghi. */
+  writeQuoteInfo(
+    tableName: string,
+    writes: InfoWrite[],
+    expectedFingerprint: string
+  ): Promise<void>;
   /** Danh sách sheet để chọn nguồn nhập thư viện (chỉ đọc). */
   listSheets(): Promise<{ sheets: SheetSummary[]; activeSheet: string }>;
   /** Đọc vùng có dữ liệu của sheet (tối đa maxRows dòng), kèm chữ hiển thị và ngày (chỉ đọc). */

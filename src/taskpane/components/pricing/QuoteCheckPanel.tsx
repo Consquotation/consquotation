@@ -39,7 +39,7 @@ const useStyles = makeStyles({
 type State =
   | { kind: "idle" }
   | { kind: "running" }
-  | { kind: "done"; snapshot: QuoteSnapshot; result: QuoteCheckResult }
+  | { kind: "done"; snapshot: QuoteSnapshot; result: QuoteCheckResult; at: string }
   | { kind: "error"; message: string };
 
 /** Kiểm tra báo giá (prompts/10, 13): đọc trực tiếp sheet, chỉ báo; sửa cần xác nhận. */
@@ -58,7 +58,7 @@ const QuoteCheckPanel: React.FC<{ pricing: PricingGateway; tableName: string }> 
     setState({ kind: "running" });
     try {
       const snapshot = await pricing.readQuoteSnapshot(tableName);
-      setState({ kind: "done", snapshot, result: checkQuote(snapshot) });
+      setState({ kind: "done", snapshot, result: checkQuote(snapshot), at: new Date().toLocaleTimeString("vi-VN") });
     } catch (error) {
       setState({ kind: "error", message: describeOfficeError(error) });
     }
@@ -188,6 +188,7 @@ const QuoteCheckPanel: React.FC<{ pricing: PricingGateway; tableName: string }> 
                 </li>
               ))}
           </ul>
+          <Caption1>{s.checkedAt(state.at)}</Caption1>
           <Caption1>{s.circularNote}</Caption1>
         </>
       )}

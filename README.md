@@ -4,7 +4,7 @@ Microsoft Excel Add-in hỗ trợ lập báo giá thi công xây dựng **ngay t
 
 ## Trạng thái
 
-Đã triển khai theo bộ đặc tả trong `prompts/`: 04 (setup, manifest), 05 (Ribbon, task pane), 06 (workbook integration), 08 (thư viện cá nhân), 09 (nhập/xuất, sao lưu thư viện), 10 (tính đơn giá và thành tiền).
+Đã triển khai theo bộ đặc tả trong `prompts/`: 04 (setup, manifest), 05 (Ribbon, task pane), 06 (workbook integration), 08 (thư viện cá nhân), 09 (nhập/xuất, sao lưu thư viện), 10 (tính đơn giá và thành tiền), 07 (quy trình báo giá).
 
 Đã có:
 - **Ribbon**: tab **ConsQuotation** gồm nhóm **Báo giá** (Mở ConsQuotation, Tạo bảng báo giá, Thư viện của tôi) và nhóm **Trợ giúp**.
@@ -30,6 +30,10 @@ Microsoft Excel Add-in hỗ trợ lập báo giá thi công xây dựng **ngay t
   - Luồng nhập: nhận diện tiêu đề → chọn loại dữ liệu → map cột → xem trước → kiểm tra → chọn cách xử lý trùng → xác nhận → báo cáo.
   - Không ghi đè mặc định. Báo lỗi theo dòng và cột. Mỗi lần nhập ghi trong một giao dịch.
   - Nhắc khi thư viện chưa được sao lưu.
+- **Quy trình báo giá** (prompts/07):
+  - Tab Tổng quan hiện tình trạng 9 bước. Tình trạng đọc trực tiếp từ workbook mỗi lần kiểm tra, kèm nút chuyển tới đúng chỗ.
+  - Panel **Thông tin báo giá** đọc và ghi khối thông tin trên sheet: tìm lại nhãn mỗi lần đọc, ghi ngày thành ngày Excel, cảnh báo báo giá hết hiệu lực.
+  - Không có trạng thái nháp/đã phát hành. Trước mọi lần ghi, add-in đọc lại sheet; nếu sheet vừa bị sửa thì dừng và cho người dùng xem lại.
 - **Tính giá** (tab mới; xem [ADR-0008](docs/ADR/0008-tinh-don-gia-va-thanh-tien.md)):
   - Đơn giá có thể nhập trực tiếp, lấy từ thư viện, hoặc **phân tích từ định mức**. Phần phân tích nằm ở sheet "Phân tích đơn giá" bằng công thức Excel, nên truy vết được từng tài nguyên.
   - Chiết khấu, phụ phí, thuế do người dùng cấu hình và áp dụng theo thứ tự. Không có tỷ lệ mặc định.
@@ -53,7 +57,7 @@ Office.js · TypeScript (strict) · React 18 · Fluent UI React v9 · webpack 5 
 
 | Nền tảng | Mức hỗ trợ | Đã kiểm thử |
 |---|---|---|
-| Excel Microsoft 365 trên Windows | Chính | Có — đặc tả 04, 05, 06, 08, 09, 10 (2026-10-19/21), build 16.0.20430.20182 |
+| Excel Microsoft 365 trên Windows | Chính | Có — đặc tả 04–10 (2026-10-19/21), build 16.0.20430.20182 |
 | Excel trên web | Phụ | Chưa |
 | Excel 2016/2019/2021/2024 bản retail trên Windows (WebView2) | Hỗ trợ | Chưa — không có máy kiểm thử |
 | Excel trên Mac | Chưa kiểm thử | Chưa |
