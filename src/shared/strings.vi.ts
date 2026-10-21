@@ -105,8 +105,7 @@ export const STRINGS = {
     buildMode: "Bản build",
     development: "Phát triển (dev)",
     production: "Chính thức (production)",
-    unavailableNote:
-      "Định dạng và sao lưu thư viện sẽ có ở đây khi tính năng Thư viện của tôi được triển khai.",
+    unavailableNote: "Sao lưu, khôi phục và nhập/xuất thư viện: mở Thư viện › Nhập/Xuất.",
   },
 
   context: {

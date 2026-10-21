@@ -1,7 +1,8 @@
 import * as React from "react";
 import { Body1, Caption1, Spinner, Subtitle2, makeStyles, tokens } from "@fluentui/react-components";
 import { useLibrary } from "./useLibrary";
-import { LibraryService } from "../../../application/libraryService";
+import { BackupStatus, LibraryService } from "../../../application/libraryService";
+import { formatDateTime } from "../../../domain/library/dates";
 import { LIBRARY_STRINGS } from "../../../shared/strings.library.vi";
 
 const useStyles = makeStyles({
@@ -13,6 +14,10 @@ const LibraryStoragePanel: React.FC<{ service: LibraryService }> = ({ service })
   const styles = useStyles();
   const s = LIBRARY_STRINGS.storage;
   const { state } = useLibrary(service);
+  const [backup, setBackup] = React.useState<BackupStatus | null>(null);
+  React.useEffect(() => {
+    service.backupStatus().then(setBackup, () => setBackup(null));
+  }, [service]);
   return (
     <section className={styles.root} aria-labelledby="cq-library-storage-title">
       <Subtitle2 as="h2" id="cq-library-storage-title">
@@ -31,6 +36,11 @@ const LibraryStoragePanel: React.FC<{ service: LibraryService }> = ({ service })
         </Body1>
       )}
       {state.kind === "error" && <Body1>{state.message}</Body1>}
+      {backup && (
+        <Body1>
+          {backup.lastBackupAt ? s.lastBackup(formatDateTime(backup.lastBackupAt)) : s.noBackup}
+        </Body1>
+      )}
       <Caption1>{s.risk}</Caption1>
     </section>
   );

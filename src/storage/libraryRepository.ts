@@ -23,6 +23,11 @@ export interface LibraryRepository {
   deletePrice(id: string): Promise<void>;
   putNorm(norm: NormDefinition): Promise<void>;
   deleteNorm(id: string): Promise<void>;
+  /**
+   * Ghi mọi bản ghi nhập trong MỘT giao dịch (ADR-0004): lỗi giữa chừng thì không lưu gì.
+   * Bản ghi có id đã tồn tại được thay thế (cập nhật).
+   */
+  applyImport(changes: LibrarySnapshot): Promise<void>;
   getSetting<T>(key: string): Promise<T | undefined>;
   setSetting<T>(key: string, value: T): Promise<void>;
 }

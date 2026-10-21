@@ -34,12 +34,40 @@ ConsQuotation **không kèm sẵn** định mức, đơn giá hay danh mục nà
 
 ## Sao lưu, khôi phục và chuyển máy
 
-> **Hiện chưa có chức năng xuất/nhập thư viện ra file.** Chức năng này thuộc bước tiếp theo (prompts/09). Trong lúc chờ, tab Thư viện luôn hiện cảnh báo. Hãy cân nhắc trước khi nhập nhiều dữ liệu.
+Mọi thao tác nằm ở **Thư viện › Nhập/Xuất**. Định dạng file và quy tắc nhập xem [LIBRARY_SCHEMA.md](LIBRARY_SCHEMA.md).
 
-Khi có chức năng xuất/nhập (prompts/09), quy trình sẽ là:
+### Sao lưu
 
-1. **Sao lưu:** Thư viện › Xuất. Add-in mở một workbook mới chứa toàn bộ thư viện; bạn lưu workbook đó bằng Excel (File › Save As) vào nơi an toàn như OneDrive hoặc ổ đĩa ngoài.
-2. **Khôi phục hoặc chuyển máy:** trên máy mới, hoặc sau khi xóa cache, mở workbook sao lưu, rồi dùng Thư viện › Nhập. Có xem trước dữ liệu và chọn cách xử lý mã trùng.
+- **Tải bản sao lưu (.json)** — cách khuyên dùng.
+  - Trên Excel cho Windows, file được lưu thẳng vào thư mục **Downloads (Tải về)** với tên dạng `ConsQuotation-thu-vien-2026-10-21-0925.json`.
+  - Hãy chép file sang nơi an toàn như OneDrive hoặc ổ đĩa ngoài.
+  - Đây là bản đầy đủ nhất: giữ cả id và thời điểm tạo/sửa.
+- **Xuất ra workbook Excel.**
+  - Add-in mở một workbook mới (chưa lưu), mỗi loại dữ liệu một sheet. Hãy lưu bằng **File › Save As**.
+  - Dùng khi muốn xem, sửa hàng loạt, hoặc chuyển dữ liệu sang máy khác.
+
+Tab Thư viện nhắc khi thư viện **chưa sao lưu lần nào** hoặc **đã thay đổi sau lần sao lưu/xuất gần nhất**. Tab Cài đặt hiện thời điểm sao lưu gần nhất.
+
+Add-in không biết bạn có lưu workbook xuất ra hay không, nên với việc xuất workbook, mốc sao lưu được ghi ngay khi workbook được mở.
+
+### Khôi phục hoặc chuyển máy
+
+1. Cài ConsQuotation trên máy mới, hoặc mở lại sau khi xóa cache.
+2. Vào **Thư viện › Nhập/Xuất**, rồi chọn một trong hai cách:
+   - **Chọn file (.json, .csv)** và chọn file sao lưu JSON;
+   - mở workbook đã xuất trong Excel, mở ConsQuotation trong workbook đó, rồi bấm **Đọc toàn bộ bản xuất**.
+3. Xem bảng kết quả kiểm tra: số dòng mới, trùng, lỗi, dòng trống, kèm danh sách lỗi theo dòng và cột.
+4. Chọn cách xử lý bản ghi trùng (mặc định là **Bỏ qua**), rồi bấm **Nhập** và xác nhận.
+
+Khôi phục từ JSON vào thư viện trống cho ra dữ liệu **giống hệt** bản sao lưu; đã kiểm chứng ngày 2026-10-21.
+
+### Nhập dữ liệu của bạn từ Excel/CSV
+
+- **CSV:** lưu bằng **File › Save As › CSV UTF-8**. Mỗi file chứa một loại dữ liệu: công tác, tài nguyên, giá, hoặc định mức.
+- **Sheet trong workbook đang mở:** chọn sheet, rồi bấm **Đọc sheet**.
+  - Add-in tự tìm dòng tiêu đề (kể cả khi phía trên có dòng tiêu đề phụ), đoán loại dữ liệu và map cột theo tên. Bạn sửa lại được nếu sai.
+  - Add-in chỉ **đọc** sheet, không ghi gì vào workbook.
+- **File mẫu:** nút **Mở file mẫu trống**, hoặc các file trong [templates/](templates/).
 
 ## Báo giá không bị thay đổi khi sửa thư viện
 

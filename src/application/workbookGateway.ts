@@ -3,6 +3,8 @@
  * test dùng bản giả lập. Mọi địa chỉ trả về là địa chỉ A1 không kèm tên sheet.
  */
 
+import type { SourceTable } from "../domain/library/exchange/source";
+
 export interface WorkbookContext {
   workbookName: string | null;
   sheetName: string;
@@ -88,6 +90,19 @@ export interface AppendedRows {
   address: string;
 }
 
+export interface SheetSummary {
+  name: string;
+  /** Kích thước vùng có dữ liệu (0 nếu sheet trống). */
+  rowCount: number;
+  columnCount: number;
+}
+
+export interface SheetRead {
+  table: SourceTable;
+  /** Tổng số dòng có dữ liệu trên sheet; lớn hơn số dòng đã đọc nếu vượt giới hạn. */
+  totalRows: number;
+}
+
 export interface WorkbookGateway {
   readContext(): Promise<WorkbookContext>;
   /** Kiểm tra vùng mẫu sẽ chiếm tại ô đầu tiên của vùng đang chọn trên sheet hiện tại. */
@@ -116,6 +131,12 @@ export interface WorkbookGateway {
    */
   wasLibraryUsed(): Promise<boolean>;
   markLibraryUsed(): Promise<void>;
+  /** Danh sách sheet để chọn nguồn nhập thư viện (chỉ đọc). */
+  listSheets(): Promise<{ sheets: SheetSummary[]; activeSheet: string }>;
+  /** Đọc vùng có dữ liệu của sheet (tối đa maxRows dòng), kèm chữ hiển thị và ngày (chỉ đọc). */
+  readSheet(sheetName: string, maxRows: number): Promise<SheetRead>;
+  /** Mở workbook mới từ nội dung .xlsx (base64); người dùng tự lưu bằng Excel. */
+  openNewWorkbook(base64: string): Promise<void>;
   inspectAppend(tableName: string, position: InsertPosition): Promise<AppendInspection>;
   /** Chèn dòng tại insertIndex đã kiểm tra (null = cuối bảng); kiểm tra lại vân tay trong cùng batch. */
   appendRows(

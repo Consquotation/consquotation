@@ -122,7 +122,19 @@ export class IndexedDbLibraryRepository implements LibraryRepository {
         // transaction() ném InvalidStateError ngay nếu kết nối đã bị đóng — trước khi có thay đổi nào.
         const tx = db.transaction(stores, mode);
         const done = transactionDone(tx);
-        const result = await work(tx);
+        let result: T;
+        try {
+          result = await work(tx);
+        } catch (error) {
+          // Lỗi giữa chừng: hủy giao dịch để các lệnh ghi trước đó không được lưu.
+          try {
+            tx.abort();
+          } catch {
+            /* giao dịch đã kết thúc */
+          }
+          done.catch(() => undefined);
+          throw error;
+        }
         await done;
         return result;
       } catch (error) {
@@ -211,6 +223,27 @@ export class IndexedDbLibraryRepository implements LibraryRepository {
   }
   deleteNorm(id: string): Promise<void> {
     return this.remove(STORES.norms, id);
+  }
+
+  applyImport(changes: LibrarySnapshot): Promise<void> {
+    return this.run(
+      [STORES.workItems, STORES.resources, STORES.resourcePrices, STORES.norms],
+      "readwrite",
+      (tx) => {
+        for (const item of changes.workItems) {
+          tx.objectStore(STORES.workItems).put(item);
+        }
+        for (const resource of changes.resources) {
+          tx.objectStore(STORES.resources).put(resource);
+        }
+        for (const price of changes.resourcePrices) {
+          tx.objectStore(STORES.resourcePrices).put(price);
+        }
+        for (const norm of changes.norms) {
+          tx.objectStore(STORES.norms).put(norm);
+        }
+      }
+    );
   }
 
   async getSetting<T>(key: string): Promise<T | undefined> {

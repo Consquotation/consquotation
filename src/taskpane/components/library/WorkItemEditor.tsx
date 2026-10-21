@@ -14,6 +14,7 @@ import {
 import { TextField, errorFor, formatQuantity } from "./common";
 import ConfirmDialog from "../ConfirmDialog";
 import { LibraryService } from "../../../application/libraryService";
+import { compareCodes } from "../../../domain/library/search";
 import { LibrarySnapshot, NormDefinition, WorkItem } from "../../../domain/library/types";
 import {
   FieldError,
@@ -197,7 +198,7 @@ const NormsSection: React.FC<{
   }
 
   const norms = library.norms.filter((n) => n.workItemId === workItem.id);
-  const resources = [...library.resources].sort((a, b) => a.code.localeCompare(b.code, "vi", { numeric: true }));
+  const resources = [...library.resources].sort((a, b) => compareCodes(a.code, b.code));
   const add = () =>
     exclusive(async () => {
       const result = await service.saveNorm(workItem.id, { resourceId, quantity, notes: "" }, null, library);

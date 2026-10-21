@@ -29,6 +29,13 @@ import {
   WorkItem,
 } from "../domain/library/types";
 import { LibraryRepository } from "../storage/libraryRepository";
+import {
+  DuplicateMode,
+  ImportAnalysis,
+  ImportChanges,
+  analyzeImport,
+} from "../domain/library/exchange/analyze";
+import { ImportDataset } from "../domain/library/exchange/source";
 
 export interface LibraryDeps {
   now: () => Date;
@@ -37,6 +44,15 @@ export interface LibraryDeps {
 
 export type SaveResult<T, F extends string> =
   { ok: true; value: T } | { ok: false; errors: FieldError<F>[] };
+
+/** Mốc sao lưu (ADR-0003): nhắc người dùng khi thư viện thay đổi sau lần sao lưu gần nhất. */
+export interface BackupStatus {
+  lastBackupAt: string | null;
+  lastChangedAt: string | null;
+}
+
+const LAST_BACKUP_KEY = "lastBackupAt";
+const LAST_CHANGED_KEY = "lastChangedAt";
 
 export type DeleteResourceResult = { ok: true } | { ok: false; reason: "inUse"; normCount: number };
 
@@ -65,6 +81,42 @@ export class LibraryService {
     return this.deps.now().toISOString();
   }
 
+  /** Ghi mốc "thư viện vừa thay đổi". Lỗi ở đây không làm hỏng thao tác chính đã lưu. */
+  private async touch(): Promise<void> {
+    try {
+      await this.repo.setSetting(LAST_CHANGED_KEY, this.stamp());
+    } catch {
+      /* chỉ ảnh hưởng lời nhắc sao lưu */
+    }
+  }
+
+  async backupStatus(): Promise<BackupStatus> {
+    const [lastBackupAt, lastChangedAt] = await Promise.all([
+      this.repo.getSetting<string>(LAST_BACKUP_KEY),
+      this.repo.getSetting<string>(LAST_CHANGED_KEY),
+    ]);
+    return { lastBackupAt: lastBackupAt ?? null, lastChangedAt: lastChangedAt ?? null };
+  }
+
+  /** Gọi sau khi file sao lưu đã được tạo (tải về). */
+  async recordBackup(at: Date): Promise<void> {
+    await this.repo.setSetting(LAST_BACKUP_KEY, at.toISOString());
+  }
+
+  analyzeImport(
+    datasets: readonly ImportDataset[],
+    library: LibrarySnapshot,
+    mode: DuplicateMode
+  ): ImportAnalysis {
+    return analyzeImport(datasets, library, { mode, now: this.stamp(), newId: this.deps.newId });
+  }
+
+  /** Ghi kết quả nhập trong một giao dịch: lỗi thì thư viện giữ nguyên. */
+  async applyImport(changes: ImportChanges): Promise<void> {
+    await this.repo.applyImport(changes);
+    await this.touch();
+  }
+
   async saveWorkItem(
     form: WorkItemForm,
     editingId: string | null,
@@ -85,6 +137,7 @@ export class LibraryService {
       updatedAt: now,
     };
     await this.repo.putWorkItem(item);
+    await this.touch();
     return { ok: true, value: item };
   }
 
@@ -112,11 +165,13 @@ export class LibraryService {
         updatedAt: now,
       });
     }
+    await this.touch();
     return copy;
   }
 
-  deleteWorkItem(id: string): Promise<void> {
-    return this.repo.deleteWorkItem(id);
+  async deleteWorkItem(id: string): Promise<void> {
+    await this.repo.deleteWorkItem(id);
+    await this.touch();
   }
 
   async saveResource(
@@ -137,6 +192,7 @@ export class LibraryService {
       updatedAt: now,
     };
     await this.repo.putResource(resource);
+    await this.touch();
     return { ok: true, value: resource };
   }
 
@@ -147,6 +203,7 @@ export class LibraryService {
       return { ok: false, reason: "inUse", normCount };
     }
     await this.repo.deleteResource(id);
+    await this.touch();
     return { ok: true };
   }
 
@@ -173,11 +230,13 @@ export class LibraryService {
       updatedAt: now,
     };
     await this.repo.putPrice(price);
+    await this.touch();
     return { ok: true, value: price };
   }
 
-  deletePrice(id: string): Promise<void> {
-    return this.repo.deletePrice(id);
+  async deletePrice(id: string): Promise<void> {
+    await this.repo.deletePrice(id);
+    await this.touch();
   }
 
   async saveNorm(
@@ -203,10 +262,12 @@ export class LibraryService {
       updatedAt: now,
     };
     await this.repo.putNorm(norm);
+    await this.touch();
     return { ok: true, value: norm };
   }
 
-  deleteNorm(id: string): Promise<void> {
-    return this.repo.deleteNorm(id);
+  async deleteNorm(id: string): Promise<void> {
+    await this.repo.deleteNorm(id);
+    await this.touch();
   }
 }

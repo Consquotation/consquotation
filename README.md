@@ -4,7 +4,7 @@ Microsoft Excel Add-in hỗ trợ lập báo giá thi công xây dựng **ngay t
 
 ## Trạng thái
 
-Đã triển khai theo bộ đặc tả trong `prompts/`: 04 (setup, manifest), 05 (Ribbon, task pane), 06 (workbook integration), 08 (thư viện cá nhân).
+Đã triển khai theo bộ đặc tả trong `prompts/`: 04 (setup, manifest), 05 (Ribbon, task pane), 06 (workbook integration), 08 (thư viện cá nhân), 09 (nhập/xuất, sao lưu thư viện).
 
 Đã có:
 - **Ribbon**: tab **ConsQuotation** gồm nhóm **Báo giá** (Mở ConsQuotation, Tạo bảng báo giá, Thư viện của tôi) và nhóm **Trợ giúp**.
@@ -24,14 +24,21 @@ Microsoft Excel Add-in hỗ trợ lập báo giá thi công xây dựng **ngay t
   - Kiểm tra thư viện: mã trùng, thiếu dữ liệu, liên kết hỏng, giá hết hạn, giá chồng thời gian.
   - Chèn vào báo giá dưới dạng bản sao giá trị.
   - Thư viện ban đầu **trống**, không có dữ liệu mẫu.
+- **Nhập/Xuất và sao lưu thư viện** (xem [docs/LIBRARY_SCHEMA.md](docs/LIBRARY_SCHEMA.md)):
+  - Sao lưu ra file JSON, xuất ra workbook Excel mới, mở file mẫu trống.
+  - Nhập từ JSON, CSV UTF-8 hoặc một sheet trong workbook đang mở.
+  - Luồng nhập: nhận diện tiêu đề → chọn loại dữ liệu → map cột → xem trước → kiểm tra → chọn cách xử lý trùng → xác nhận → báo cáo.
+  - Không ghi đè mặc định. Báo lỗi theo dòng và cột. Mỗi lần nhập ghi trong một giao dịch.
+  - Nhắc khi thư viện chưa được sao lưu.
 - Thông báo "không tương thích" cho Excel dùng webview cũ (IE11/EdgeHTML) hoặc thiếu ExcelApi 1.8.
 
-Chưa có: xuất/nhập (sao lưu) thư viện (prompts/09), kiểm tra báo giá, định giá theo định mức (prompts/10), in ấn (prompts/11).
+Chưa có: kiểm tra báo giá, định giá theo định mức (prompts/10), in ấn (prompts/11).
 
 ### Hạn chế đã biết
 
 - **Thao tác ghi của add-in không hoàn tác được bằng Ctrl+Z.** Đã kiểm chứng trên Excel Microsoft 365 cho Windows, ngày 2026-10-20. Vì vậy add-in luôn kiểm tra và hỏi xác nhận trước khi ghi vào vùng có dữ liệu.
-- **Thư viện cá nhân bị xóa khi xóa cache Office** và chưa có chức năng sao lưu ra file (sẽ có ở prompts/09). Xem [docs/LIBRARY.md](docs/LIBRARY.md).
+- **Thư viện cá nhân bị xóa khi xóa cache Office.** Hãy sao lưu thường xuyên bằng Thư viện › Nhập/Xuất. Xem [docs/LIBRARY.md](docs/LIBRARY.md).
+- Add-in không đọc trực tiếp file `.xlsx`: mở file trong Excel rồi dùng "Đọc từ workbook đang mở".
 
 ## Công nghệ
 
@@ -41,7 +48,7 @@ Office.js · TypeScript (strict) · React 18 · Fluent UI React v9 · webpack 5 
 
 | Nền tảng | Mức hỗ trợ | Đã kiểm thử |
 |---|---|---|
-| Excel Microsoft 365 trên Windows | Chính | Có — đặc tả 04, 05, 06, 08 (2026-10-19/20), build 16.0.20430.20182 |
+| Excel Microsoft 365 trên Windows | Chính | Có — đặc tả 04, 05, 06, 08, 09 (2026-10-19/21), build 16.0.20430.20182 |
 | Excel trên web | Phụ | Chưa |
 | Excel 2016/2019/2021/2024 bản retail trên Windows (WebView2) | Hỗ trợ | Chưa — không có máy kiểm thử |
 | Excel trên Mac | Chưa kiểm thử | Chưa |

@@ -15,8 +15,6 @@ export const LIBRARY_STRINGS = {
     resources: "Tài nguyên",
     check: "Kiểm tra",
   },
-  backupWarning:
-    "Chưa có chức năng sao lưu ra file (sẽ có ở bước Nhập/Xuất thư viện). Dữ liệu cục bộ sẽ mất nếu xóa cache Office — hãy cân nhắc trước khi nhập nhiều dữ liệu.",
   emptyButUsed:
     "Thư viện trên máy này đang trống, nhưng workbook này từng dùng thư viện. Có thể cache Office đã bị xóa hoặc bạn đang dùng máy/tài khoản khác. Hãy khôi phục từ bản sao lưu (nếu có) trước khi nhập lại.",
   search: "Tìm theo mã, tên, nhóm, đơn vị (không cần gõ dấu)",
@@ -167,6 +165,8 @@ export const LIBRARY_STRINGS = {
       "Lưu trong bộ nhớ cục bộ (IndexedDB) của add-in trên máy này, theo tài khoản Office và địa chỉ add-in. Không gửi lên máy chủ nào.",
     counts: (w: number, r: number, p: number, n: number) =>
       `${w} công tác · ${r} tài nguyên · ${p} giá · ${n} định mức`,
+    lastBackup: (at: string) => `Lần sao lưu/xuất gần nhất: ${at}.`,
+    noBackup: "Chưa sao lưu lần nào (Thư viện › Nhập/Xuất).",
     risk: "Dữ liệu mất khi xóa cache Office; không tự đồng bộ giữa các máy hoặc giữa Excel desktop và Excel trên web.",
   },
 } as const;

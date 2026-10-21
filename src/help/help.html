@@ -16,14 +16,23 @@
   <p>ConsQuotation là Excel Add-in hỗ trợ lập báo giá thi công xây dựng ngay trong workbook Excel. Excel vẫn là bảng tính chính; add-in bổ sung tab <strong>ConsQuotation</strong> trên Ribbon và bảng điều khiển (task pane).</p>
 
   <h2>Phiên bản hiện tại</h2>
-  <p>Bản đang phát triển. Đã có: tạo bảng báo giá, thêm công tác (thủ công hoặc từ thư viện) và <strong>Thư viện của tôi</strong>. Chưa có: xuất/nhập (sao lưu) thư viện, kiểm tra báo giá, định giá theo định mức, in ấn.</p>
+  <p>Bản đang phát triển. Đã có: tạo bảng báo giá; thêm công tác (thủ công hoặc từ thư viện); <strong>Thư viện của tôi</strong> cùng chức năng nhập/xuất và sao lưu. Chưa có: kiểm tra báo giá, định giá theo định mức, in ấn.</p>
 
   <h2>Thư viện của tôi</h2>
   <ul>
     <li>Thư viện do bạn tự tạo: công tác, tài nguyên, giá (có ngày hiệu lực) và định mức. ConsQuotation không kèm sẵn dữ liệu nào.</li>
     <li>Tìm kiếm theo mã, tên, nhóm, đơn vị — không cần gõ dấu.</li>
     <li><strong>Chèn vào báo giá</strong> chép giá trị công tác vào bảng báo giá; sửa thư viện sau đó không làm đổi báo giá cũ.</li>
-    <li>Thư viện lưu trên máy này và <strong>mất khi xóa cache Office</strong>. Chức năng sao lưu ra file sẽ có ở bản sau.</li>
+    <li>Thư viện lưu trên máy này và <strong>mất khi xóa cache Office</strong>. Hãy sao lưu thường xuyên.</li>
+  </ul>
+
+  <h2>Sao lưu, nhập và xuất thư viện</h2>
+  <ul>
+    <li><strong>Thư viện › Nhập/Xuất › Tải bản sao lưu (.json)</strong>: file được lưu vào thư mục Downloads. Chép file sang nơi an toàn (OneDrive, ổ đĩa ngoài).</li>
+    <li><strong>Xuất ra workbook Excel</strong>: mở workbook mới, mỗi loại dữ liệu một sheet. Lưu bằng File › Save As.</li>
+    <li><strong>Khôi phục</strong>: chọn file .json, hoặc mở workbook đã xuất rồi bấm <strong>Đọc toàn bộ bản xuất</strong>.</li>
+    <li><strong>Nhập từ CSV hoặc sheet</strong>: add-in tự tìm dòng tiêu đề và map cột; bạn xem trước và sửa được. CSV phải lưu dạng <em>CSV UTF-8</em>. Với file .xlsx, mở file trong Excel trước rồi đọc từ workbook đang mở.</li>
+    <li>Dòng lỗi không được nhập và được chỉ rõ dòng, cột. Add-in không tự điền đơn vị hay giá còn thiếu. Bản ghi trùng mặc định được <strong>bỏ qua</strong>; chọn <strong>Cập nhật</strong> nếu muốn ghi theo file.</li>
   </ul>
 
   <h2>Lưu ý khi ghi vào workbook</h2>

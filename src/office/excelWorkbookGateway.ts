@@ -13,6 +13,8 @@ import {
   CreatedQuote,
   InsertPosition,
   OccupiedCells,
+  SheetRead,
+  SheetSummary,
   QuoteTableInfo,
   TargetBlocker,
   TargetChangedError,
@@ -32,11 +34,14 @@ import {
   totalRowFormulas,
 } from "../domain/quoteTemplate";
 import { cellAddress, fitsInSheet, rangeAddress, stripSheetName } from "../shared/a1";
+import { RawCell, excelSerialToIso, isDateNumberFormat } from "../domain/library/exchange/cells";
 
 const SAMPLE_LIMIT = 5;
 const SETTINGS_KEY = "ConsQuotation.quoteTables";
 const LIBRARY_USED_KEY = "ConsQuotation.libraryUsed";
 const NEW_SHEET_FINGERPRINT = "new-sheet";
+/** Đọc sheet theo từng khối để không vượt giới hạn kích thước phản hồi (Excel trên web ~5 MB). */
+const READ_CHUNK_ROWS = 2000;
 
 interface QuoteTableRecord {
   tableName: string;
@@ -620,6 +625,99 @@ export class ExcelWorkbookGateway implements WorkbookGateway {
       context.workbook.settings.add(LIBRARY_USED_KEY, true);
       await context.sync();
     });
+  }
+
+  async listSheets(): Promise<{ sheets: SheetSummary[]; activeSheet: string }> {
+    return Excel.run(async (context) => {
+      const sheets = context.workbook.worksheets;
+      sheets.load("items/name");
+      const active = sheets.getActiveWorksheet();
+      active.load("name");
+      await context.sync();
+      const used = sheets.items.map((sheet) => {
+        const range = sheet.getUsedRangeOrNullObject(true);
+        range.load("rowCount,columnCount");
+        return range;
+      });
+      await context.sync();
+      // Sheet trống vẫn trả về vùng A1: đọc giá trị ô đó để báo đúng là trống.
+      const singles = used.map((range) => {
+        if (range.isNullObject || range.rowCount * range.columnCount !== 1) {
+          return null;
+        }
+        range.load("values");
+        return range;
+      });
+      await context.sync();
+      const isEmpty = (i: number) =>
+        used[i].isNullObject || (singles[i] !== null && singles[i]!.values[0][0] === "");
+      return {
+        activeSheet: active.name,
+        sheets: sheets.items.map((sheet, i) => ({
+          name: sheet.name,
+          rowCount: isEmpty(i) ? 0 : used[i].rowCount,
+          columnCount: isEmpty(i) ? 0 : used[i].columnCount,
+        })),
+      };
+    });
+  }
+
+  async readSheet(sheetName: string, maxRows: number): Promise<SheetRead> {
+    return Excel.run(async (context) => {
+      const sheet = context.workbook.worksheets.getItem(sheetName);
+      const used = sheet.getUsedRangeOrNullObject(true);
+      used.load("rowIndex,columnIndex,rowCount,columnCount");
+      await context.sync();
+      const label = `Sheet "${sheetName}"`;
+      if (used.isNullObject) {
+        return { table: { label, firstRowNumber: 1, firstColumnIndex: 0, rows: [] }, totalRows: 0 };
+      }
+      const rowsToRead = Math.min(used.rowCount, maxRows);
+      const rows: RawCell[][] = [];
+      for (let offset = 0; offset < rowsToRead; offset += READ_CHUNK_ROWS) {
+        const count = Math.min(READ_CHUNK_ROWS, rowsToRead - offset);
+        const chunk = sheet.getRangeByIndexes(
+          used.rowIndex + offset,
+          used.columnIndex,
+          count,
+          used.columnCount
+        );
+        chunk.load("values,text,numberFormat");
+        // Mỗi khối một lần sync: giữ kích thước phản hồi nhỏ (Excel trên web giới hạn ~5 MB).
+        // eslint-disable-next-line office-addins/no-context-sync-in-loop
+        await context.sync();
+        const { values, text, numberFormat } = chunk;
+        for (let r = 0; r < count; r++) {
+          rows.push(
+            values[r].map((value, c): RawCell => {
+              const cell: RawCell = {
+                value: value === "" ? null : (value as string | number | boolean),
+              };
+              if (typeof value === "number") {
+                cell.text = text[r][c];
+                if (isDateNumberFormat(String(numberFormat[r][c] ?? ""))) {
+                  cell.date = excelSerialToIso(value) ?? undefined;
+                }
+              }
+              return cell;
+            })
+          );
+        }
+      }
+      return {
+        table: {
+          label,
+          firstRowNumber: used.rowIndex + 1,
+          firstColumnIndex: used.columnIndex,
+          rows,
+        },
+        totalRows: used.rowCount,
+      };
+    });
+  }
+
+  async openNewWorkbook(base64: string): Promise<void> {
+    await Excel.createWorkbook(base64);
   }
 
   async selectQuoteTable(tableName: string): Promise<void> {
