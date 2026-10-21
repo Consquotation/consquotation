@@ -16,7 +16,7 @@ export const STRINGS = {
   overview: {
     title: "Tổng quan",
     phaseNotice:
-      "Bản đang phát triển: đã có tạo bảng báo giá, thêm công tác thủ công và Thư viện của tôi. Nhập/xuất thư viện và kiểm tra báo giá sẽ được bổ sung ở các giai đoạn tiếp theo.",
+      "Bản đang phát triển: đã có tạo bảng báo giá, thêm công tác, Thư viện của tôi (kèm nhập/xuất, sao lưu) và Tính giá (đơn giá phân tích, tổng hợp chiết khấu/thuế, làm tròn, kiểm tra báo giá). In ấn sẽ được bổ sung ở giai đoạn sau.",
   },
 
   environment: {
@@ -58,13 +58,14 @@ export const STRINGS = {
     currentWrite: "Lần ghi này",
     failed: "Kiểm tra lưu trữ thất bại",
     cacheWarning:
-      "Lưu ý: dữ liệu cục bộ của add-in bị xóa khi xóa cache add-in của Office. Thư viện cá nhân sau này phải được sao lưu thường xuyên.",
+      "Lưu ý: dữ liệu cục bộ của add-in bị xóa khi xóa cache add-in của Office. Hãy sao lưu thư viện thường xuyên (Thư viện › Nhập/Xuất).",
   },
 
   tabs: {
     label: "Các phần của ConsQuotation",
     overview: "Tổng quan",
     quote: "Báo giá",
+    pricing: "Tính giá",
     library: "Thư viện",
     settings: "Cài đặt",
   },
@@ -78,6 +79,7 @@ export const STRINGS = {
     createQuote: "Tạo bảng báo giá",
     addWorkItem: "Thêm công tác thủ công",
     library: "Thư viện của tôi",
+    checkQuote: "Kiểm tra báo giá",
     help: "Xem hướng dẫn",
   },
 

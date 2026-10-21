@@ -3,6 +3,7 @@
  * Không tự suy diễn giá trị thiếu: ô trống được ghi là trống, không phải 0 (prompts/10, 13).
  */
 
+import { NO_ROUNDING, RoundingRule } from "./pricing/rounding";
 import { QUOTE_COLUMNS, quoteColumnFormulas } from "./quoteTemplate";
 
 export interface WorkItemDraftInput {
@@ -48,11 +49,13 @@ export function parseDecimalInput(text: string): DecimalParse {
 }
 
 /**
- * Chữ bắt đầu bằng = + - @ sẽ bị Excel hiểu là công thức khi ghi qua Range.values.
- * Thêm dấu nháy đơn (quote prefix) để Excel lưu đúng nguyên văn dưới dạng chữ (prompts/15).
+ * Excel tự "hiểu" chữ ghi qua Range.values: "=…" thành công thức, "007" thành số 7, "1/2" hoặc
+ * "1-2" thành ngày, "10%" thành 0,1, "TRUE" thành giá trị logic (đã kiểm chứng trên Excel 16.0.20430).
+ * Luôn thêm dấu nháy đơn (quote prefix) để Excel lưu đúng nguyên văn dưới dạng chữ
+ * (prompts/09: giữ mã; prompts/15: không chạy công thức). Dấu nháy không hiện trong ô.
  */
 export function asLiteralText(text: string): string {
-  return /^[=+\-@]/.test(text) ? `'${text}` : text;
+  return text === "" ? "" : `'${text}`;
 }
 
 export type DraftValidation =
@@ -64,7 +67,8 @@ export type DraftValidation =
  */
 export function validateWorkItemDraft(
   input: WorkItemDraftInput,
-  tableName: string
+  tableName: string,
+  amountRule: RoundingRule = NO_ROUNDING
 ): DraftValidation {
   const errors: DraftError[] = [];
 
@@ -90,7 +94,7 @@ export function validateWorkItemDraft(
     return { ok: false, errors };
   }
 
-  const formulas = quoteColumnFormulas(tableName);
+  const formulas = quoteColumnFormulas(tableName, amountRule);
   const row = QUOTE_COLUMNS.map((column): string | number => {
     switch (column.key) {
       case "stt":

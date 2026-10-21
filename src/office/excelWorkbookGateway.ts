@@ -1,4 +1,4 @@
-/* global Excel, Office */
+/* global Excel */
 
 /**
  * Adapter Office.js cho WorkbookGateway. Nơi duy nhất gọi Excel.run (ADR-0006).
@@ -34,9 +34,20 @@ import {
   totalRowFormulas,
 } from "../domain/quoteTemplate";
 import { cellAddress, fitsInSheet, rangeAddress, stripSheetName } from "../shared/a1";
+import {
+  CellRect,
+  SAMPLE_LIMIT,
+  bestEffort,
+  findOccupied,
+  hashString,
+  isEmptyCell,
+  loadSheetNames,
+  readRounding,
+  supports,
+} from "./excelHelpers";
+import { summaryTableName } from "../domain/pricing/adjustments";
 import { RawCell, excelSerialToIso, isDateNumberFormat } from "../domain/library/exchange/cells";
 
-const SAMPLE_LIMIT = 5;
 const SETTINGS_KEY = "ConsQuotation.quoteTables";
 const LIBRARY_USED_KEY = "ConsQuotation.libraryUsed";
 const NEW_SHEET_FINGERPRINT = "new-sheet";
@@ -47,46 +58,6 @@ interface QuoteTableRecord {
   tableName: string;
   createdAt: string;
   schemaVersion: 1;
-}
-
-/** Băm djb2 — chỉ để so sánh "có thay đổi hay không", không dùng cho bảo mật. */
-function hashString(text: string): string {
-  let hash = 5381;
-  for (let i = 0; i < text.length; i++) {
-    hash = ((hash << 5) + hash + text.charCodeAt(i)) | 0;
-  }
-  return (hash >>> 0).toString(16);
-}
-
-function isEmptyCell(value: unknown): boolean {
-  return value === "" || value === null || value === undefined;
-}
-
-function findOccupied(formulas: unknown[][], rowIndex: number, columnIndex: number): OccupiedCells {
-  let count = 0;
-  const sample: string[] = [];
-  formulas.forEach((row, r) =>
-    row.forEach((value, c) => {
-      if (!isEmptyCell(value)) {
-        count++;
-        if (sample.length < SAMPLE_LIMIT) {
-          sample.push(cellAddress(rowIndex + r, columnIndex + c));
-        }
-      }
-    })
-  );
-  return { count, sample };
-}
-
-function supports(version: string): boolean {
-  return Office.context.requirements.isSetSupported("ExcelApi", version);
-}
-
-async function loadSheetNames(context: Excel.RequestContext): Promise<string[]> {
-  const sheets = context.workbook.worksheets;
-  sheets.load("items/name");
-  await context.sync();
-  return sheets.items.map((sheet) => sheet.name);
 }
 
 /** Tên Table và tên đã đặt (cấp workbook và cấp sheet) — Table không được trùng các tên này. */
@@ -211,22 +182,6 @@ async function inspectInContext(
   };
 }
 
-/**
- * Chạy một bước phụ sau khi thao tác chính đã được Excel xác nhận; nuốt lỗi có chủ đích
- * (bước phụ không được làm sai kết quả của thao tác chính).
- */
-async function bestEffort(
-  context: Excel.RequestContext,
-  queue: () => void | Promise<void>
-): Promise<void> {
-  try {
-    await queue();
-    await context.sync();
-  } catch {
-    // Bỏ qua: chỉ là điều hướng/metadata.
-  }
-}
-
 async function recordQuoteTable(context: Excel.RequestContext, tableName: string): Promise<void> {
   const settings = context.workbook.settings;
   const existing = settings.getItemOrNullObject(SETTINGS_KEY);
@@ -327,7 +282,18 @@ async function inspectAppendInContext(
   full.load("address,rowIndex,columnIndex,rowCount,columnCount");
   const used = sheet.getUsedRangeOrNullObject(true);
   used.load("rowIndex,rowCount");
+  // Bảng tổng hợp (chiết khấu/thuế) của chính bảng này nằm bên dưới và được Excel đẩy xuống cùng
+  // khi chèn dòng (đã kiểm chứng) — không tính là "dữ liệu bên dưới" cần hỏi xác nhận.
+  const summary = context.workbook.tables.getItemOrNullObject(summaryTableName(tableName));
+  summary.load("name");
   await context.sync();
+  let summaryRect: CellRect | undefined;
+  if (!summary.isNullObject) {
+    const range = summary.getRange();
+    range.load("rowIndex,columnIndex,rowCount,columnCount");
+    await context.sync();
+    summaryRect = range;
+  }
 
   const lastRow = full.rowIndex + full.rowCount - 1;
   const usedLastRow = used.isNullObject ? -1 : used.rowIndex + used.rowCount - 1;
@@ -343,7 +309,7 @@ async function inspectAppendInContext(
     belowRange.load("formulas");
     await context.sync();
     belowFormulas = belowRange.formulas as unknown[][];
-    below = findOccupied(belowFormulas, lastRow + 1, full.columnIndex);
+    below = findOccupied(belowFormulas, lastRow + 1, full.columnIndex, summaryRect);
   }
 
   const headers = (header.values[0] ?? []).map((v) => String(v));
@@ -496,7 +462,8 @@ export class ExcelWorkbookGateway implements WorkbookGateway {
       );
       table.name = tableName;
 
-      const formulas = quoteColumnFormulas(tableName);
+      // Thành tiền theo quy tắc làm tròn của workbook (prompts/10).
+      const formulas = quoteColumnFormulas(tableName, (await readRounding(context)).amount);
       QUOTE_COLUMNS.forEach((column) => {
         const body = table.columns.getItem(column.header).getDataBodyRange();
         const formula = formulas[column.key];
@@ -761,9 +728,16 @@ export class ExcelWorkbookGateway implements WorkbookGateway {
       if (insertIndex !== null && (insertIndex < 0 || insertIndex > before.rowCount)) {
         throw new TargetChangedError();
       }
+      // Công thức Thành tiền theo quy tắc làm tròn hiện tại của workbook (đọc ngay lúc ghi).
+      const amountFormula =
+        quoteColumnFormulas(tableName, (await readRounding(context)).amount).amount ?? "";
+      const amountIndex = QUOTE_COLUMNS.findIndex((column) => column.key === "amount");
+      const withAmount = rows.map((row) =>
+        row.map((cell, i) => (i === amountIndex ? amountFormula : cell))
+      );
       // Ghi theo tên cột: bảng có thể có thêm cột của người dùng hoặc đã đổi thứ tự cột.
       const headers = (header.values[0] ?? []).map((v) => String(v));
-      const aligned = rows.map((row) => alignRowToHeaders(headers, row));
+      const aligned = withAmount.map((row) => alignRowToHeaders(headers, row));
       if (aligned.some((row) => row === null)) {
         throw new TargetChangedError();
       }

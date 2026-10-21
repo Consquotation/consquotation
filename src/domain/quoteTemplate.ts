@@ -11,6 +11,8 @@
  *   hàng 10+N         Dòng tổng (totals row của Table)
  */
 
+import { NO_ROUNDING, RoundingRule, wrapRounding } from "./pricing/rounding";
+
 export type QuoteColumnKey =
   "stt" | "code" | "group" | "description" | "unit" | "quantity" | "unitPrice" | "amount" | "notes";
 
@@ -73,14 +75,18 @@ function thisRow(key: QuoteColumnKey): string {
  * Công thức cột tính toán (calculated column). Viết bằng cú pháp en-US qua Range.formulas
  * nên không phụ thuộc dấu phân cách theo locale của người dùng.
  */
-export function quoteColumnFormulas(tableName: string): Partial<Record<QuoteColumnKey, string>> {
+export function quoteColumnFormulas(
+  tableName: string,
+  amountRule: RoundingRule = NO_ROUNDING
+): Partial<Record<QuoteColumnKey, string>> {
   const quantity = thisRow("quantity");
   const unitPrice = thisRow("unitPrice");
   return {
     // Tự đánh số; người dùng có thể gõ đè (ví dụ đánh số nhóm I, II).
     stt: `=ROW()-ROW(${tableName}[#Headers])`,
     // Để trống khi thiếu khối lượng hoặc đơn giá; không đổi lỗi thành 0 (prompts/10).
-    amount: `=IF(OR(${quantity}="",${unitPrice}=""),"",${quantity}*${unitPrice})`,
+    // Làm tròn (nếu người dùng cấu hình) bằng hàm Excel, ở cấp Thành tiền từng dòng.
+    amount: `=IF(OR(${quantity}="",${unitPrice}=""),"",${wrapRounding(`${quantity}*${unitPrice}`, amountRule)})`,
   };
 }
 

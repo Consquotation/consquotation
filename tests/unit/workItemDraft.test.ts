@@ -29,12 +29,16 @@ describe("parseDecimalInput", () => {
 });
 
 describe("asLiteralText", () => {
-  it("thêm dấu nháy đơn trước chữ bắt đầu bằng = + - @ để Excel không chạy như công thức", () => {
+  it("luôn thêm dấu nháy đơn để Excel giữ nguyên chữ (không thành công thức, số, ngày, %)", () => {
+    expect(asLiteralText("007")).toBe("'007");
+    expect(asLiteralText("1/2")).toBe("'1/2");
+    expect(asLiteralText("10%")).toBe("'10%");
+    expect(asLiteralText("")).toBe("");
     expect(asLiteralText("=HYPERLINK(\"x\")")).toBe("'=HYPERLINK(\"x\")");
     expect(asLiteralText("+1")).toBe("'+1");
     expect(asLiteralText("-A")).toBe("'-A");
     expect(asLiteralText("@x")).toBe("'@x");
-    expect(asLiteralText("Đào móng")).toBe("Đào móng");
+    expect(asLiteralText("Đào móng")).toBe("'Đào móng");
   });
 });
 
@@ -64,14 +68,24 @@ describe("validateWorkItemDraft", () => {
     expect(result.ok).toBe(true);
     if (result.ok) {
       expect(result.row[0]).toBe("=ROW()-ROW(CQ_Quote_2[#Headers])");
-      expect(result.row[1]).toBe("BT-01");
-      expect(result.row[3]).toBe("Đổ bê tông móng");
-      expect(result.row[4]).toBe("m3");
+      expect(result.row[1]).toBe("'BT-01");
+      expect(result.row[3]).toBe("'Đổ bê tông móng");
+      expect(result.row[4]).toBe("'m3");
       expect(result.row[5]).toBe(12.5);
       expect(result.row[6]).toBe(1500000);
       expect(String(result.row[7])).toContain("[@[Khối lượng]]*[@[Đơn giá]]");
       expect(result.row[8]).toBe("'=SUM(A1)");
     }
+  });
+
+  it("Thành tiền theo quy tắc làm tròn của workbook", () => {
+    const result = validateWorkItemDraft({ ...base, quantity: "1", unitPrice: "2" }, "CQ_Quote_1", {
+      mode: "round",
+      digits: -3,
+    });
+    expect(result.ok && result.row[7]).toBe(
+      '=IF(OR([@[Khối lượng]]="",[@[Đơn giá]]=""),"",ROUND([@[Khối lượng]]*[@[Đơn giá]],-3))'
+    );
   });
 
   it("từ chối số âm và số không hợp lệ, gắn lỗi đúng trường", () => {

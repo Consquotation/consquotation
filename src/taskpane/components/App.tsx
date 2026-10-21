@@ -21,6 +21,10 @@ import VersionPanel from "./VersionPanel";
 import WorkbookContextPanel from "./WorkbookContextPanel";
 import LibraryStoragePanel from "./library/LibraryStoragePanel";
 import LibraryView from "./library/LibraryView";
+import PricingView from "./pricing/PricingView";
+import { compositionLines } from "../../domain/pricing/composition";
+import { ExcelPricingGateway } from "../../office/excelPricingGateway";
+import { PricingGateway } from "../../application/pricingGateway";
 import { LibraryService } from "../../application/libraryService";
 import { WorkbookGateway } from "../../application/workbookGateway";
 import { todayIso } from "../../domain/library/dates";
@@ -63,6 +67,7 @@ const useStyles = makeStyles({
 const FOCUS_TARGET: Record<View, string> = {
   overview: "cq-context-title",
   quote: "cq-create-title",
+  pricing: "cq-check-title",
   library: "cq-library-title",
   settings: "cq-version-title",
   help: "cq-help-title",
@@ -74,12 +79,14 @@ interface Navigation {
   focusId: string | null;
 }
 
-const App: React.FC<{ gateway?: WorkbookGateway; libraryService?: LibraryService }> = ({
-  gateway: injected,
-  libraryService: injectedLibrary,
-}) => {
+const App: React.FC<{
+  gateway?: WorkbookGateway;
+  pricing?: PricingGateway;
+  libraryService?: LibraryService;
+}> = ({ gateway: injected, pricing: injectedPricing, libraryService: injectedLibrary }) => {
   const styles = useStyles();
   const gateway = React.useMemo(() => injected ?? new ExcelWorkbookGateway(), [injected]);
+  const pricing = React.useMemo(() => injectedPricing ?? new ExcelPricingGateway(), [injectedPricing]);
   const libraryService = React.useMemo(() => injectedLibrary ?? createLibraryService(), [injectedLibrary]);
   // Công tác vừa chọn "Chèn vào báo giá" ở thư viện; form Thêm công tác dùng một lần rồi xóa.
   const [prefill, setPrefill] = React.useState<LibraryPrefill | null>(null);
@@ -109,9 +116,20 @@ const App: React.FC<{ gateway?: WorkbookGateway; libraryService?: LibraryService
     target?.focus();
   }, [nav]);
 
-  const insertFromLibrary = (item: WorkItem) => {
-    const { draft, warnings } = draftFromWorkItem(item, todayIso());
-    setPrefill({ nonce: Date.now(), code: item.code, draft, warnings });
+  const insertFromLibrary = async (item: WorkItem) => {
+    const today = todayIso();
+    const { draft, warnings } = draftFromWorkItem(item, today);
+    // Công tác có định mức: cho phép chọn "Phân tích từ định mức" (prompts/10). Đọc lại thư viện
+    // để có giá tài nguyên mới nhất đã lưu.
+    let composition: LibraryPrefill["composition"];
+    try {
+      const library = await libraryService.load();
+      const lines = compositionLines(item, library, today);
+      composition = lines.length > 0 ? { item, lines } : undefined;
+    } catch {
+      composition = undefined;
+    }
+    setPrefill({ nonce: Date.now(), code: item.code, draft, warnings, composition });
     go("quote", "cq-append-title");
   };
 
@@ -137,6 +155,7 @@ const App: React.FC<{ gateway?: WorkbookGateway; libraryService?: LibraryService
           >
             <Tab value="overview">{s.tabs.overview}</Tab>
             <Tab value="quote">{s.tabs.quote}</Tab>
+            <Tab value="pricing">{s.tabs.pricing}</Tab>
             <Tab value="library">{s.tabs.library}</Tab>
             <Tab value="settings">{s.tabs.settings}</Tab>
           </TabList>
@@ -154,6 +173,7 @@ const App: React.FC<{ gateway?: WorkbookGateway; libraryService?: LibraryService
                   </Button>
                   <Button onClick={() => go("quote", "cq-append-title")}>{s.shortcuts.addWorkItem}</Button>
                   <Button onClick={() => go("library")}>{s.shortcuts.library}</Button>
+                  <Button onClick={() => go("pricing")}>{s.shortcuts.checkQuote}</Button>
                   <Button onClick={() => go("help")}>{s.shortcuts.help}</Button>
                 </div>
               </section>
@@ -170,6 +190,7 @@ const App: React.FC<{ gateway?: WorkbookGateway; libraryService?: LibraryService
               <CreateQuotePanel gateway={gateway} onCreated={bumpTables} />
               <AddWorkItemPanel
                 gateway={gateway}
+                pricing={pricing}
                 tablesVersion={tablesVersion}
                 onAppended={bumpTables}
                 prefill={prefill}
@@ -178,9 +199,19 @@ const App: React.FC<{ gateway?: WorkbookGateway; libraryService?: LibraryService
             </div>
           )}
 
+          {nav.view === "pricing" && (
+            <div className={styles.panel} role="tabpanel" aria-label={s.tabs.pricing}>
+              <PricingView gateway={gateway} pricing={pricing} tablesVersion={tablesVersion} />
+            </div>
+          )}
+
           {nav.view === "library" && (
             <div className={styles.panel} role="tabpanel" aria-label={s.tabs.library}>
-              <LibraryView service={libraryService} gateway={gateway} onInsert={insertFromLibrary} />
+              <LibraryView
+                service={libraryService}
+                gateway={gateway}
+                onInsert={(item) => void insertFromLibrary(item)}
+              />
             </div>
           )}
 
