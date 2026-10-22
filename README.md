@@ -111,6 +111,16 @@ npm run check        # chạy typecheck, lint, test, validate, build
 
 Hướng dẫn đầy đủ (chứng chỉ HTTPS, Excel trên web, xóa cache, manifest production): [docs/SIDELOAD.md](docs/SIDELOAD.md).
 
+### Chạy thử trong Excel trên Windows
+
+1. Cài Node.js bản LTS, rồi chạy `npm install` trong thư mục dự án.
+2. Cài chứng chỉ HTTPS phát triển (một lần): `npx office-addin-dev-certs install`, rồi chọn **Yes** ở hộp thoại bảo mật của Windows.
+3. `npm start`: dev server chạy tại `https://localhost:3000` và Excel mở một workbook mới có sẵn add-in.
+   - Lần đầu, nếu được hỏi về localhost loopback, nhập `Y`.
+4. Trong Excel: tab **ConsQuotation (Dev)** › **Mở ConsQuotation**. Task pane mở ở bên phải, tiêu đề "ConsQuotation".
+   - Nếu hiện hộp thoại **WebView Stop On Load**: bấm **OK**. Đây là hộp thoại của chế độ debug.
+5. Xong thì chạy `npm stop`.
+
 ## Dữ liệu và quyền riêng tư
 
 - Add-in không gửi workbook hay thư viện lên máy chủ nào và không có backend.

@@ -43,6 +43,11 @@ Lệnh này build bản development, chạy dev server tại `https://localhost:
 
 - Lần đầu có thể được hỏi "Allow localhost loopback for Microsoft Edge WebView?" — nhập `Y` (cần quyền quản trị).
 - Trong Excel: tab **ConsQuotation (Dev)** › **Mở ConsQuotation**. Nếu tab chưa hiện: **Home** › **Add-ins** › chọn ConsQuotation.
+- Workbook mới do `npm start` mở **không tự mở task pane**; bấm nút trên Ribbon như trên.
+- `npm start` bật chế độ debug, nên mỗi lần task pane tải hoặc tải lại có thể hiện hộp thoại **WebView Stop On Load** ("To debug the webview, attach VS Code…"). Task pane đứng ở trang trắng cho tới khi bạn trả lời:
+  - bấm **OK** để tiếp tục tải;
+  - hoặc bấm **Cancel** để không hỏi lại trong các lần sau.
+  - Đã gặp ngày 2026-10-22 trên Excel 16.0.20430.
 - Sửa HTML/JS: bấm vào task pane rồi nhấn `Ctrl+F5` để tải lại. Sửa manifest: dừng, xóa cache (mục 7) rồi chạy lại.
 
 Dừng và gỡ add-in đã sideload:
