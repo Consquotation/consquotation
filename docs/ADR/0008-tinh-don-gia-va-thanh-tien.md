@@ -82,6 +82,7 @@ Cấu hình theo workbook: `workbook.settings["ConsQuotation.pricing"].rounding`
 - Áp dụng bằng hàm Excel trong công thức.
 - Đơn giá nhập trực tiếp hoặc lấy từ thư viện không bị làm tròn.
 - Tổng là tổng các Thành tiền đã làm tròn.
+- **Hiển thị theo định dạng ô của Excel** (người dùng chốt khi nghiệm thu, 2026-10-22). Giá trị chỉ bị làm tròn khi người dùng đặt quy tắc. Nếu không, số vẫn giữ đủ phần lẻ và Excel hiển thị theo định dạng ô: ví dụ `#,##0` hiện 265.000,5 thành 265.001, còn tổng sau thuế 28.022.647,572 in ra 28.022.648. Add-in không tự đổi định dạng hay làm tròn để che phần lẻ; người dùng tự chỉnh định dạng ô nếu muốn thấy phần lẻ.
 - **Khi áp dụng:** chỉ thay các ô có công thức **mẫu**, nhận diện mọi biến thể quy tắc sau khi chuẩn hóa như kết quả 3. Ô có công thức khác mẫu hoặc ô hằng số được giữ nguyên và được đếm. Bảng mới và dòng mới luôn dùng quy tắc hiện tại, đọc ngay lúc ghi.
 
 ### Chiết khấu, phụ phí, thuế

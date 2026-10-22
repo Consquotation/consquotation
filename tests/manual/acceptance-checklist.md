@@ -83,14 +83,15 @@
    - Checklist 13–17 ghi "mọi mục có Cách sửa" là chưa đúng.
    - Sửa: đã bổ sung, kèm unit test.
 
-## Quan sát cần bạn quyết định (chưa thay đổi)
+## Quan sát đã được người dùng quyết định (2026-10-22): giữ theo nguyên tắc của Excel
 
 - **Đơn giá có phần lẻ hiển thị làm tròn.**
-  - Cột Đơn giá dùng định dạng `#,##0`, nên 265.000,5 hiện thành 265.001, trong khi Thành tiền tính theo số thật (40 × 265.000,5 = 10.600.020). Người đọc bản in nhân tay sẽ ra 10.600.040.
-  - Có thể giữ nguyên (đơn giá thường là số nguyên) hoặc đổi định dạng cho hiện phần lẻ.
+  - Cột Đơn giá dùng định dạng `#,##0`, nên 265.000,5 hiện thành 265.001, trong khi Thành tiền tính theo số thật (40 × 265.000,5 = 10.600.020).
+  - Quyết định: hiển thị theo định dạng ô của Excel. Chỉ làm tròn giá trị khi người dùng đặt quy tắc; người dùng tự chỉnh định dạng ô nếu muốn thấy phần lẻ.
 - **Khoản tổng hợp mặc định không làm tròn.**
-  - Tổng sau thuế là 28.022.647,572: task pane hiện đủ phần lẻ, bản in hiện 28.022.648.
-  - Nếu cần số chẵn, đặt quy tắc làm tròn cho nhóm "Khoản chiết khấu/phụ phí/thuế".
+  - Tổng sau thuế là 28.022.647,572: task pane hiện đủ phần lẻ, bản in hiện 28.022.648 theo định dạng ô.
+  - Quyết định: giữ theo nguyên tắc của Excel; nếu cần số chẵn, người dùng đặt quy tắc làm tròn cho nhóm "Khoản chiết khấu/phụ phí/thuế".
+- Ghi vào [ADR-0008](../../docs/ADR/0008-tinh-don-gia-va-thanh-tien.md) (mục Làm tròn). Không đổi code.
 
 ## Chờ người dùng
 
