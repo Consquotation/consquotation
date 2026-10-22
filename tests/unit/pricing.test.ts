@@ -262,9 +262,9 @@ describe("kiểm tra báo giá", () => {
     ...extra,
   });
 
-  it("dòng trống bị bỏ qua; dòng đủ dữ liệu không có vấn đề", () => {
+  it("dòng trống không tính là công tác (chỉ nhắc còn dòng trống); dòng đủ dữ liệu không có vấn đề", () => {
     const result = checkQuote(snap(quote([row([1, "A", "", "Đào đất", "m3", 2, 50, 100, ""]), row([2, "", "", "", "", "", "", "", ""])])));
-    expect(result.issues).toEqual([]);
+    expect(result.issues.map((i) => i.message)).toEqual(["Còn 1 dòng trống trong bảng (hàng 12) — khi in vẫn hiện số thứ tự."]);
     expect(result.rowCount).toBe(1);
     expect(result.methods[0].method).toBe("direct");
   });
@@ -339,6 +339,7 @@ describe("kiểm tra báo giá", () => {
     expect(messages).toContain('G22: Tổng hợp "Thuế": chưa nhập giá trị — Tổng cộng chưa tính được.');
     expect(messages).toContain('E23: Tổng hợp "Phí": Loại phải là Giảm trừ hoặc Cộng thêm.');
     expect(messages.some((m) => m.startsWith("H24: Tổng cộng (sau chiết khấu/phụ phí/thuế) lỗi #N/A"))).toBe(true);
+    expect(result.issues.every((i) => i.hint && i.hint.length > 0)).toBe(true);
   });
 });
 
@@ -389,6 +390,15 @@ describe("kiểm tra báo giá — bổ sung prompts/13", () => {
     expect(by("G11").message).toContain("lớn bất thường");
     expect(by("F12").message).toContain("lớn bất thường");
     expect(result.issues.every((i) => i.hint && i.hint.length > 0)).toBe(true);
+  });
+
+  it("còn dòng trống của mẫu khi đã có công tác: cảnh báo kèm hàng; bảng chưa có công tác thì không", () => {
+    const blank = row([2, "", "", "", "", "", "", "", ""]);
+    const result = checkQuote(snap([row([1, "A", "", "X", "m3", 1, 2, 2, ""]), blank]));
+    const issue = result.issues.find((i) => i.message.startsWith("Còn 1 dòng trống"));
+    expect(issue?.address).toBe("A12");
+    expect(issue?.hint).toContain("Delete › Table Rows");
+    expect(checkQuote(snap([blank])).issues.filter((i) => i.message.startsWith("Còn"))).toEqual([]);
   });
 
   it("lỗi công thức có hướng khắc phục theo loại lỗi", () => {

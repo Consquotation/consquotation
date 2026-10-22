@@ -34,7 +34,12 @@ export const INFO_FIELDS: readonly InfoField[] = QUOTE_INFO_LABELS.map((label, i
   type: KEYS[i] === "date" || KEYS[i] === "validUntil" ? "date" : "text",
 }));
 
-export const INFO_DATE_FORMAT = "dd/mm/yyyy";
+/**
+ * Đuôi ";@" giữ định dạng cố định. "dd/mm/yyyy" trơn trùng ngày ngắn của Windows vi-VN nên Excel đổi
+ * thành định dạng ngày hệ thống (m/d/yyyy) — máy định dạng vùng en-US sẽ hiện 10/21/2026
+ * (đã kiểm chứng trên Excel 16.0.20430).
+ */
+export const INFO_DATE_FORMAT = "dd/mm/yyyy;@";
 /** Số dòng phía trên dòng tiêu đề bảng được dò tìm nhãn. */
 export const INFO_SCAN_ROWS = 15;
 

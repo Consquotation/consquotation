@@ -89,7 +89,7 @@ export async function executeTemplate(
 
 export type AppendPlan =
   | { status: "blocked"; inspection: AppendInspection }
-  /** Có dữ liệu dưới bảng sẽ bị đẩy xuống: cần xác nhận. */
+  /** Có dữ liệu dưới bảng sẽ bị đẩy xuống: cần xác nhận. Ghi vào dòng trống thì không đẩy gì. */
   | { status: "needsShiftConfirmation"; inspection: AppendInspection }
   | { status: "ready"; inspection: AppendInspection };
 
@@ -102,7 +102,7 @@ export async function planAppend(
   if (inspection.blockers.length > 0) {
     return { status: "blocked", inspection };
   }
-  if (inspection.cellsBelow.count > 0) {
+  if (inspection.cellsBelow.count > 0 && inspection.fillIndex === null) {
     return { status: "needsShiftConfirmation", inspection };
   }
   return { status: "ready", inspection };
@@ -119,7 +119,9 @@ export async function executeAppend(
   if (plan.status === "blocked") {
     throw new Error("Không thể thêm dòng vào bảng đang bị chặn.");
   }
-  if (plan.status === "needsShiftConfirmation" && !confirmation.shift) {
+  // Chỉ ghi vào dòng trống khi thêm đúng 1 dòng; nhiều dòng thì chèn như thường (cần xác nhận nếu đẩy dữ liệu).
+  const fillIndex = rows.length === 1 ? plan.inspection.fillIndex : null;
+  if (fillIndex === null && plan.inspection.cellsBelow.count > 0 && !confirmation.shift) {
     throw new Error("Cần xác nhận trước khi đẩy dữ liệu bên dưới bảng xuống.");
   }
   try {
@@ -127,7 +129,8 @@ export async function executeAppend(
       plan.inspection.tableName,
       rows,
       plan.inspection.fingerprint,
-      plan.inspection.insertIndex
+      plan.inspection.insertIndex,
+      fillIndex
     );
     return { status: "appended", rows: appended };
   } catch (error) {

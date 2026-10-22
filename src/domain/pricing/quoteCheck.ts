@@ -456,6 +456,29 @@ export function checkQuote(snapshot: QuoteSnapshot, options: CheckOptions = {}):
     }
   }
 
+  // Dòng trống (mẫu tạo sẵn) còn lại khi đã có công tác: vẫn được in ra kèm số thứ tự.
+  if (rowCount > 0) {
+    const inputColumns = (
+      ["code", "group", "description", "unit", "quantity", "unitPrice", "notes"] as const
+    )
+      .map((key) => index(key))
+      .filter((col) => col >= 0);
+    const blankRows = quote.rows
+      .map((row, r) => (inputColumns.every((col) => isBlank(row.values[col])) ? r : -1))
+      .filter((r) => r >= 0);
+    if (blankRows.length > 0) {
+      const sheetRows = blankRows.map((r) => quote.firstRowIndex + r + 1);
+      push(
+        "warning",
+        at(quote, blankRows[0], Math.max(0, index("stt"))),
+        `Còn ${blankRows.length} dòng trống trong bảng (hàng ${sheetRows.slice(0, 5).join(", ")}${sheetRows.length > 5 ? "…" : ""}) — khi in vẫn hiện số thứ tự.`,
+        {
+          hint: "Nếu không dùng: chọn các dòng đó › chuột phải › Delete › Table Rows. Khi thêm công tác, add-in ghi vào dòng trống trước.",
+        }
+      );
+    }
+  }
+
   // Dòng phân tích thiếu số liệu của các mã đang dùng.
   for (const line of analysis ?? []) {
     if (usedCodes.has(normalizeCode(line.code)) && (line.quantityBlank || line.priceBlank)) {
@@ -466,13 +489,21 @@ export function checkQuote(snapshot: QuoteSnapshot, options: CheckOptions = {}):
           address: line.priceAddress,
           location: `Dòng ${line.rowIndex + 1}`,
         },
-        `Phân tích mã "${line.code}": thiếu ${line.quantityBlank ? "hao phí" : "đơn giá nguồn"}.`
+        `Phân tích mã "${line.code}": thiếu ${line.quantityBlank ? "hao phí" : "đơn giá nguồn"}.`,
+        {
+          hint: "Nhập số còn trống trên sheet Phân tích đơn giá (nút Đi tới), rồi bấm Kiểm tra lại.",
+        }
       );
     }
   }
 
   // Bảng tổng hợp (chiết khấu, phụ phí, thuế).
   if (summary) {
+    const reapply =
+      "Sửa trong tab Tính giá › Tổng hợp rồi bấm Áp dụng — add-in ghi lại bảng tổng hợp và công thức.";
+    const cascade =
+      "Thường do tổng bảng báo giá hoặc một khoản phía trên bị lỗi — sửa các lỗi đó trước. Nếu vẫn lỗi: " +
+      reapply;
     const s = (name: (typeof SUMMARY_HEADERS)[number]) => summary.headers.indexOf(name);
     summary.rows.forEach((row, r) => {
       const name = String(row.values[s("Khoản mục")] ?? "");
@@ -482,7 +513,8 @@ export function checkQuote(snapshot: QuoteSnapshot, options: CheckOptions = {}):
           push(
             "error",
             at(summary, r, col),
-            `Tổng hợp "${name}" — ${summary.headers[col]}: lỗi ${explainError(row.values[col])}.`
+            `Tổng hợp "${name}" — ${summary.headers[col]}: lỗi ${explainError(row.values[col])}.`,
+            { hint: cascade }
           );
         }
       });
@@ -493,14 +525,16 @@ export function checkQuote(snapshot: QuoteSnapshot, options: CheckOptions = {}):
         push(
           "error",
           at(summary, r, s("Loại")),
-          `Tổng hợp "${name}": Loại phải là ${Object.values(KIND_LABELS).join(" hoặc ")}.`
+          `Tổng hợp "${name}": Loại phải là ${Object.values(KIND_LABELS).join(" hoặc ")}.`,
+          { hint: reapply }
         );
       }
       if (!Object.values(METHOD_LABELS).includes(methodText)) {
         push(
           "error",
           at(summary, r, s("Cách tính")),
-          `Tổng hợp "${name}": Cách tính không hợp lệ.`
+          `Tổng hợp "${name}": Cách tính không hợp lệ.`,
+          { hint: reapply }
         );
       }
       const v = row.values[s("Giá trị")];
@@ -515,7 +549,10 @@ export function checkQuote(snapshot: QuoteSnapshot, options: CheckOptions = {}):
         push(
           "error",
           at(summary, r, s("Giá trị")),
-          `Tổng hợp "${name}": giá trị "${String(v)}" không phải số.`
+          `Tổng hợp "${name}": giá trị "${String(v)}" không phải số.`,
+          {
+            hint: "Gõ lại dạng số (ví dụ 8 nghĩa là 8%), không kèm ký hiệu % hay dấu phân cách hàng nghìn.",
+          }
         );
       }
       for (const header of ["Số tiền", "Lũy kế"] as const) {
@@ -523,7 +560,8 @@ export function checkQuote(snapshot: QuoteSnapshot, options: CheckOptions = {}):
           push(
             "warning",
             at(summary, r, s(header)),
-            `Tổng hợp "${name}": ${header} không còn là công thức.`
+            `Tổng hợp "${name}": ${header} không còn là công thức.`,
+            { hint: reapply }
           );
         }
       }
@@ -535,7 +573,8 @@ export function checkQuote(snapshot: QuoteSnapshot, options: CheckOptions = {}):
         push(
           "error",
           at(summary, 0, amountColumn, true),
-          `Tổng cộng (sau chiết khấu/phụ phí/thuế) lỗi ${explainError(summary.totals.values[amountColumn])}.`
+          `Tổng cộng (sau chiết khấu/phụ phí/thuế) lỗi ${explainError(summary.totals.values[amountColumn])}.`,
+          { hint: cascade }
         );
       }
     }

@@ -12,7 +12,7 @@ import {
 /** Excel giả lập: ghi lại mọi lần gọi ghi để kiểm chứng "không ghi khi chưa xác nhận". */
 class FakeGateway implements WorkbookGateway {
   writes: { target: TemplateTarget; initialRows: number; fingerprint: string }[] = [];
-  appends: { tableName: string; rows: (string | number)[][]; insertIndex: number | null }[] = [];
+  appends: { tableName: string; rows: (string | number)[][]; insertIndex: number | null; fillIndex?: number | null }[] = [];
   inspectedPositions: InsertPosition[] = [];
   inspectedNewSheetNames: string[] = [];
   selectionInspection: TargetInspection = inspection({ kind: "atCell", sheetName: "Sheet1", rowIndex: 1, columnIndex: 1 });
@@ -22,6 +22,7 @@ class FakeGateway implements WorkbookGateway {
     cellsBelow: { count: 0, sample: [] },
     blockers: [],
     insertIndex: null,
+    fillIndex: null,
     fingerprint: "fp-append",
   };
   /** Mô phỏng người dùng sửa sheet trong lúc hộp xác nhận đang mở. */
@@ -73,12 +74,13 @@ class FakeGateway implements WorkbookGateway {
     tableName: string,
     rows: (string | number)[][],
     _fingerprint: string,
-    insertIndex: number | null
+    insertIndex: number | null,
+    fillIndex: number | null
   ) {
     if (this.changedBeforeWrite) {
       throw new TargetChangedError();
     }
-    this.appends.push({ tableName, rows, insertIndex });
+    this.appends.push(fillIndex === null ? { tableName, rows, insertIndex } : { tableName, rows, insertIndex, fillIndex });
     return { tableName, sheetName: "Báo giá", address: "A16:I16" };
   }
 }
@@ -195,6 +197,19 @@ describe("planAppend / executeAppend", () => {
     const plan = await planAppend(gateway, "CQ_Quote_1");
     expect(plan.status).toBe("blocked");
     await expect(executeAppend(gateway, plan, [row], { shift: true })).rejects.toThrow();
+  });
+
+  it("còn dòng trống: ghi vào dòng trống, không hỏi đẩy dữ liệu bên dưới", async () => {
+    const gateway = new FakeGateway();
+    gateway.appendInspection = { ...gateway.appendInspection, cellsBelow: { count: 1, sample: ["A40"] }, fillIndex: 3 };
+    const plan = await planAppend(gateway, "CQ_Quote_1");
+    expect(plan.status).toBe("ready");
+    await executeAppend(gateway, plan, [row], { shift: false });
+    expect(gateway.appends).toEqual([{ tableName: "CQ_Quote_1", rows: [row], insertIndex: null, fillIndex: 3 }]);
+    // Nhiều dòng một lần: chèn như thường, vẫn cần xác nhận đẩy dữ liệu.
+    await expect(executeAppend(gateway, plan, [row, row], { shift: false })).rejects.toThrow();
+    await executeAppend(gateway, plan, [row, row], { shift: true });
+    expect(gateway.appends[1]).toEqual({ tableName: "CQ_Quote_1", rows: [row, row], insertIndex: null });
   });
 
   it("bảng đổi trong lúc chờ xác nhận: báo 'changed', không ghi", async () => {

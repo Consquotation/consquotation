@@ -6,6 +6,8 @@ import {
   buildQuoteLayout,
   clampInitialRows,
   alignRowToHeaders,
+  blankRowFlags,
+  blankRowToFill,
   hasQuoteHeaders,
   quoteColumnFormulas,
   totalRowFormulas,
@@ -107,12 +109,36 @@ describe("alignRowToHeaders", () => {
     expect(alignRowToHeaders(headers, row)).toEqual(row);
   });
 
-  it("để trống cột người dùng tự thêm và khớp theo tên khi đổi thứ tự", () => {
+  it("không ghi (null) cột người dùng tự thêm và khớp theo tên khi đổi thứ tự", () => {
     const custom = ["Column1", ...headers.slice().reverse()];
-    expect(alignRowToHeaders(custom, row)).toEqual(["", ...row.slice().reverse()]);
+    expect(alignRowToHeaders(custom, row)).toEqual([null, ...row.slice().reverse()]);
   });
 
   it("trả về null khi thiếu cột mẫu", () => {
     expect(alignRowToHeaders(headers.slice(1), row)).toBeNull();
+  });
+});
+
+describe("dòng trống của mẫu", () => {
+  const headers = [...QUOTE_COLUMNS.map((c) => c.header), "Cột riêng"];
+  const blank = ["=ROW()-1", "", "", "", "", "", "", '=IF(1,"",1)', "", "=X1"];
+  const filled = ["=ROW()-1", "", "", "Đào đất", "", "", "", '=IF(1,"",1)', "", ""];
+
+  it("trống khi mọi cột nhập liệu của mẫu đều trống; bỏ qua STT, Thành tiền và cột người dùng", () => {
+    expect(
+      blankRowFlags(headers, [blank, filled, ["=ROW()-1", "", "", "", "", "", "", "", "", "x"]])
+    ).toEqual([true, false, true]);
+    expect(blankRowFlags(headers, [["", "", "", "", "", "", 0, "", "", ""]])).toEqual([false]);
+  });
+
+  it("cuối bảng: dòng đầu của khối trống ở cuối; dưới dòng đang chọn: dòng đang chọn rồi dòng ngay dưới, nếu trống", () => {
+    expect(blankRowToFill([false, true, false, true, true], null)).toBe(3);
+    expect(blankRowToFill([true, true, true], null)).toBe(0);
+    expect(blankRowToFill([true, false], null)).toBeNull();
+    expect(blankRowToFill([false, true, false], 1)).toBe(1);
+    expect(blankRowToFill([false, true, false], 2)).toBe(1);
+    expect(blankRowToFill([false, false, false], 2)).toBeNull();
+    expect(blankRowToFill([true, true], 1)).toBe(0);
+    expect(blankRowToFill([true], 1)).toBe(0);
   });
 });

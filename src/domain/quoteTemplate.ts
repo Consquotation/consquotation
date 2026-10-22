@@ -156,17 +156,63 @@ export function hasQuoteHeaders(headers: readonly string[]): boolean {
 
 /**
  * Sắp một dòng giá trị theo thứ tự QUOTE_COLUMNS sang đúng thứ tự cột thực tế của bảng
- * (khớp theo tên cột); cột người dùng tự thêm được để trống. Trả về null nếu thiếu cột mẫu.
+ * (khớp theo tên cột). Cột người dùng tự thêm nhận null = không ghi, để Excel tự điền công thức
+ * nếu đó là cột tính toán (ghi "" sẽ xóa công thức ở dòng mới). Trả về null nếu thiếu cột mẫu.
  */
 export function alignRowToHeaders(
   headers: readonly string[],
   templateRow: readonly (string | number)[]
-): (string | number)[] | null {
+): (string | number | null)[] | null {
   if (!hasQuoteHeaders(headers) || templateRow.length !== QUOTE_COLUMNS.length) {
     return null;
   }
   return headers.map((header) => {
     const index = QUOTE_COLUMNS.findIndex((column) => column.header === header);
-    return index >= 0 ? templateRow[index] : "";
+    return index >= 0 ? templateRow[index] : null;
   });
+}
+
+/** Cột người dùng nhập liệu; STT và Thành tiền là công thức của bảng. */
+const INPUT_COLUMN_KEYS: readonly QuoteColumnKey[] = QUOTE_COLUMNS.map((c) => c.key).filter(
+  (key) => key !== "stt" && key !== "amount"
+);
+
+/**
+ * Dòng trống = mọi cột nhập liệu của mẫu đều trống (không giá trị, không công thức).
+ * Đọc từ Range.formulas của phần dữ liệu bảng; cột người dùng tự thêm không được xét.
+ */
+export function blankRowFlags(
+  headers: readonly string[],
+  formulas: readonly unknown[][]
+): boolean[] {
+  const columns = INPUT_COLUMN_KEYS.map((key) => headers.indexOf(headerOf(key))).filter(
+    (index) => index >= 0
+  );
+  return formulas.map((row) =>
+    columns.every((index) => row[index] === "" || row[index] === null || row[index] === undefined)
+  );
+}
+
+/**
+ * Dòng trống sẽ được ghi vào thay vì chèn dòng mới (mẫu tạo sẵn vài dòng trống):
+ * - cuối bảng: dòng đầu tiên của khối dòng trống liền nhau ở cuối bảng;
+ * - dưới dòng đang chọn (insertIndex = dòng chọn + 1): dòng đang chọn nếu nó trống (người dùng chỉ
+ *   vào dòng trống), nếu không thì dòng ngay dưới nếu trống.
+ * null = chèn dòng mới như bình thường.
+ */
+export function blankRowToFill(
+  flags: readonly boolean[],
+  insertIndex: number | null
+): number | null {
+  if (insertIndex !== null) {
+    if (insertIndex > 0 && flags[insertIndex - 1]) {
+      return insertIndex - 1;
+    }
+    return flags[insertIndex] ? insertIndex : null;
+  }
+  let start = flags.length;
+  while (start > 0 && flags[start - 1]) {
+    start--;
+  }
+  return start < flags.length ? start : null;
 }

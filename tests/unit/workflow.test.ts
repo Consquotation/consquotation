@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { QuoteCheckResult, QuoteSnapshot } from "../../src/domain/pricing/quoteCheck";
 import { NO_ROUNDING } from "../../src/domain/pricing/rounding";
 import {
+  INFO_DATE_FORMAT,
   INFO_FIELDS,
   InfoCell,
   InfoKey,
@@ -46,6 +47,14 @@ describe("thông tin báo giá", () => {
     const date = INFO_FIELDS.find((f) => f.key === "date")!;
     expect(infoDisplayValue(date, cell("date", 46203, { numberFormat: "dd/mm/yyyy" }))).toBe("30/06/2026");
     expect(infoDisplayValue(date, cell("date", "30/6/26"))).toBe("30/6/26");
+  });
+
+  it("định dạng ngày ghi vào ô không bị Excel đổi thành ngày hệ thống", () => {
+    expect(INFO_DATE_FORMAT).toBe("dd/mm/yyyy;@");
+    const date = INFO_FIELDS.find((f) => f.key === "date")!;
+    expect(infoDisplayValue(date, cell("date", 46203, { numberFormat: INFO_DATE_FORMAT }))).toBe("30/06/2026");
+    // Ô đã ghi bằng bản cũ (Excel lưu thành định dạng hệ thống) vẫn đọc được là ngày.
+    expect(infoDisplayValue(date, cell("date", 46203, { numberFormat: "m/d/yyyy" }))).toBe("30/06/2026");
   });
 
   it("chỉ ghi mục đã đổi; ngày ghi thành số ngày; xóa trống được", () => {

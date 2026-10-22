@@ -15,7 +15,7 @@
 | Lỗi import/export, storage | Có (prompts/09). Lỗi IndexedDB → thông báo kèm Thử lại | Regression #7 |
 | Phân biệt lỗi chặn và cảnh báo | Mức Lỗi / Cảnh báo ở mọi danh sách kiểm tra | |
 | Gắn lỗi với bản ghi/dòng/cột/range | Mỗi mục có sheet, dòng, địa chỉ ô và nút Đi tới | |
-| **Hướng khắc phục rõ ràng** | **Mới:** mọi mục của Kiểm tra báo giá có "Cách sửa: …" (unit test kiểm tra đủ) | |
+| **Hướng khắc phục rõ ràng** | **Mới:** mọi mục của Kiểm tra báo giá có "Cách sửa: …" (unit test kiểm tra đủ). *Đính chính khi nghiệm thu (prompts/20): mục của bảng tổng hợp và mục "Phân tích mã … thiếu" còn thiếu, đã bổ sung trong 1.8.0.* | |
 | Không thay lỗi bằng 0/giá mặc định | Có (prompts/10) | |
 | **Không nuốt exception; log an toàn** | **Mới:** nhật ký lỗi kỹ thuật của phiên (Cài đặt › Nhật ký lỗi kỹ thuật), chỉ ghi thời điểm, thao tác và mã lỗi, không ghi nội dung. Các bước phụ trước đây bỏ qua lỗi im lặng nay ghi vào nhật ký. Lỗi IndexedDB cũng được ghi | `diagnostics.ts` |
 | **Thất bại một phần: báo trạng thái và cách phục hồi** | **Mới:** lỗi của thao tác ghi kèm câu "một phần có thể đã được ghi… kiểm tra vùng… chạy Kiểm tra báo giá" | `describeWriteError` |

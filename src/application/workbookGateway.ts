@@ -82,6 +82,11 @@ export interface AppendInspection {
    * Cố định lúc kiểm tra để bước ghi không phụ thuộc vùng chọn mới.
    */
   insertIndex: number | null;
+  /**
+   * Dòng trống (chỉ số trong phần dữ liệu) sẽ được ghi vào khi thêm 1 dòng, thay vì chèn dòng mới —
+   * không đẩy dữ liệu bên dưới. null = chèn dòng mới. Trạng thái trống nằm trong vân tay.
+   */
+  fillIndex: number | null;
   fingerprint: string;
 }
 
@@ -155,12 +160,16 @@ export interface WorkbookGateway {
   /** Mở workbook mới từ nội dung .xlsx (base64); người dùng tự lưu bằng Excel. */
   openNewWorkbook(base64: string): Promise<void>;
   inspectAppend(tableName: string, position: InsertPosition): Promise<AppendInspection>;
-  /** Chèn dòng tại insertIndex đã kiểm tra (null = cuối bảng); kiểm tra lại vân tay trong cùng batch. */
+  /**
+   * Ghi 1 dòng vào dòng trống fillIndex, hoặc chèn dòng tại insertIndex đã kiểm tra (null = cuối bảng);
+   * kiểm tra lại vân tay trong cùng batch.
+   */
   appendRows(
     tableName: string,
     rows: (string | number)[][],
     expectedFingerprint: string,
-    insertIndex: number | null
+    insertIndex: number | null,
+    fillIndex: number | null
   ): Promise<AppendedRows>;
 }
 

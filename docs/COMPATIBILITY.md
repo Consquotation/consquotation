@@ -64,7 +64,8 @@ Các thao tác ghi đều kiểm tra trước khi chạy. Nếu sheet đang đư
   - Nhận dấu thập phân `.` hoặc `,`.
   - Từ chối dấu phân cách hàng nghìn (`1.500.000`) thay vì đoán.
   - Số đọc từ ô Excel là số thật, không phụ thuộc cách hiển thị.
-- **Ngày:** người dùng nhập `dd/mm/yyyy` hoặc `yyyy-mm-dd`; add-in ghi vào ô dưới dạng số ngày Excel kèm định dạng `dd/mm/yyyy`.
+- **Ngày:** người dùng nhập `dd/mm/yyyy` hoặc `yyyy-mm-dd`; add-in ghi vào ô dưới dạng số ngày Excel kèm định dạng `dd/mm/yyyy;@`.
+  - Đuôi `;@` là bắt buộc. Đã kiểm chứng (2026-10-21): trên máy có ngày ngắn của Windows là dd/MM/yyyy, Excel đổi `dd/mm/yyyy` trơn thành định dạng ngày hệ thống (`m/d/yyyy`), nên mở trên máy định dạng vùng en-US sẽ hiện 10/21/2026.
   - Không ghi chuỗi ngày vào ô, vì Excel hiểu chuỗi theo locale của Excel. Đã kiểm chứng: "01/10/2026" bị hiểu thành 10/01/2026 trên Excel en-US.
 - **Chữ:** luôn ghi kèm tiền tố `'`, nên "007" không thành 7, "1/2" không thành ngày, "10%" không thành 0,1.
 - **Chưa kiểm thử:** Excel giao diện tiếng Việt, và định dạng vùng en-US (dấu thập phân `.`). Không đổi cài đặt hệ thống của máy kiểm thử.

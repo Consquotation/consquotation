@@ -511,10 +511,11 @@ export class ExcelPricingGateway implements PricingGateway {
       const aligned = data.map((row) =>
         headers.map((h) => {
           const i = ANALYSIS_COLUMNS.findIndex((c) => c.header === h);
-          return i >= 0 ? row[i] : "";
+          // null: không ghi cột người dùng tự thêm — Excel tự điền nếu là cột tính toán.
+          return i >= 0 ? row[i] : null;
         })
       );
-      table.rows.add(undefined, aligned);
+      table.rows.add(undefined, aligned as unknown as (string | number)[][]);
       await context.sync();
       const first = sheet.getRangeByIndexes(lastRow + 1, body.columnIndex + priceColumn, 1, 1);
       first.load("values,valueTypes");

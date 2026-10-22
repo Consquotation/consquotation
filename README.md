@@ -4,7 +4,7 @@ Microsoft Excel Add-in hỗ trợ lập báo giá thi công xây dựng **ngay t
 
 ## Trạng thái
 
-Đã triển khai theo bộ đặc tả trong `prompts/`: 04 (setup, manifest), 05 (Ribbon, task pane), 06 (workbook integration), 08 (thư viện cá nhân), 09 (nhập/xuất, sao lưu thư viện), 10 (tính đơn giá và thành tiền), 07 (quy trình báo giá), 11 (mẫu báo giá và in ấn), 13–17 (kiểm tra lỗi, tương thích, bảo mật, kiểm thử, hiệu năng).
+Đã triển khai theo bộ đặc tả trong `prompts/`: 04 (setup, manifest), 05 (Ribbon, task pane), 06 (workbook integration), 08 (thư viện cá nhân), 09 (nhập/xuất, sao lưu thư viện), 10 (tính đơn giá và thành tiền), 07 (quy trình báo giá), 11 (mẫu báo giá và in ấn), 13–17 (kiểm tra lỗi, tương thích, bảo mật, kiểm thử, hiệu năng), 20 (nghiệm thu — xem [biên bản](tests/manual/acceptance-checklist.md)).
 
 Đã có:
 - **Ribbon**: tab **ConsQuotation** gồm nhóm **Báo giá** (Mở ConsQuotation, Tạo bảng báo giá, Thư viện của tôi) và nhóm **Trợ giúp**.
@@ -15,7 +15,7 @@ Microsoft Excel Add-in hỗ trợ lập báo giá thi công xây dựng **ngay t
   - Chặn khi sheet bị bảo vệ, có Table chồng lên, có ô gộp, hoặc vượt giới hạn sheet.
   - Dòng tổng không đẩy dữ liệu bên dưới.
 - **Thêm công tác** thủ công hoặc từ thư viện:
-  - Mặc định chèn ngay dưới dòng đang chọn.
+  - Mặc định chèn ngay dưới dòng đang chọn. Dòng trống có sẵn của mẫu được ghi vào trước, không chèn thêm dòng.
   - Chống bấm lặp tạo dòng trùng.
   - Chữ bắt đầu bằng `= + - @` được lưu dạng chữ.
 - **Thư viện của tôi** (xem [docs/LIBRARY.md](docs/LIBRARY.md)):
@@ -45,9 +45,9 @@ Microsoft Excel Add-in hỗ trợ lập báo giá thi công xây dựng **ngay t
   - **Kiểm tra báo giá**: lỗi công thức, thiếu dữ liệu, đơn giá bằng 0, công thức bị sửa tay, đơn giá lệch sheet phân tích. Có nút Đi tới và đề xuất cập nhật (cần xác nhận).
 - Thông báo "không tương thích" cho Excel dùng webview cũ (IE11/EdgeHTML) hoặc thiếu ExcelApi 1.8.
 
-Chưa làm: đặc tả 12 (lưu trữ và quyền riêng tư) và 18–21.
+Chưa làm: đặc tả 12 (lưu trữ và quyền riêng tư), 18, 19 và 21.
 
-Tài liệu thêm: [tương thích](docs/COMPATIBILITY.md) · [bảo mật](docs/SECURITY.md) · [hiệu năng](docs/PERFORMANCE.md) · [regression](tests/manual/regression-checklist.md).
+Tài liệu thêm: [tương thích](docs/COMPATIBILITY.md) · [bảo mật](docs/SECURITY.md) · [hiệu năng](docs/PERFORMANCE.md) · [regression](tests/manual/regression-checklist.md) · [nghiệm thu](tests/manual/acceptance-checklist.md).
 
 ### Hạn chế đã biết
 
@@ -78,9 +78,11 @@ manifest/manifest.dev.xml   Manifest phát triển (localhost). Manifest product
 src/taskpane/               Task pane (React + Fluent UI)
 src/commands/               FunctionFile cho lệnh Ribbon
 src/compat/compat-gate.js   Kiểm tra webview viết bằng ES5, chạy trước bundle
-src/office/                 Adapter Office.js (requirement set, thông tin môi trường)
-src/storage/                Lưu trữ cục bộ (hiện: công cụ kiểm tra IndexedDB)
-src/shared/                 Chuỗi tiếng Việt dùng chung
+src/domain/                 Nghiệp vụ thuần (mẫu báo giá, thư viện, tính giá, in ấn) — không gọi Office.js
+src/application/            Điều phối: kiểm tra → xác nhận → ghi; interface gateway
+src/office/                 Adapter Office.js (đọc/ghi workbook, requirement set, lỗi Excel)
+src/storage/                Thư viện cá nhân trong IndexedDB
+src/shared/                 Chuỗi tiếng Việt, tiện ích dùng chung (A1, zip/xlsx, nhật ký lỗi)
 src/help/help.html          Trang trợ giúp (SupportUrl của manifest)
 tests/unit/                 Unit test (Vitest)
 tests/manual/               Checklist kiểm thử tay trong Excel
@@ -112,7 +114,7 @@ Hướng dẫn đầy đủ (chứng chỉ HTTPS, Excel trên web, xóa cache, m
 ## Dữ liệu và quyền riêng tư
 
 - Add-in không gửi workbook hay thư viện lên máy chủ nào và không có backend.
-- Thư viện cá nhân (khi được triển khai) lưu cục bộ trong IndexedDB của add-in. Dữ liệu này **bị xóa khi xóa cache add-in của Office** và không đồng bộ giữa các máy hoặc giữa Excel desktop và Excel trên web — người dùng phải sao lưu bằng chức năng export. Xem [ADR-0003](docs/ADR/0003-luu-tru-thu-vien-ca-nhan.md) và [ADR-0004](docs/ADR/0004-import-export-thu-vien.md).
+- Thư viện cá nhân lưu cục bộ trong IndexedDB của add-in. Dữ liệu này **bị xóa khi xóa cache add-in của Office** và không đồng bộ giữa các máy hoặc giữa Excel desktop và Excel trên web — người dùng phải sao lưu bằng chức năng export. Xem [ADR-0003](docs/ADR/0003-luu-tru-thu-vien-ca-nhan.md) và [ADR-0004](docs/ADR/0004-import-export-thu-vien.md).
 
 ## Triển khai
 

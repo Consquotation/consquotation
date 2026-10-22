@@ -30,6 +30,8 @@ import {
   QUOTE_COLUMNS,
   QUOTE_TITLE,
   alignRowToHeaders,
+  blankRowFlags,
+  blankRowToFill,
   buildQuoteLayout,
   hasQuoteHeaders,
   quoteColumnFormulas,
@@ -279,6 +281,7 @@ async function inspectAppendInContext(
         cellsBelow: { count: 0, sample: [] },
         blockers: [{ kind: "tableMissing" }],
         insertIndex: null,
+        fillIndex: null,
         fingerprint: "",
       },
     };
@@ -291,6 +294,8 @@ async function inspectAppendInContext(
   header.load("values");
   const full = table.getRange();
   full.load("address,rowIndex,columnIndex,rowCount,columnCount");
+  const dataBody = table.getDataBodyRange();
+  dataBody.load("formulas");
   const used = sheet.getUsedRangeOrNullObject(true);
   used.load("rowIndex,rowCount");
   await context.sync();
@@ -334,6 +339,12 @@ async function inspectAppendInContext(
     }
   }
 
+  // Mẫu tạo sẵn vài dòng trống: ghi vào đó thay vì chèn thêm, để không còn dòng trống có STT bị in ra.
+  // insertIndex null (cuối bảng, kể cả khi đang chọn dòng tổng/cả bảng như ngay sau khi tạo mẫu)
+  // → dòng trống đầu tiên ở cuối bảng.
+  const blank = blankRowFlags(headers, dataBody.formulas as unknown[][]);
+  const fillIndex = blankRowToFill(blank, insertIndex);
+
   return {
     table,
     inspection: {
@@ -342,10 +353,14 @@ async function inspectAppendInContext(
       cellsBelow: below,
       blockers,
       insertIndex,
+      fillIndex,
       // Không đưa vùng chọn vào vân tay: người dùng có thể click chỗ khác khi hộp xác nhận đang mở;
-      // vị trí chèn đã được cố định ở insertIndex.
+      // vị trí chèn đã được cố định ở insertIndex. Trạng thái trống của từng dòng thì có: nếu người
+      // dùng vừa gõ vào dòng trống sắp được ghi, add-in dừng thay vì ghi đè.
       fingerprint: hashString(
-        `${full.address}|${headers.join("\t")}|${JSON.stringify(belowFormulas)}`
+        `${full.address}|${headers.join("\t")}|${JSON.stringify(belowFormulas)}|${blank
+          .map((b) => (b ? 1 : 0))
+          .join("")}`
       ),
     },
   };
@@ -451,6 +466,8 @@ export class ExcelWorkbookGateway implements WorkbookGateway {
           range.clear(Excel.ClearApplyTo.contents);
         } else if (write.kind === "date") {
           range.numberFormat = [[INFO_DATE_FORMAT]];
+          // Ngày là số nên Excel căn phải; căn trái cho thẳng hàng với các mục chữ khi in.
+          range.format.horizontalAlignment = Excel.HorizontalAlignment.left;
           range.values = [[write.serial]];
         } else {
           range.values = [[asLiteralText(write.text)]];
@@ -820,7 +837,8 @@ export class ExcelWorkbookGateway implements WorkbookGateway {
     tableName: string,
     rows: (string | number)[][],
     expectedFingerprint: string,
-    insertIndex: number | null
+    insertIndex: number | null,
+    fillIndex: number | null
   ): Promise<AppendedRows> {
     return Excel.run(async (context) => {
       // Kiểm tra lại bảng (không phụ thuộc vùng chọn hiện tại); vị trí chèn dùng insertIndex đã cố định.
@@ -842,6 +860,12 @@ export class ExcelWorkbookGateway implements WorkbookGateway {
       if (insertIndex !== null && (insertIndex < 0 || insertIndex > before.rowCount)) {
         throw new TargetChangedError();
       }
+      if (
+        fillIndex !== null &&
+        (rows.length !== 1 || fillIndex < 0 || fillIndex >= before.rowCount)
+      ) {
+        throw new TargetChangedError();
+      }
       // Công thức Thành tiền theo quy tắc làm tròn hiện tại của workbook (đọc ngay lúc ghi).
       const amountFormula =
         quoteColumnFormulas(tableName, (await readRounding(context)).amount).amount ?? "";
@@ -856,15 +880,29 @@ export class ExcelWorkbookGateway implements WorkbookGateway {
         throw new TargetChangedError();
       }
 
-      table.rows.add(insertIndex ?? undefined, aligned as (string | number)[][]);
+      if (fillIndex !== null) {
+        // Ghi vào dòng trống đã kiểm tra (vân tay bảo đảm dòng vẫn trống). Chỉ ghi các cột mẫu,
+        // không đụng cột người dùng tự thêm.
+        headers.forEach((header, column) => {
+          const template = QUOTE_COLUMNS.findIndex((c) => c.header === header);
+          if (template >= 0) {
+            before.getCell(fillIndex, column).values = [[withAmount[0][template]]];
+          }
+        });
+      } else {
+        // null ở cột người dùng: Excel tự điền công thức cột tính toán (đã kiểm chứng trên Excel 16.0.20430).
+        table.rows.add(insertIndex ?? undefined, aligned as unknown as (string | number)[][]);
+      }
       const body = table.getDataBodyRange();
       body.load("rowIndex,columnIndex,rowCount,columnCount");
       await context.sync();
 
       const firstNewRow =
-        insertIndex === null
-          ? body.rowIndex + body.rowCount - rows.length
-          : body.rowIndex + insertIndex;
+        fillIndex !== null
+          ? body.rowIndex + fillIndex
+          : insertIndex === null
+            ? body.rowIndex + body.rowCount - rows.length
+            : body.rowIndex + insertIndex;
       // Chọn dòng vừa thêm là bước phụ: lỗi (ví dụ workbook mất focus) không làm báo thất bại,
       // vì dòng đã được ghi — báo sai sẽ khiến người dùng thêm lại thành dòng trùng.
       await bestEffort(context, () => {
