@@ -93,7 +93,7 @@ npx office-addin-cache clear
 
 ## 8. Manifest production
 
-Nhà cung cấp hosting production chưa được chọn (ADR-0005). Khi đã có domain HTTPS cố định:
+Bản production được host trên GitHub Pages (ADR-0007) và build tự động bằng GitHub Actions, xem [DEPLOY.md](DEPLOY.md). Build tay với domain HTTPS cố định:
 
 ```bash
 # bash
@@ -117,4 +117,5 @@ Kiểm tra manifest production vừa sinh: `npm run validate:prod`.
 | Trình duyệt/Excel báo chứng chỉ không tin cậy | `npx office-addin-dev-certs verify`; nếu lỗi thì `uninstall` rồi `install` lại |
 | Tab ConsQuotation không hiện sau khi sửa manifest | `npm stop`, xóa cache (mục 7), `npm start` |
 | Task pane hiện "Phiên bản Excel chưa tương thích" | Excel đang dùng webview IE11/EdgeHTML hoặc thiếu ExcelApi 1.8 (ADR-0001, ADR-0002) |
-| Cổng 3000 bị chiếm | Dừng tiến trình đang dùng cổng 3000, hoặc đổi `config.dev_server_port` trong `package.json` và URL trong manifest dev |
+| Cổng 3000 bị chiếm | Dừng tiến trình đang dùng cổng 3000, hoặc đổi cùng lúc `config.dev_server_port` trong `package.json`, URL trong manifest dev và `urlDev` trong `webpack.config.js` |
+| Task pane trắng, Excel hiện hộp thoại "WebView Stop On Load" | Bấm OK (hoặc Cancel để không hỏi lại); xem mục 4 |

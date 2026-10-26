@@ -93,33 +93,64 @@ docs/DEPLOY.md              Triển khai lên GitHub Pages, cài bản productio
 prompts/                    Bộ đặc tả yêu cầu dự án
 ```
 
-## Lệnh
+## Cài đặt và chạy
+
+### Yêu cầu môi trường
+
+| Thành phần | Yêu cầu |
+|---|---|
+| Hệ điều hành | Windows 10/11 (nền tảng chính) |
+| Excel | Microsoft 365 hoặc bản retail 2016 trở lên có WebView2, đạt ExcelApi 1.8. Đã kiểm thử: Microsoft 365, build 16.0.20430.20182 |
+| Node.js | 24 trở lên (`engines` trong `package.json`). Đã dùng: Node 24.18.0, npm 11.16.0 |
+| Package manager | npm (repo dùng `package-lock.json`) |
+| Quyền | Cài chứng chỉ cho tài khoản Windows hiện tại; quyền quản trị nếu Windows hỏi về localhost loopback |
+
+### Cài dependency và chứng chỉ (một lần)
 
 ```bash
-npm install          # cài dependency
-npm start            # chạy dev server và sideload vào Excel trên Windows
-npm run start:web -- --document "<link workbook OneDrive>"   # Excel trên web
-npm stop             # dừng và gỡ add-in đã sideload
-npm run typecheck    # TypeScript
-npm run lint         # ESLint + Prettier
-npm test             # Vitest
-npm run validate     # kiểm tra manifest (gửi nội dung manifest tới dịch vụ kiểm tra của Microsoft)
-npm run build        # build production vào dist/ (đặt CQ_PROD_URL để sinh manifest production)
-npm run validate:prod  # kiểm tra dist/manifest.prod.xml
-npm run check        # chạy typecheck, lint, test, validate, build
+npm install
+npx office-addin-dev-certs install    # chọn Yes ở hộp thoại bảo mật của Windows
+npx office-addin-dev-certs verify     # kiểm tra chứng chỉ
 ```
 
-Hướng dẫn đầy đủ (chứng chỉ HTTPS, Excel trên web, xóa cache, manifest production): [docs/SIDELOAD.md](docs/SIDELOAD.md).
+### Chạy thử trong Excel trên Windows (sideload)
 
-### Chạy thử trong Excel trên Windows
-
-1. Cài Node.js bản LTS, rồi chạy `npm install` trong thư mục dự án.
-2. Cài chứng chỉ HTTPS phát triển (một lần): `npx office-addin-dev-certs install`, rồi chọn **Yes** ở hộp thoại bảo mật của Windows.
-3. `npm start`: dev server chạy tại `https://localhost:3000` và Excel mở một workbook mới có sẵn add-in.
+1. `npm start`: build bản dev, chạy dev server tại `https://localhost:3000`, đăng ký `manifest/manifest.dev.xml` với Excel và mở một workbook mới.
    - Lần đầu, nếu được hỏi về localhost loopback, nhập `Y`.
-4. Trong Excel: tab **ConsQuotation (Dev)** › **Mở ConsQuotation**. Task pane mở ở bên phải, tiêu đề "ConsQuotation".
-   - Nếu hiện hộp thoại **WebView Stop On Load**: bấm **OK**. Đây là hộp thoại của chế độ debug.
-5. Xong thì chạy `npm stop`.
+2. Trong Excel: tab **ConsQuotation (Dev)** › **Mở ConsQuotation**. Task pane mở ở bên phải.
+   - Tải thành công: tiêu đề "ConsQuotation", dòng giới thiệu, và dòng trạng thái "Đã tải xong · Đã kết nối Excel trên Windows · Bản … (dev)".
+   - Nếu hiện hộp thoại **WebView Stop On Load**: bấm OK. Đây là hộp thoại của chế độ debug.
+3. Dừng: `npm stop`. Lệnh này dừng dev server và gỡ add-in đã sideload.
+
+Chỉ chạy dev server, không mở Excel: `npm run dev-server` (dừng bằng Ctrl+C).
+
+### Build và kiểm tra
+
+```bash
+npm run lint           # ESLint + Prettier
+npm run typecheck      # TypeScript (strict)
+npm test               # Vitest
+npm run validate       # kiểm tra manifest dev (gửi nội dung manifest tới dịch vụ kiểm tra của Microsoft)
+npm run build          # build production vào dist/; đặt CQ_PROD_URL để sinh manifest production
+npm run validate:prod  # kiểm tra dist/manifest.prod.xml
+npm run check          # chạy lần lượt typecheck, lint, test, validate, build
+```
+
+Excel trên web: `npm run start:web -- --document "<link workbook OneDrive>"` (chưa kiểm thử). Hướng dẫn đầy đủ: [docs/SIDELOAD.md](docs/SIDELOAD.md); triển khai bản production: [docs/DEPLOY.md](docs/DEPLOY.md).
+
+### Lỗi thường gặp
+
+| Hiện tượng | Cách xử lý |
+|---|---|
+| Task pane trắng, Excel hiện hộp thoại "WebView Stop On Load" | Bấm OK (hoặc Cancel để không hỏi lại). Chỉ có ở `npm start` |
+| "We can't open this add-in from localhost" | Kiểm tra dev server đang chạy (`npm start` hoặc `npm run dev-server`) và đã cho phép loopback |
+| Báo chứng chỉ không tin cậy | `npx office-addin-dev-certs verify`; nếu lỗi: `npx office-addin-dev-certs uninstall` rồi `install` lại |
+| Không thấy tab ConsQuotation (Dev), hoặc Ribbon không đổi sau khi sửa manifest | `npm stop`, `npx office-addin-cache clear`, rồi `npm start`. Lưu ý: xóa cache cũng xóa thư viện cá nhân trên máy, hãy sao lưu trước |
+| "Phiên bản Excel chưa tương thích" | Excel dùng webview cũ (IE11/EdgeHTML) hoặc thiếu ExcelApi 1.8; cập nhật Office |
+| Cổng 3000 đang bị chiếm | Dừng tiến trình đang dùng cổng 3000. Đổi cổng phải sửa cùng lúc `config.dev_server_port` (package.json), URL trong `manifest/manifest.dev.xml` và `urlDev` trong `webpack.config.js` |
+| `npm run validate` lỗi mạng | Lệnh cần Internet để gọi dịch vụ kiểm tra của Microsoft |
+
+Bộ công cụ Office Add-in của Microsoft có thể hỏi về việc gửi dữ liệu sử dụng ẩn danh của chính công cụ (không phải dữ liệu workbook). Tắt bằng `npx office-addin-usage-data off`.
 
 ## Dữ liệu và quyền riêng tư
 

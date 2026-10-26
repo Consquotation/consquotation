@@ -1,7 +1,19 @@
 /** Chuỗi giao diện tiếng Việt. Gom tại đây để thống nhất thuật ngữ (ADR-0006). */
+
+/** Office.context.diagnostics.platform → tên nền tảng hiển thị. */
+const PLATFORM_LABELS: Record<string, string> = {
+  PC: "Windows",
+  OfficeOnline: "web",
+  Mac: "Mac",
+  iOS: "iPad",
+};
+
 export const STRINGS = {
   appName: "ConsQuotation",
   appTagline: "Lập báo giá thi công xây dựng ngay trong Excel",
+  /** Dòng trạng thái dưới tiêu đề — chỉ hiện sau khi Office.js sẵn sàng và Excel đạt mức API tối thiểu. */
+  readyStatus: (platform: string, version: string, dev: boolean) =>
+    `Đã tải xong · Đã kết nối Excel trên ${PLATFORM_LABELS[platform] ?? platform} · Bản ${version}${dev ? " (dev)" : ""}`,
 
   unsupported: {
     title: "Phiên bản Excel chưa tương thích",

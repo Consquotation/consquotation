@@ -2,6 +2,7 @@ import * as React from "react";
 import {
   Body1,
   Button,
+  Caption1,
   MessageBar,
   MessageBarBody,
   Subtitle2,
@@ -36,9 +37,13 @@ import { WorkbookGateway } from "../../application/workbookGateway";
 import { todayIso } from "../../domain/library/dates";
 import { draftFromWorkItem } from "../../domain/library/toQuote";
 import { WorkItem } from "../../domain/library/types";
-import { readPartitionKey } from "../../office/environment";
+import { readHostInfo, readPartitionKey } from "../../office/environment";
+import { APP_VERSION, BUILD_MODE } from "../../shared/buildInfo";
 import { ExcelWorkbookGateway } from "../../office/excelWorkbookGateway";
-import { IndexedDbLibraryRepository, libraryDatabaseName } from "../../storage/indexedDbLibraryRepository";
+import {
+  IndexedDbLibraryRepository,
+  libraryDatabaseName,
+} from "../../storage/indexedDbLibraryRepository";
 import { STRINGS } from "../../shared/strings.vi";
 import { randomId } from "../../shared/uuid";
 import { View, parseInitialView } from "../navigation";
@@ -66,6 +71,19 @@ const useStyles = makeStyles({
     columnGap: tokens.spacingHorizontalS,
   },
   titles: { display: "flex", flexDirection: "column", rowGap: tokens.spacingVerticalXS },
+  ready: {
+    display: "flex",
+    alignItems: "center",
+    columnGap: tokens.spacingHorizontalXS,
+    color: tokens.colorNeutralForeground3,
+  },
+  readyDot: {
+    width: "8px",
+    height: "8px",
+    flexShrink: 0,
+    borderRadius: tokens.borderRadiusCircular,
+    backgroundColor: tokens.colorPaletteGreenForeground1,
+  },
   panel: { display: "flex", flexDirection: "column", rowGap: tokens.spacingVerticalXL },
   shortcuts: { display: "flex", flexWrap: "wrap", gap: tokens.spacingHorizontalS },
 });
@@ -92,12 +110,24 @@ const App: React.FC<{
   pricing?: PricingGateway;
   layout?: LayoutGateway;
   libraryService?: LibraryService;
-}> = ({ gateway: injected, pricing: injectedPricing, layout: injectedLayout, libraryService: injectedLibrary }) => {
+}> = ({
+  gateway: injected,
+  pricing: injectedPricing,
+  layout: injectedLayout,
+  libraryService: injectedLibrary,
+}) => {
   const styles = useStyles();
+  const hostPlatform = React.useMemo(() => readHostInfo().platform, []);
   const gateway = React.useMemo(() => injected ?? new ExcelWorkbookGateway(), [injected]);
-  const pricing = React.useMemo(() => injectedPricing ?? new ExcelPricingGateway(), [injectedPricing]);
+  const pricing = React.useMemo(
+    () => injectedPricing ?? new ExcelPricingGateway(),
+    [injectedPricing]
+  );
   const layout = React.useMemo(() => injectedLayout ?? new ExcelLayoutGateway(), [injectedLayout]);
-  const libraryService = React.useMemo(() => injectedLibrary ?? createLibraryService(), [injectedLibrary]);
+  const libraryService = React.useMemo(
+    () => injectedLibrary ?? createLibraryService(),
+    [injectedLibrary]
+  );
   const loadLibrary = React.useCallback(() => libraryService.load(), [libraryService]);
   // Công tác vừa chọn "Chèn vào báo giá" ở thư viện; form Thêm công tác dùng một lần rồi xóa.
   const [prefill, setPrefill] = React.useState<LibraryPrefill | null>(null);
@@ -106,7 +136,9 @@ const App: React.FC<{
     view: parseInitialView(window.location.search),
     focusId: null,
   }));
-  const [lastTab, setLastTab] = React.useState<View>(() => (nav.view === "help" ? "overview" : nav.view));
+  const [lastTab, setLastTab] = React.useState<View>(() =>
+    nav.view === "help" ? "overview" : nav.view
+  );
   // Tăng sau mỗi lần tạo/thêm để các danh sách bảng tự tải lại.
   const [tablesVersion, setTablesVersion] = React.useState(0);
   const bumpTables = React.useCallback(() => setTablesVersion((v) => v + 1), []);
@@ -169,6 +201,11 @@ const App: React.FC<{
         <div className={styles.titles}>
           <Title3 as="h1">{s.appName}</Title3>
           <Body1>{s.appTagline}</Body1>
+          {/* App chỉ render sau Office.onReady và kiểm tra mức API, nên dòng này phản ánh đúng trạng thái. */}
+          <Caption1 role="status" className={styles.ready}>
+            <span className={styles.readyDot} aria-hidden="true" />
+            {s.readyStatus(hostPlatform, APP_VERSION, BUILD_MODE === "development")}
+          </Caption1>
         </div>
         {nav.view !== "help" && <Button onClick={() => go("help")}>{s.header.help}</Button>}
       </header>
@@ -207,7 +244,9 @@ const App: React.FC<{
                   <Button appearance="primary" onClick={() => go("quote", "cq-create-title")}>
                     {s.shortcuts.createQuote}
                   </Button>
-                  <Button onClick={() => go("quote", "cq-append-title")}>{s.shortcuts.addWorkItem}</Button>
+                  <Button onClick={() => go("quote", "cq-append-title")}>
+                    {s.shortcuts.addWorkItem}
+                  </Button>
                   <Button onClick={() => go("library")}>{s.shortcuts.library}</Button>
                   <Button onClick={() => go("pricing")}>{s.shortcuts.checkQuote}</Button>
                   <Button onClick={() => go("help")}>{s.shortcuts.help}</Button>
