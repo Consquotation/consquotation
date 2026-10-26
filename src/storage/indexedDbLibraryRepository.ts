@@ -4,22 +4,29 @@
  * - Phiên bản schema = phiên bản IndexedDB; gặp database của phiên bản add-in mới hơn thì báo lỗi,
  *   không ghi đè.
  * - Mọi thao tác ghi nhiều store (xóa kèm phụ thuộc) chạy trong một giao dịch: lỗi thì không lưu gì.
+ * - Nâng cấp v1 → v2 (ADR-0012) chạy trong giao dịch versionchange: lỗi thì database giữ nguyên v1.
  */
 
-/* global IDBDatabase, IDBFactory, IDBRequest, IDBTransaction, IDBTransactionMode, DOMException */
+/* global IDBDatabase, IDBFactory, IDBObjectStore, IDBRequest, IDBTransaction, IDBTransactionMode, DOMException */
 
 import {
+  Category,
   LIBRARY_SCHEMA_VERSION,
   LibrarySnapshot,
   NormDefinition,
   Resource,
   ResourcePrice,
+  Supplier,
   WorkItem,
+  normalizeName,
 } from "../domain/library/types";
+import { randomId } from "../shared/uuid";
 import { LibraryRepository, LibraryStorageError } from "./libraryRepository";
 
 const DB_BASE_NAME = "consquotation-library";
 const STORES = {
+  categories: "categories",
+  suppliers: "suppliers",
   workItems: "workItems",
   resources: "resources",
   resourcePrices: "resourcePrices",
@@ -60,18 +67,80 @@ function transactionDone(transaction: IDBTransaction): Promise<void> {
   });
 }
 
+/** Duyệt mọi bản ghi của store bằng cursor và ghi lại bản đã đổi (trong giao dịch đang mở). */
+function updateEach(
+  store: IDBObjectStore,
+  change: (record: Record<string, unknown>) => Record<string, unknown>
+): void {
+  const request = store.openCursor();
+  request.onsuccess = () => {
+    const cursor = request.result;
+    if (cursor) {
+      cursor.update(change({ ...(cursor.value as Record<string, unknown>) }));
+      cursor.continue();
+    }
+  };
+}
+
+/**
+ * v1 → v2: mỗi tên "Nhóm" (chữ tự do) của công tác thành một danh mục; các tên chỉ khác hoa thường
+ * hoặc khoảng trắng thừa gộp làm một (giữ cách viết gặp đầu tiên). Tài nguyên chưa có nhóm, giá và
+ * công tác chưa có nhà cung cấp. Không mất dữ liệu: tên nhóm cũ nằm trong danh mục.
+ */
+function migrateV1toV2(tx: IDBTransaction, now: string): void {
+  const categories = tx.objectStore(STORES.categories);
+  const idByName = new Map<string, string>();
+  updateEach(tx.objectStore(STORES.workItems), (record) => {
+    const { group, ...rest } = record;
+    const name = typeof group === "string" ? group.replace(/\s+/g, " ").trim() : "";
+    let categoryId: string | null = null;
+    if (name !== "") {
+      const key = normalizeName(name);
+      categoryId = idByName.get(key) ?? null;
+      if (categoryId === null) {
+        categoryId = randomId();
+        idByName.set(key, categoryId);
+        const category: Category = {
+          id: categoryId,
+          name,
+          notes: "",
+          createdAt: now,
+          updatedAt: now,
+        };
+        categories.put(category);
+      }
+    }
+    return { ...rest, categoryId, supplierId: rest.supplierId ?? null };
+  });
+  updateEach(tx.objectStore(STORES.resources), (record) => ({
+    ...record,
+    categoryId: record.categoryId ?? null,
+  }));
+  updateEach(tx.objectStore(STORES.resourcePrices), (record) => ({
+    ...record,
+    supplierId: record.supplierId ?? null,
+  }));
+}
+
 export function openLibraryDatabase(factory: IDBFactory, name: string): Promise<IDBDatabase> {
   return new Promise((resolve, reject) => {
     const request = factory.open(name, LIBRARY_SCHEMA_VERSION);
     request.onupgradeneeded = (event) => {
       const db = request.result;
-      // Migration tuần tự theo phiên bản cũ; hiện chỉ có v1.
+      // Migration tuần tự theo phiên bản cũ.
       if (event.oldVersion < 1) {
         db.createObjectStore(STORES.workItems, { keyPath: "id" });
         db.createObjectStore(STORES.resources, { keyPath: "id" });
         db.createObjectStore(STORES.resourcePrices, { keyPath: "id" });
         db.createObjectStore(STORES.norms, { keyPath: "id" });
         db.createObjectStore(STORES.settings, { keyPath: "key" });
+      }
+      if (event.oldVersion < 2) {
+        db.createObjectStore(STORES.categories, { keyPath: "id" });
+        db.createObjectStore(STORES.suppliers, { keyPath: "id" });
+        if (event.oldVersion >= 1 && request.transaction) {
+          migrateV1toV2(request.transaction, new Date().toISOString());
+        }
       }
     };
     request.onsuccess = () => {
@@ -153,18 +222,40 @@ export class IndexedDbLibraryRepository implements LibraryRepository {
 
   async loadAll(): Promise<LibrarySnapshot> {
     return this.run(
-      [STORES.workItems, STORES.resources, STORES.resourcePrices, STORES.norms],
+      [
+        STORES.categories,
+        STORES.suppliers,
+        STORES.workItems,
+        STORES.resources,
+        STORES.resourcePrices,
+        STORES.norms,
+      ],
       "readonly",
       async (tx) => {
-        const [workItems, resources, resourcePrices, norms] = await Promise.all([
-          requestToPromise(tx.objectStore(STORES.workItems).getAll() as IDBRequest<WorkItem[]>),
-          requestToPromise(tx.objectStore(STORES.resources).getAll() as IDBRequest<Resource[]>),
-          requestToPromise(
-            tx.objectStore(STORES.resourcePrices).getAll() as IDBRequest<ResourcePrice[]>
-          ),
-          requestToPromise(tx.objectStore(STORES.norms).getAll() as IDBRequest<NormDefinition[]>),
-        ]);
-        return { workItems, resources, resourcePrices, norms };
+        const [categories, suppliers, workItems, resources, resourcePrices, norms] =
+          await Promise.all([
+            requestToPromise(tx.objectStore(STORES.categories).getAll() as IDBRequest<Category[]>),
+            requestToPromise(tx.objectStore(STORES.suppliers).getAll() as IDBRequest<Supplier[]>),
+            requestToPromise(tx.objectStore(STORES.workItems).getAll() as IDBRequest<WorkItem[]>),
+            requestToPromise(tx.objectStore(STORES.resources).getAll() as IDBRequest<Resource[]>),
+            requestToPromise(
+              tx.objectStore(STORES.resourcePrices).getAll() as IDBRequest<ResourcePrice[]>
+            ),
+            requestToPromise(tx.objectStore(STORES.norms).getAll() as IDBRequest<NormDefinition[]>),
+          ]);
+        // Đọc phòng thủ: trường tham chiếu thiếu (dữ liệu cũ, sửa tay) coi là "không có".
+        return {
+          categories,
+          suppliers,
+          workItems: workItems.map((w) => ({
+            ...w,
+            categoryId: w.categoryId ?? null,
+            supplierId: w.supplierId ?? null,
+          })),
+          resources: resources.map((r) => ({ ...r, categoryId: r.categoryId ?? null })),
+          resourcePrices: resourcePrices.map((p) => ({ ...p, supplierId: p.supplierId ?? null })),
+          norms,
+        };
       }
     );
   }
@@ -200,6 +291,58 @@ export class IndexedDbLibraryRepository implements LibraryRepository {
     });
   }
 
+  putCategory(category: Category): Promise<void> {
+    return this.put(STORES.categories, category);
+  }
+
+  /** Chuyển mọi công tác/tài nguyên của danh mục sang `reassignTo` (null = bỏ phân nhóm) rồi xóa nó. */
+  deleteCategory(id: string, reassignTo: string | null, now: string): Promise<void> {
+    return this.run(
+      [STORES.categories, STORES.workItems, STORES.resources],
+      "readwrite",
+      async (tx) => {
+        for (const storeName of [STORES.workItems, STORES.resources]) {
+          const store = tx.objectStore(storeName);
+          const all = (await requestToPromise(store.getAll())) as Array<{
+            categoryId?: string | null;
+          }>;
+          for (const record of all) {
+            if (record.categoryId === id) {
+              store.put({ ...record, categoryId: reassignTo, updatedAt: now });
+            }
+          }
+        }
+        tx.objectStore(STORES.categories).delete(id);
+      }
+    );
+  }
+
+  putSupplier(supplier: Supplier): Promise<void> {
+    return this.put(STORES.suppliers, supplier);
+  }
+
+  /** Bỏ liên kết nhà cung cấp ở mọi công tác/giá (giữ nguyên "Nguồn giá") rồi xóa nó. */
+  deleteSupplier(id: string, now: string): Promise<void> {
+    return this.run(
+      [STORES.suppliers, STORES.workItems, STORES.resourcePrices],
+      "readwrite",
+      async (tx) => {
+        for (const storeName of [STORES.workItems, STORES.resourcePrices]) {
+          const store = tx.objectStore(storeName);
+          const all = (await requestToPromise(store.getAll())) as Array<{
+            supplierId?: string | null;
+          }>;
+          for (const record of all) {
+            if (record.supplierId === id) {
+              store.put({ ...record, supplierId: null, updatedAt: now });
+            }
+          }
+        }
+        tx.objectStore(STORES.suppliers).delete(id);
+      }
+    );
+  }
+
   putWorkItem(item: WorkItem): Promise<void> {
     return this.put(STORES.workItems, item);
   }
@@ -227,9 +370,22 @@ export class IndexedDbLibraryRepository implements LibraryRepository {
 
   applyImport(changes: LibrarySnapshot): Promise<void> {
     return this.run(
-      [STORES.workItems, STORES.resources, STORES.resourcePrices, STORES.norms],
+      [
+        STORES.categories,
+        STORES.suppliers,
+        STORES.workItems,
+        STORES.resources,
+        STORES.resourcePrices,
+        STORES.norms,
+      ],
       "readwrite",
       (tx) => {
+        for (const category of changes.categories) {
+          tx.objectStore(STORES.categories).put(category);
+        }
+        for (const supplier of changes.suppliers) {
+          tx.objectStore(STORES.suppliers).put(supplier);
+        }
         for (const item of changes.workItems) {
           tx.objectStore(STORES.workItems).put(item);
         }

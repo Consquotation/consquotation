@@ -31,7 +31,9 @@ const LibraryStoragePanel: React.FC<{ service: LibraryService }> = ({ service })
             state.library.workItems.length,
             state.library.resources.length,
             state.library.resourcePrices.length,
-            state.library.norms.length
+            state.library.norms.length,
+            state.library.categories.length,
+            state.library.suppliers.length
           )}
         </Body1>
       )}

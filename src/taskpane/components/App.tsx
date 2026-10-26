@@ -36,7 +36,8 @@ import { LibraryService } from "../../application/libraryService";
 import { WorkbookGateway } from "../../application/workbookGateway";
 import { todayIso } from "../../domain/library/dates";
 import { draftFromWorkItem } from "../../domain/library/toQuote";
-import { WorkItem } from "../../domain/library/types";
+import { nameLookup } from "../../domain/library/search";
+import { LibrarySnapshot, WorkItem } from "../../domain/library/types";
 import { readHostInfo, readPartitionKey } from "../../office/environment";
 import { APP_VERSION, BUILD_MODE } from "../../shared/buildInfo";
 import { ExcelWorkbookGateway } from "../../office/excelWorkbookGateway";
@@ -97,6 +98,8 @@ const useStyles = makeStyles({
   },
   panel: { display: "flex", flexDirection: "column", rowGap: tokens.spacingVerticalXL },
   shortcuts: { display: "flex", flexWrap: "wrap", gap: tokens.spacingHorizontalS },
+  // Task pane hẹp (~320 px): tab xuống dòng thay vì bắt cuộn ngang.
+  tabs: { flexWrap: "wrap" },
 });
 
 /** Tiêu đề nhận focus khi chuyển tới màn hình/phần tương ứng (bàn phím, trình đọc màn hình). */
@@ -190,17 +193,22 @@ const App: React.FC<{
 
   const insertFromLibrary = async (item: WorkItem) => {
     const today = todayIso();
-    const { draft, warnings } = draftFromWorkItem(item, today);
-    // Công tác có định mức: cho phép chọn "Phân tích từ định mức" (prompts/10). Đọc lại thư viện
-    // để có giá tài nguyên mới nhất đã lưu.
-    let composition: LibraryPrefill["composition"];
+    // Đọc lại thư viện: tên nhóm/nhà cung cấp hiện tại (chép vào dòng báo giá) và giá tài nguyên mới
+    // nhất cho "Phân tích từ định mức" (prompts/10).
+    let library: LibrarySnapshot | undefined;
     try {
-      const library = await libraryService.load();
-      const lines = compositionLines(item, library, today);
-      composition = lines.length > 0 ? { item, lines } : undefined;
+      library = await libraryService.load();
     } catch {
-      composition = undefined;
+      library = undefined;
     }
+    const { draft, warnings } = draftFromWorkItem(
+      item,
+      today,
+      library ? nameLookup(library) : undefined
+    );
+    const lines = library ? compositionLines(item, library, today) : [];
+    const composition: LibraryPrefill["composition"] =
+      lines.length > 0 ? { item, lines } : undefined;
     setPrefill({ nonce: Date.now(), code: item.code, draft, warnings, composition });
     go("quote", "cq-append-title");
   };
@@ -226,6 +234,7 @@ const App: React.FC<{
       ) : (
         <>
           <TabList
+            className={styles.tabs}
             aria-label={s.tabs.label}
             selectedValue={nav.view}
             onTabSelect={(_e, data) => go(data.value as View, null)}

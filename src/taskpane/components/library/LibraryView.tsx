@@ -11,10 +11,13 @@ import {
   Subtitle2,
   Tab,
   TabList,
+  Text,
   makeStyles,
   tokens,
 } from "@fluentui/react-components";
+import CatalogPanel from "./CatalogPanel";
 import ExchangePanel from "./ExchangePanel";
+import { TextField } from "./common";
 import LibraryCheckPanel from "./LibraryCheckPanel";
 import ResourcesPanel from "./ResourcesPanel";
 import WorkItemsPanel from "./WorkItemsPanel";
@@ -22,19 +25,35 @@ import { useLibrary } from "./useLibrary";
 import { BackupStatus, LibraryService } from "../../../application/libraryService";
 import { WorkbookGateway } from "../../../application/workbookGateway";
 import { formatDateTime } from "../../../domain/library/dates";
-import { WorkItem, isLibraryEmpty } from "../../../domain/library/types";
+import {
+  DEFAULT_LIBRARY_NAME,
+  LibrarySnapshot,
+  WorkItem,
+  isLibraryEmpty,
+} from "../../../domain/library/types";
 import { requestPersistence } from "../../../storage/storageProbe";
 import { EXCHANGE_STRINGS } from "../../../shared/strings.exchange.vi";
 import { LIBRARY_STRINGS } from "../../../shared/strings.library.vi";
+import { useExclusive } from "../../useExclusive";
 
 /* global navigator */
 
-type Section = "workItems" | "resources" | "check" | "exchange";
-
-
+type Section = "workItems" | "resources" | "catalog" | "check" | "exchange";
 
 const useStyles = makeStyles({
   root: { display: "flex", flexDirection: "column", rowGap: tokens.spacingVerticalM },
+  overview: {
+    display: "flex",
+    flexDirection: "column",
+    rowGap: tokens.spacingVerticalXS,
+    padding: tokens.spacingHorizontalM,
+    backgroundColor: tokens.colorNeutralBackground2,
+    borderRadius: tokens.borderRadiusMedium,
+  },
+  nameRow: { display: "flex", alignItems: "center", flexWrap: "wrap", gap: tokens.spacingHorizontalS },
+  libraryName: { wordBreak: "break-word" },
+  quick: { display: "flex", flexWrap: "wrap", gap: tokens.spacingHorizontalS, marginTop: tokens.spacingVerticalXS },
+  tabs: { flexWrap: "wrap" },
 });
 
 const LibraryView: React.FC<{
@@ -50,10 +69,16 @@ const LibraryView: React.FC<{
   const [usedInWorkbook, setUsedInWorkbook] = React.useState(false);
   const persistenceRequested = React.useRef(false);
   const [backup, setBackup] = React.useState<BackupStatus | null>(null);
+  const [libraryName, setLibraryName] = React.useState<string | null>(null);
+  // Tăng để mở form thêm mới ở tab tương ứng (nút thao tác nhanh).
+  const [newWorkItem, setNewWorkItem] = React.useState(0);
+  const [newResource, setNewResource] = React.useState(0);
 
   const refreshBackup = React.useCallback(async () => {
     try {
-      setBackup(await service.backupStatus());
+      const [status, name] = await Promise.all([service.backupStatus(), service.libraryName()]);
+      setBackup(status);
+      setLibraryName(name);
     } catch {
       setBackup(null);
     }
@@ -110,6 +135,31 @@ const LibraryView: React.FC<{
               onBackup={section === "exchange" ? undefined : () => setSection("exchange")}
             />
           )}
+          <LibraryOverview
+            service={service}
+            name={libraryName}
+            library={state.library}
+            lastChangedAt={backup?.lastChangedAt ?? null}
+            onRenamed={(name) => {
+              setLibraryName(name);
+              void refreshBackup();
+            }}
+            onAddWorkItem={() => {
+              setNotice(null);
+              setSection("workItems");
+              setNewWorkItem((n) => n + 1);
+            }}
+            onAddResource={() => {
+              setNotice(null);
+              setSection("resources");
+              setNewResource((n) => n + 1);
+            }}
+            onExchange={() => {
+              setNotice(null);
+              setSection("exchange");
+            }}
+            styles={styles}
+          />
           {notice && (
             <MessageBar intent="success" layout="multiline" politeness="polite">
               <MessageBarBody>{notice}</MessageBarBody>
@@ -117,6 +167,7 @@ const LibraryView: React.FC<{
           )}
 
           <TabList
+            className={styles.tabs}
             aria-label={s.sections.label}
             size="small"
             selectedValue={section}
@@ -125,12 +176,9 @@ const LibraryView: React.FC<{
               setSection(data.value as Section);
             }}
           >
-            <Tab value="workItems">
-              {s.sections.workItems} ({state.library.workItems.length})
-            </Tab>
-            <Tab value="resources">
-              {s.sections.resources} ({state.library.resources.length})
-            </Tab>
+            <Tab value="workItems">{s.sections.workItems}</Tab>
+            <Tab value="resources">{s.sections.resources}</Tab>
+            <Tab value="catalog">{s.sections.catalog}</Tab>
             <Tab value="check">{s.sections.check}</Tab>
             <Tab value="exchange">{EXCHANGE_STRINGS.sectionTab}</Tab>
           </TabList>
@@ -142,10 +190,20 @@ const LibraryView: React.FC<{
               reload={reloadAfterWrite}
               onInsert={onInsert}
               notify={setNotice}
+              startNew={newWorkItem}
             />
           )}
           {section === "resources" && (
-            <ResourcesPanel service={service} library={state.library} reload={reloadAfterWrite} notify={setNotice} />
+            <ResourcesPanel
+              service={service}
+              library={state.library}
+              reload={reloadAfterWrite}
+              notify={setNotice}
+              startNew={newResource}
+            />
+          )}
+          {section === "catalog" && (
+            <CatalogPanel service={service} library={state.library} reload={reloadAfterWrite} notify={setNotice} />
           )}
           {section === "check" && <LibraryCheckPanel library={state.library} />}
           {section === "exchange" && (
@@ -158,6 +216,95 @@ const LibraryView: React.FC<{
           )}
         </>
       )}
+    </section>
+  );
+};
+
+/** Tổng quan thư viện: tên (đổi được), số liệu, cập nhật gần nhất, nơi lưu và thao tác chính. */
+const LibraryOverview: React.FC<{
+  service: LibraryService;
+  name: string | null;
+  library: LibrarySnapshot;
+  lastChangedAt: string | null;
+  onRenamed: (name: string) => void;
+  onAddWorkItem: () => void;
+  onAddResource: () => void;
+  onExchange: () => void;
+  styles: ReturnType<typeof useStyles>;
+}> = ({ service, name, library, lastChangedAt, onRenamed, onAddWorkItem, onAddResource, onExchange, styles }) => {
+  const s = LIBRARY_STRINGS.overview;
+  const [editing, setEditing] = React.useState<string | null>(null);
+  const [failure, setFailure] = React.useState<string | null>(null);
+  const exclusive = useExclusive();
+  const save = () =>
+    exclusive(async () => {
+      if (editing === null) {
+        return;
+      }
+      setFailure(null);
+      try {
+        onRenamed(await service.setLibraryName(editing));
+        setEditing(null);
+      } catch (error) {
+        setFailure(error instanceof Error ? error.message : String(error));
+      }
+    });
+  return (
+    <section className={styles.overview} aria-labelledby="cq-library-name">
+      {editing === null ? (
+        <div className={styles.nameRow}>
+          <Text weight="semibold" id="cq-library-name" className={styles.libraryName}>
+            {name ?? DEFAULT_LIBRARY_NAME}
+          </Text>
+          <Button size="small" appearance="subtle" onClick={() => setEditing(name ?? DEFAULT_LIBRARY_NAME)}>
+            {s.rename}
+          </Button>
+        </div>
+      ) : (
+        <form
+          noValidate
+          className={styles.nameRow}
+          onSubmit={(event) => {
+            event.preventDefault();
+            void save();
+          }}
+        >
+          <TextField label={s.nameLabel} value={editing} onChange={setEditing} />
+          <Button size="small" type="submit" appearance="primary">
+            {s.saveName}
+          </Button>
+          <Button size="small" onClick={() => setEditing(null)}>
+            {LIBRARY_STRINGS.actions.cancel}
+          </Button>
+        </form>
+      )}
+      {failure && (
+        <MessageBar intent="error" layout="multiline">
+          <MessageBarBody>{failure}</MessageBarBody>
+        </MessageBar>
+      )}
+      <Caption1>
+        {s.stats(
+          library.workItems.length,
+          library.resources.length,
+          library.resourcePrices.length,
+          library.categories.length,
+          library.suppliers.length
+        )}
+      </Caption1>
+      <Caption1>{lastChangedAt ? s.lastChanged(formatDateTime(lastChangedAt)) : s.neverChanged}</Caption1>
+      <Caption1>{s.storage}</Caption1>
+      <div className={styles.quick}>
+        <Button size="small" onClick={onAddWorkItem}>
+          {s.addWorkItem}
+        </Button>
+        <Button size="small" onClick={onAddResource}>
+          {s.addResource}
+        </Button>
+        <Button size="small" onClick={onExchange}>
+          {s.exchange}
+        </Button>
+      </div>
     </section>
   );
 };

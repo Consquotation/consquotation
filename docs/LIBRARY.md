@@ -6,12 +6,45 @@ Theo [prompts/08_USER_OWNED_LIBRARY.md](../prompts/08_USER_OWNED_LIBRARY.md) và
 
 | Loại | Nội dung |
 |---|---|
-| Công tác | Mã, tên, nhóm, đơn vị, mô tả, đơn giá (có thể để trống), tiền tệ, nguồn giá, ngày hiệu lực, ghi chú |
-| Tài nguyên | Vật liệu, nhân công, máy thi công hoặc loại khác: mã, tên, đơn vị |
-| Giá tài nguyên | Đơn giá, đơn vị, tiền tệ, ngày hiệu lực, nguồn, trạng thái (đang dùng/ngưng dùng). Một tài nguyên có thể có nhiều giá |
+| Công tác (đơn giá tổng hợp) | Mã, tên, nhóm, đơn vị, mô tả, đơn giá (có thể để trống), tiền tệ, nhà cung cấp, nguồn giá, ngày hiệu lực, ghi chú |
+| Tài nguyên | Vật liệu, nhân công, máy thi công hoặc loại khác: mã, tên, nhóm, đơn vị |
+| Giá tài nguyên | Đơn giá, đơn vị, tiền tệ, ngày hiệu lực, nhà cung cấp, nguồn, trạng thái (đang dùng/ngưng dùng). Một tài nguyên có thể có nhiều giá |
 | Định mức | Hao phí tài nguyên cho 1 đơn vị công tác (tùy chọn) |
+| Nhóm | Danh mục do bạn tự đặt, dùng chung cho công tác và tài nguyên |
+| Nhà cung cấp | Tên, thông tin liên hệ, ghi chú |
 
-ConsQuotation **không kèm sẵn** định mức, đơn giá hay danh mục nào. Thư viện mới luôn trống.
+ConsQuotation **không kèm sẵn** định mức, đơn giá hay danh mục nào. Thư viện mới luôn trống. Bạn có thể đặt tên cho thư viện (phần đầu tab Thư viện); tên này được ghi vào file sao lưu.
+
+Mỗi bản ghi có id riêng, không đổi khi sửa mã hay tên. Đơn giá lưu dạng số; ô nhập không nhận chuỗi như "1.250.000 VNĐ".
+
+### Quy tắc dữ liệu
+
+| Trường hợp | Cách xử lý |
+|---|---|
+| Thiếu mã, tên hoặc đơn vị | Không lưu, báo lỗi tại ô |
+| Mã trùng (không phân biệt hoa thường) | Không lưu: mã dùng để so khớp khi nhập/xuất |
+| Tên trùng bản ghi khác | Cảnh báo "có khả năng trùng", vẫn lưu; không tự gộp |
+| Đơn giá âm | Không lưu |
+| Đơn giá bằng 0 | Lưu; Kiểm tra thư viện cảnh báo |
+| Đơn giá công tác để trống | "Chưa có giá" (khác 0), vì giá có thể đến từ định mức |
+| Ngày không có thật, ngày kết thúc trước ngày bắt đầu | Không lưu |
+| Nhóm hoặc nhà cung cấp đã bị xóa | Không lưu, yêu cầu chọn lại |
+
+## Tab Thư viện
+
+- **Phần tổng quan:** tên thư viện (đổi được), số công tác, tài nguyên, giá, nhóm, nhà cung cấp, thời điểm cập nhật gần nhất, nơi lưu, và các nút Thêm công tác / Thêm tài nguyên / Nhập, Xuất, Sao lưu.
+- **Công tác, Tài nguyên:**
+  - tìm theo mã, tên, nhóm, đơn vị, nhà cung cấp (không cần gõ dấu: "vuon uom" tìm được "Vườn ươm");
+  - lọc theo nhóm (kể cả "Chưa phân nhóm"), nhà cung cấp, loại tài nguyên;
+  - sắp xếp theo mã, tên hoặc đơn giá; chưa có giá luôn ở cuối;
+  - mỗi lần hiện 50 mục, bấm Xem thêm để hiện tiếp.
+- **Giá hiện hành của tài nguyên:** chỉ hiện khi có đúng một giá đang dùng và còn hiệu lực hôm nay. Có nhiều giá như vậy thì danh sách ghi số giá, không tự chọn giá nào.
+- **Danh mục:** quản lý nhóm và nhà cung cấp.
+  - Mỗi mục hiện số công tác, tài nguyên, giá đang dùng nó.
+  - Xóa nhóm đang có bản ghi: chọn chuyển sang nhóm khác hoặc bỏ phân nhóm. Công tác và tài nguyên **không bao giờ** bị xóa theo nhóm.
+  - Xóa nhà cung cấp chỉ bỏ liên kết ở công tác và giá; giá và nguồn giá giữ nguyên.
+- Trong form công tác, tài nguyên và giá, ô Nhóm và Nhà cung cấp có lựa chọn "+ … mới…" để tạo ngay, không phải rời form.
+- Xóa công tác, tài nguyên hoặc giá đều hỏi xác nhận, hộp xác nhận ghi rõ mã và tên.
 
 ## Lưu ở đâu
 
@@ -64,6 +97,7 @@ Khôi phục từ JSON vào thư viện trống cho ra dữ liệu **giống h�
 ### Nhập dữ liệu của bạn từ Excel/CSV
 
 - **CSV:** lưu bằng **File › Save As › CSV UTF-8**. Mỗi file chứa một loại dữ liệu: công tác, tài nguyên, giá, hoặc định mức.
+- **Excel Table trong workbook đang mở:** chọn bảng ở ô "Hoặc một Excel Table", rồi bấm **Đọc bảng**. Add-in đọc đúng vùng của bảng (tiêu đề + dữ liệu) và không sửa bảng.
 - **Sheet trong workbook đang mở:** chọn sheet, rồi bấm **Đọc sheet**.
   - Add-in tự tìm dòng tiêu đề (kể cả khi phía trên có dòng tiêu đề phụ), đoán loại dữ liệu và map cột theo tên. Bạn sửa lại được nếu sai.
   - Add-in chỉ **đọc** sheet, không ghi gì vào workbook.
@@ -89,6 +123,15 @@ Tab Thư viện › **Kiểm tra** liệt kê, nhưng không tự sửa, các v�
 - định mức hoặc giá trỏ tới bản ghi đã bị xóa;
 - đơn vị của giá khác đơn vị tài nguyên;
 - nhiều giá đang dùng chồng thời gian.
+
+## Nâng cấp từ bản 1.8.0
+
+Lần đầu mở tab Thư viện ở bản 1.9.0, thư viện trên máy được nâng từ schema 1 lên 2 ([ADR-0012](ADR/0012-danh-muc-nha-cung-cap-schema-v2.md)):
+- mỗi tên "Nhóm" của công tác thành một nhóm; các tên chỉ khác hoa thường hoặc khoảng trắng gộp làm một;
+- không mất bản ghi nào;
+- nếu nâng cấp lỗi, thư viện giữ nguyên như cũ.
+
+Nên tải một bản sao lưu ở bản 1.8.0 trước khi cập nhật. Sau khi nâng cấp, bản 1.8.0 không mở được thư viện này nữa: add-in báo "được tạo bởi phiên bản mới hơn" và không ghi đè.
 
 ## Dữ liệu của từng người
 

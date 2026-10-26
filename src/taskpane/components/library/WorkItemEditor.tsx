@@ -11,7 +11,8 @@ import {
   makeStyles,
   tokens,
 } from "@fluentui/react-components";
-import { TextField, errorFor, formatQuantity } from "./common";
+import { NEW_REF, RefSelect, TextField, errorFor, formatQuantity } from "./common";
+import { createNewRefs } from "./newRefs";
 import ConfirmDialog from "../ConfirmDialog";
 import { LibraryService } from "../../../application/libraryService";
 import { compareCodes } from "../../../domain/library/search";
@@ -21,6 +22,7 @@ import {
   NormField,
   WorkItemField,
   WorkItemForm,
+  sameNameRecords,
   workItemToForm,
 } from "../../../domain/library/validation";
 import { LIBRARY_STRINGS } from "../../../shared/strings.library.vi";
@@ -29,12 +31,13 @@ import { useExclusive } from "../../useExclusive";
 const EMPTY_FORM: WorkItemForm = {
   code: "",
   name: "",
-  group: "",
+  categoryId: "",
   unit: "",
   description: "",
   unitPrice: "",
   // Mặc định giao diện, người dùng sửa được; không phải dữ liệu chuyên ngành.
   currency: "VND",
+  supplierId: "",
   source: "",
   effectiveFrom: "",
   effectiveTo: "",
@@ -85,16 +88,42 @@ const WorkItemEditor: React.FC<WorkItemEditorProps> = ({
   const [form, setForm] = React.useState<WorkItemForm>(editing ? workItemToForm(editing) : EMPTY_FORM);
   const [errors, setErrors] = React.useState<FieldError<WorkItemField>[]>([]);
   const [failure, setFailure] = React.useState<string | null>(null);
+  const [newCategory, setNewCategory] = React.useState("");
+  const [newSupplier, setNewSupplier] = React.useState("");
   const exclusive = useExclusive();
   const set = (field: WorkItemField) => (value: string) => setForm((current) => ({ ...current, [field]: value }));
+  const sameName = sameNameRecords(form.name, library.workItems, editing?.id ?? null);
 
   const save = () =>
     exclusive(async () => {
       setFailure(null);
       try {
-        const result = await service.saveWorkItem(form, editing?.id ?? null, library);
+        // Nhóm/nhà cung cấp mới gõ trong form: tạo trước, rồi lưu công tác trỏ tới chúng.
+        const refs = await createNewRefs(service, library, {
+          category: form.categoryId === NEW_REF ? newCategory : undefined,
+          supplier: form.supplierId === NEW_REF ? newSupplier : undefined,
+        });
+        if (!refs.ok) {
+          setErrors([{ field: refs.field, message: refs.message }]);
+          return;
+        }
+        const toSave: WorkItemForm = {
+          ...form,
+          categoryId: refs.categoryId ?? form.categoryId,
+          supplierId: refs.supplierId ?? form.supplierId,
+        };
+        if (refs.categoryId || refs.supplierId) {
+          // Giữ lựa chọn vừa tạo nếu bước lưu công tác báo lỗi (không mất dữ liệu đang nhập).
+          setForm(toSave);
+          setNewCategory("");
+          setNewSupplier("");
+        }
+        const result = await service.saveWorkItem(toSave, editing?.id ?? null, refs.library);
         if (!result.ok) {
           setErrors(result.errors);
+          if (refs.categoryId || refs.supplierId) {
+            await onLibraryChanged();
+          }
           return;
         }
         setErrors([]);
@@ -118,8 +147,26 @@ const WorkItemEditor: React.FC<WorkItemEditorProps> = ({
       >
         <div className={styles.grid}>
           <TextField label={f.code} required value={form.code} onChange={set("code")} error={errorFor(errors, "code")} />
-          <TextField label={f.name} required value={form.name} onChange={set("name")} error={errorFor(errors, "name")} />
-          <TextField label={f.group} value={form.group} onChange={set("group")} />
+          <TextField
+            label={f.name}
+            required
+            value={form.name}
+            onChange={set("name")}
+            error={errorFor(errors, "name")}
+            hint={sameName.length > 0 ? s.sameName(sameName.map((w) => w.code).join(", ")) : undefined}
+          />
+          <RefSelect
+            label={f.group}
+            value={form.categoryId}
+            options={library.categories}
+            noneLabel={s.refs.noneCategory}
+            onChange={set("categoryId")}
+            error={errorFor(errors, "categoryId")}
+            newLabel={s.refs.newCategory}
+            newName={newCategory}
+            newNameLabel={s.refs.newCategoryName}
+            onNewNameChange={setNewCategory}
+          />
           <TextField label={f.unit} required value={form.unit} onChange={set("unit")} error={errorFor(errors, "unit")} />
           <TextField
             label={f.unitPrice}
@@ -130,6 +177,18 @@ const WorkItemEditor: React.FC<WorkItemEditorProps> = ({
             inputMode="decimal"
           />
           <TextField label={f.currency} value={form.currency} onChange={set("currency")} error={errorFor(errors, "currency")} />
+          <RefSelect
+            label={f.supplier}
+            value={form.supplierId}
+            options={library.suppliers}
+            noneLabel={s.refs.noneSupplier}
+            onChange={set("supplierId")}
+            error={errorFor(errors, "supplierId")}
+            newLabel={s.refs.newSupplier}
+            newName={newSupplier}
+            newNameLabel={s.refs.newSupplierName}
+            onNewNameChange={setNewSupplier}
+          />
           <TextField label={f.source} value={form.source} onChange={set("source")} />
           <TextField
             label={f.effectiveFrom}

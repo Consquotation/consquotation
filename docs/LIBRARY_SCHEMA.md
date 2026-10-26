@@ -1,11 +1,18 @@
-# Schema nhập/xuất thư viện — phiên bản 1
+# Schema nhập/xuất thư viện, phiên bản 2
 
 Schema công bố theo [prompts/09_LIBRARY_IMPORT_EXPORT.md](../prompts/09_LIBRARY_IMPORT_EXPORT.md) và [ADR-0004](ADR/0004-import-export-thu-vien.md). Mã nguồn: [src/domain/library/exchange/schema.ts](../src/domain/library/exchange/schema.ts).
 
 - `format`: `consquotation-library`
-- `schemaVersion`: `1`
+- `schemaVersion`: `2` (từ bản 1.9.0, [ADR-0012](ADR/0012-danh-muc-nha-cung-cap-schema-v2.md))
 
 Add-in từ chối file có `schemaVersion` lớn hơn phiên bản nó hỗ trợ. Lý do: tránh nhập thiếu dữ liệu của phiên bản mới.
+
+Thay đổi so với v1:
+- thêm loại dữ liệu **Nhóm** và **Nhà cung cấp**;
+- thêm cột **Nhóm** cho tài nguyên, cột **Nhà cung cấp** cho công tác và giá tài nguyên;
+- JSON có thêm `library.name` (tên thư viện).
+
+File v1 (bản 1.8.0 trở về trước) vẫn nhập được. Cột "Nhóm" của công tác trong file v1 được chuyển thành nhóm.
 
 ## Ba dạng file
 
@@ -21,17 +28,35 @@ Add-in **không đọc trực tiếp file `.xlsx`**: hãy mở file trong Excel 
 
 Tên cột so khớp không phân biệt dấu, hoa thường, dấu `*` hay khoảng trắng thừa. Một số tên khác cũng được nhận (cột "Tên khác được nhận"). Bạn luôn có thể map cột bằng tay ở bước **Map cột**. Cột in **đậm** là bắt buộc.
 
+### Nhóm (sheet `Nhóm`)
+
+| Cột | Kiểu | Ghi chú |
+|---|---|---|
+| **Tên nhóm** | chữ | Tên khác được nhận: Tên danh mục, Danh mục. Tối đa 120 ký tự |
+| Ghi chú | chữ | |
+
+### Nhà cung cấp (sheet `Nhà cung cấp`)
+
+| Cột | Kiểu | Ghi chú |
+|---|---|---|
+| **Tên nhà cung cấp** | chữ | Tối đa 120 ký tự |
+| Liên hệ | chữ | Điện thoại, email, địa chỉ… Tối đa 500 ký tự |
+| Ghi chú | chữ | |
+
+Nhóm và nhà cung cấp được so khớp **theo tên**: bỏ khoảng trắng thừa, không phân biệt hoa thường, nhưng phân biệt dấu ("Cát" khác "Cạt"). Ở sheet công tác, tài nguyên và giá, cột "Nhóm" và "Nhà cung cấp" ghi **tên**. Nếu tên chưa có, add-in tạo mới khi nhập (bản xem trước liệt kê các tên này). Dòng lỗi hoặc dòng trùng bị bỏ qua thì không tạo gì.
+
 ### Công tác (sheet `Công tác`)
 
 | Cột | Kiểu | Tên khác được nhận |
 |---|---|---|
 | **Mã công tác** | chữ | Mã hiệu |
 | **Tên công tác** | chữ | Nội dung công việc, Tên công việc |
-| Nhóm | chữ | Nhóm công tác |
+| Nhóm | chữ | Nhóm công tác, Danh mục. Tên nhóm (xem trên) |
 | **Đơn vị tính** | chữ | Đơn vị, ĐVT |
 | Mô tả | chữ | |
 | Đơn giá | số ≥ 0 | Giá. Để trống = chưa có giá (khác 0) |
 | Tiền tệ | chữ | Bắt buộc khi có đơn giá |
+| Nhà cung cấp | chữ | NCC. Tên nhà cung cấp |
 | Nguồn giá | chữ | Nguồn |
 | Hiệu lực từ ngày | ngày | Từ ngày |
 | Hiệu lực đến ngày | ngày | Đến ngày. Phải sau hoặc bằng ngày bắt đầu |
@@ -44,6 +69,7 @@ Tên cột so khớp không phân biệt dấu, hoa thường, dấu `*` hay kho
 | **Mã tài nguyên** | chữ | Tên khác được nhận: Mã vật tư |
 | **Tên tài nguyên** | chữ | |
 | Loại | `Vật liệu` / `Nhân công` / `Máy thi công` / `Khác` | Không cần gõ dấu. Để trống = Khác |
+| Nhóm | chữ | Tên nhóm |
 | **Đơn vị tính** | chữ | |
 | Ghi chú | chữ | |
 
@@ -57,6 +83,7 @@ Tên cột so khớp không phân biệt dấu, hoa thường, dấu `*` hay kho
 | **Tiền tệ** | chữ | |
 | Hiệu lực từ ngày | ngày | |
 | Hiệu lực đến ngày | ngày | |
+| Nhà cung cấp | chữ | Tên nhà cung cấp |
 | Nguồn | chữ | |
 | Trạng thái | `Đang dùng` / `Ngưng dùng` | Để trống = Đang dùng |
 | Ghi chú | chữ | |
@@ -101,6 +128,7 @@ Tên cột so khớp không phân biệt dấu, hoa thường, dấu `*` hay kho
 
   | Loại | Coi là trùng khi |
   |---|---|
+  | Nhóm, nhà cung cấp | Cùng tên |
   | Công tác, tài nguyên | Cùng mã |
   | Giá | Cùng id (với JSON), hoặc giống hệt nhau: cùng tài nguyên, đơn giá, đơn vị, tiền tệ, thời gian hiệu lực và nguồn |
   | Định mức | Cùng công tác và cùng tài nguyên |
@@ -118,10 +146,13 @@ Tên cột so khớp không phân biệt dấu, hoa thường, dấu `*` hay kho
 ```json
 {
   "format": "consquotation-library",
-  "schemaVersion": 1,
-  "exportedAt": "2026-10-21T02:25:51.279Z",
-  "appVersion": "1.3.0",
+  "schemaVersion": 2,
+  "exportedAt": "2026-10-26T08:37:12.000Z",
+  "appVersion": "1.9.0",
+  "library": { "name": "Thư viện của tôi" },
   "data": {
+    "categories": [],
+    "suppliers": [],
     "workItems": [],
     "resources": [],
     "resourcePrices": [],
@@ -130,7 +161,9 @@ Tên cột so khớp không phân biệt dấu, hoa thường, dấu `*` hay kho
 }
 ```
 
-Mỗi bản ghi trong file có các trường của mô hình dữ liệu ([src/domain/library/types.ts](../src/domain/library/types.ts)). Giá và định mức tham chiếu bằng `resourceId` và `workItemId`.
+Mỗi bản ghi trong file có các trường của mô hình dữ liệu ([src/domain/library/types.ts](../src/domain/library/types.ts)). Giá và định mức tham chiếu bằng `resourceId` và `workItemId`. Công tác và tài nguyên tham chiếu nhóm bằng `categoryId`; công tác và giá tham chiếu nhà cung cấp bằng `supplierId` (`null` = không có). Tham chiếu tới id không có trong file bị báo lỗi theo bản ghi.
+
+Khi khôi phục vào thư viện đã có nhóm hoặc nhà cung cấp **cùng tên**, add-in dùng lại bản ghi đang có thay vì tạo bản thứ hai.
 
 File JSON **chỉ chứa dữ liệu thư viện**. Cài đặt nội bộ của add-in không được xuất; add-in cũng không lưu bí mật nào.
 
@@ -138,6 +171,8 @@ File JSON **chỉ chứa dữ liệu thư viện**. Cài đặt nội bộ của
 
 Thư mục [templates/](templates/) có các file CSV UTF-8 chỉ chứa dòng tiêu đề:
 
+- [nhom.csv](templates/nhom.csv)
+- [nha-cung-cap.csv](templates/nha-cung-cap.csv)
 - [cong-tac.csv](templates/cong-tac.csv)
 - [tai-nguyen.csv](templates/tai-nguyen.csv)
 - [gia-tai-nguyen.csv](templates/gia-tai-nguyen.csv)

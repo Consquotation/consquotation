@@ -5,12 +5,16 @@
 
 import {
   normalizeCode,
+  validateCategoryForm,
   validateNormForm,
   validatePriceForm,
   validateResourceForm,
+  validateSupplierForm,
   validateWorkItemForm,
 } from "../domain/library/validation";
 import type {
+  CategoryField,
+  CategoryForm,
   FieldError,
   NormField,
   NormForm,
@@ -18,14 +22,20 @@ import type {
   PriceForm,
   ResourceField,
   ResourceForm,
+  SupplierField,
+  SupplierForm,
   WorkItemField,
   WorkItemForm,
 } from "../domain/library/validation";
 import {
+  Category,
+  DEFAULT_LIBRARY_NAME,
+  LIBRARY_NAME_MAX,
   LibrarySnapshot,
   NormDefinition,
   Resource,
   ResourcePrice,
+  Supplier,
   WorkItem,
 } from "../domain/library/types";
 import { LibraryRepository } from "../storage/libraryRepository";
@@ -53,6 +63,13 @@ export interface BackupStatus {
 
 const LAST_BACKUP_KEY = "lastBackupAt";
 const LAST_CHANGED_KEY = "lastChangedAt";
+const LIBRARY_NAME_KEY = "libraryName";
+
+/** Tên thư viện hợp lệ: bỏ khoảng trắng thừa, tối đa LIBRARY_NAME_MAX ký tự; trống → tên mặc định. */
+export function cleanLibraryName(name: string): string {
+  const cleaned = name.replace(/\s+/g, " ").trim().slice(0, LIBRARY_NAME_MAX).trim();
+  return cleaned === "" ? DEFAULT_LIBRARY_NAME : cleaned;
+}
 
 export type DeleteResourceResult = { ok: true } | { ok: false; reason: "inUse"; normCount: number };
 
@@ -90,6 +107,17 @@ export class LibraryService {
     }
   }
 
+  async libraryName(): Promise<string> {
+    return cleanLibraryName((await this.repo.getSetting<string>(LIBRARY_NAME_KEY)) ?? "");
+  }
+
+  async setLibraryName(name: string): Promise<string> {
+    const cleaned = cleanLibraryName(name);
+    await this.repo.setSetting(LIBRARY_NAME_KEY, cleaned);
+    await this.touch();
+    return cleaned;
+  }
+
   async backupStatus(): Promise<BackupStatus> {
     const [lastBackupAt, lastChangedAt] = await Promise.all([
       this.repo.getSetting<string>(LAST_BACKUP_KEY),
@@ -122,7 +150,7 @@ export class LibraryService {
     editingId: string | null,
     library: LibrarySnapshot
   ): Promise<SaveResult<WorkItem, WorkItemField>> {
-    const result = validateWorkItemForm(form, library.workItems, editingId);
+    const result = validateWorkItemForm(form, library, editingId);
     if (!result.ok) {
       return result;
     }
@@ -179,7 +207,7 @@ export class LibraryService {
     editingId: string | null,
     library: LibrarySnapshot
   ): Promise<SaveResult<Resource, ResourceField>> {
-    const result = validateResourceForm(form, library.resources, editingId);
+    const result = validateResourceForm(form, library, editingId);
     if (!result.ok) {
       return result;
     }
@@ -216,7 +244,7 @@ export class LibraryService {
     if (!library.resources.some((r) => r.id === resourceId)) {
       throw new Error("Tài nguyên không còn tồn tại.");
     }
-    const result = validatePriceForm(form);
+    const result = validatePriceForm(form, library.suppliers);
     if (!result.ok) {
       return result;
     }
@@ -268,6 +296,85 @@ export class LibraryService {
 
   async deleteNorm(id: string): Promise<void> {
     await this.repo.deleteNorm(id);
+    await this.touch();
+  }
+
+  // ---------- Danh mục ----------
+
+  async saveCategory(
+    form: CategoryForm,
+    editingId: string | null,
+    library: LibrarySnapshot
+  ): Promise<SaveResult<Category, CategoryField>> {
+    const result = validateCategoryForm(form, library.categories, editingId);
+    if (!result.ok) {
+      return result;
+    }
+    const existing = editingId ? library.categories.find((c) => c.id === editingId) : undefined;
+    if (editingId && !existing) {
+      throw new Error("Nhóm không còn tồn tại.");
+    }
+    const now = this.stamp();
+    const category: Category = {
+      ...result.value,
+      id: existing?.id ?? this.deps.newId(),
+      createdAt: existing?.createdAt ?? now,
+      updatedAt: now,
+    };
+    await this.repo.putCategory(category);
+    await this.touch();
+    return { ok: true, value: category };
+  }
+
+  /**
+   * Xóa danh mục. Công tác/tài nguyên của nó KHÔNG bị xóa: chuyển sang `reassignTo`
+   * hoặc bỏ phân nhóm (null), trong cùng một giao dịch.
+   */
+  async deleteCategory(
+    id: string,
+    reassignTo: string | null,
+    library: LibrarySnapshot
+  ): Promise<void> {
+    if (reassignTo === id) {
+      throw new Error("Không thể chuyển sang chính nhóm đang xóa.");
+    }
+    if (reassignTo !== null && !library.categories.some((c) => c.id === reassignTo)) {
+      throw new Error("Nhóm đích không còn tồn tại.");
+    }
+    await this.repo.deleteCategory(id, reassignTo, this.stamp());
+    await this.touch();
+  }
+
+  // ---------- Nhà cung cấp ----------
+
+  async saveSupplier(
+    form: SupplierForm,
+    editingId: string | null,
+    library: LibrarySnapshot
+  ): Promise<SaveResult<Supplier, SupplierField>> {
+    const result = validateSupplierForm(form, library.suppliers, editingId);
+    if (!result.ok) {
+      return result;
+    }
+    const existing = editingId ? library.suppliers.find((s) => s.id === editingId) : undefined;
+    if (editingId && !existing) {
+      throw new Error("Nhà cung cấp không còn tồn tại.");
+    }
+    const now = this.stamp();
+    const supplier: Supplier = {
+      ...result.value,
+      id: existing?.id ?? this.deps.newId(),
+      createdAt: existing?.createdAt ?? now,
+      updatedAt: now,
+    };
+    await this.repo.putSupplier(supplier);
+    await this.touch();
+    return { ok: true, value: supplier };
+  }
+
+  /** Xóa nhà cung cấp; công tác/giá đang trỏ tới nó chỉ bị bỏ liên kết, không bị xóa. */
+  async deleteSupplier(id: string): Promise<void> {
+    await this.repo.deleteSupplier(id, this.stamp());
     await this.touch();
   }
 }

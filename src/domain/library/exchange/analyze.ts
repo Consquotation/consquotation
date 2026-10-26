@@ -4,12 +4,23 @@
  * - Không tự suy diễn đơn vị hoặc giá bị thiếu.
  * - Bản ghi trùng với thư viện: mặc định bỏ qua; chỉ cập nhật khi người dùng chọn,
  *   và chỉ các trường có cột trong file.
+ * - Cột "Nhóm"/"Nhà cung cấp" tham chiếu theo TÊN; tên chưa có thì tạo mới, nhưng chỉ khi dòng
+ *   hợp lệ và thực sự được thêm/cập nhật. Danh sách tên sẽ tạo nằm trong bản xem trước.
  * Hàm thuần: không ghi gì; bước ghi dùng `changes` trong một giao dịch.
  */
 
 import { normalizeCode } from "../validation";
 import { normalizeForSearch } from "../search";
-import { LibrarySnapshot, NormDefinition, Resource, ResourcePrice, WorkItem } from "../types";
+import {
+  Category,
+  LibrarySnapshot,
+  NormDefinition,
+  Resource,
+  ResourcePrice,
+  Supplier,
+  WorkItem,
+  normalizeName,
+} from "../types";
 import {
   CellParse,
   isBlankCell,
@@ -43,12 +54,7 @@ export interface DatasetSummary {
   empty: number;
 }
 
-export interface ImportChanges {
-  workItems: WorkItem[];
-  resources: Resource[];
-  resourcePrices: ResourcePrice[];
-  norms: NormDefinition[];
-}
+export type ImportChanges = LibrarySnapshot;
 
 export interface ImportAnalysis {
   summaries: DatasetSummary[];
@@ -56,6 +62,8 @@ export interface ImportAnalysis {
   /** Lỗi chặn cả lần nhập (thiếu cột bắt buộc…). */
   problems: string[];
   changes: ImportChanges;
+  /** Tên nhóm/nhà cung cấp chưa có, sẽ được tạo vì được dùng ở cột "Nhóm"/"Nhà cung cấp". */
+  createdFromReferences: { categories: string[]; suppliers: string[] };
 }
 
 export interface AnalyzeOptions {
@@ -106,11 +114,25 @@ function mergeMapped<T extends object>(existing: T, incoming: Partial<T>, mapped
 }
 
 const KIND_ORDER: Record<DatasetKind, number> = {
-  resources: 0,
-  workItems: 1,
-  resourcePrices: 2,
-  norms: 3,
+  categories: 0,
+  suppliers: 1,
+  resources: 2,
+  workItems: 3,
+  resourcePrices: 4,
+  norms: 5,
 };
+
+/** Trường "category"/"supplier" của file tương ứng thuộc tính "categoryId"/"supplierId" của bản ghi. */
+function recordKeys(mapped: Set<string>): Set<string> {
+  const keys = new Set(mapped);
+  if (mapped.has("category")) {
+    keys.add("categoryId");
+  }
+  if (mapped.has("supplier")) {
+    keys.add("supplierId");
+  }
+  return keys;
+}
 
 export function analyzeImport(
   datasets: readonly ImportDataset[],
@@ -120,7 +142,15 @@ export function analyzeImport(
   const { mode, now, newId } = options;
   const issues: ImportIssue[] = [];
   const problems: string[] = [];
-  const changes: ImportChanges = { workItems: [], resources: [], resourcePrices: [], norms: [] };
+  const changes: ImportChanges = {
+    categories: [],
+    suppliers: [],
+    workItems: [],
+    resources: [],
+    resourcePrices: [],
+    norms: [],
+  };
+  const createdFromReferences = { categories: [] as string[], suppliers: [] as string[] };
 
   // Trạng thái thư viện sau các thay đổi đã lập (để giá/định mức tham chiếu được dữ liệu vừa nhập).
   const resourceByCode = new Map<string, Resource>();
@@ -134,6 +164,14 @@ export function analyzeImport(
     if (!workItemByCode.has(normalizeCode(w.code))) {
       workItemByCode.set(normalizeCode(w.code), w);
     }
+  }
+  const categoryByName = new Map<string, Category>();
+  for (const c of library.categories) {
+    categoryByName.set(normalizeName(c.name), c);
+  }
+  const supplierByName = new Map<string, Supplier>();
+  for (const s of library.suppliers) {
+    supplierByName.set(normalizeName(s.name), s);
   }
   const priceById = new Map(library.resourcePrices.map((p) => [p.id, p]));
   const priceKey = (
@@ -154,6 +192,8 @@ export function analyzeImport(
   const priceByKey = new Map(library.resourcePrices.map((p) => [priceKey(p), p]));
   const normByPair = new Map(library.norms.map((n) => [`${n.workItemId}|${n.resourceId}`, n]));
   const usedIds = new Set<string>([
+    ...library.categories.map((x) => x.id),
+    ...library.suppliers.map((x) => x.id),
     ...library.workItems.map((x) => x.id),
     ...library.resources.map((x) => x.id),
     ...library.resourcePrices.map((x) => x.id),
@@ -175,6 +215,51 @@ export function analyzeImport(
     updatedAt: validTimestamp(row.meta?.updatedAt) ?? now,
   });
 
+  /** id của nhóm theo tên; tạo nhóm mới nếu chưa có (chỉ gọi khi bản ghi thực sự được ghi). */
+  const ensureCategory = (name: string): string | null => {
+    const cleaned = name.replace(/\s+/g, " ").trim();
+    if (cleaned === "") {
+      return null;
+    }
+    const key = normalizeName(cleaned);
+    const found = categoryByName.get(key);
+    if (found) {
+      return found.id;
+    }
+    const id = newId();
+    usedIds.add(id);
+    const created: Category = { id, name: cleaned, notes: "", createdAt: now, updatedAt: now };
+    changes.categories.push(created);
+    categoryByName.set(key, created);
+    createdFromReferences.categories.push(cleaned);
+    return id;
+  };
+  const ensureSupplier = (name: string): string | null => {
+    const cleaned = name.replace(/\s+/g, " ").trim();
+    if (cleaned === "") {
+      return null;
+    }
+    const key = normalizeName(cleaned);
+    const found = supplierByName.get(key);
+    if (found) {
+      return found.id;
+    }
+    const id = newId();
+    usedIds.add(id);
+    const created: Supplier = {
+      id,
+      name: cleaned,
+      contactInfo: "",
+      notes: "",
+      createdAt: now,
+      updatedAt: now,
+    };
+    changes.suppliers.push(created);
+    supplierByName.set(key, created);
+    createdFromReferences.suppliers.push(cleaned);
+    return id;
+  };
+
   const ordered = [...datasets].sort((a, b) => KIND_ORDER[a.kind] - KIND_ORDER[b.kind]);
   const summaries = new Map<ImportDataset, DatasetSummary>();
 
@@ -194,7 +279,7 @@ export function analyzeImport(
       problems.push(...dataset.problems.map((p) => `${dataset.sourceLabel}: ${p}`));
       continue;
     }
-    const mapped = new Set(dataset.mappedFields);
+    const mapped = recordKeys(new Set(dataset.mappedFields));
     const seen = new Map<string, string>();
 
     const report = (row: ImportRow, errors: RowErrors) => {
@@ -233,6 +318,55 @@ export function analyzeImport(
       const errors: RowErrors = [...(row.preErrors ?? [])];
       const text = (key: string) => parseTextCell(cells[key]);
 
+      if (dataset.kind === "categories" || dataset.kind === "suppliers") {
+        const isCategory = dataset.kind === "categories";
+        const name = text("name").replace(/\s+/g, " ");
+        requireText(errors, "name", name, isCategory ? "tên nhóm" : "tên nhà cung cấp");
+        if (name) {
+          firstOccurrence(normalizeName(name), row, errors, "name", `Tên "${name}"`);
+        }
+        if (errors.length > 0) {
+          report(row, errors);
+          continue;
+        }
+        const key = normalizeName(name);
+        if (isCategory) {
+          const incoming = { name, notes: text("notes") };
+          const existing = categoryByName.get(key);
+          if (existing) {
+            summary.duplicates++;
+            if (mode === "update") {
+              const updated = { ...mergeMapped(existing, incoming, mapped), updatedAt: now };
+              changes.categories.push(updated);
+              categoryByName.set(key, updated);
+              summary.updated++;
+            }
+            continue;
+          }
+          const created: Category = { id: takeId(row), ...incoming, ...stamps(row) };
+          changes.categories.push(created);
+          categoryByName.set(key, created);
+        } else {
+          const incoming = { name, contactInfo: text("contactInfo"), notes: text("notes") };
+          const existing = supplierByName.get(key);
+          if (existing) {
+            summary.duplicates++;
+            if (mode === "update") {
+              const updated = { ...mergeMapped(existing, incoming, mapped), updatedAt: now };
+              changes.suppliers.push(updated);
+              supplierByName.set(key, updated);
+              summary.updated++;
+            }
+            continue;
+          }
+          const created: Supplier = { id: takeId(row), ...incoming, ...stamps(row) };
+          changes.suppliers.push(created);
+          supplierByName.set(key, created);
+        }
+        summary.added++;
+        continue;
+      }
+
       if (dataset.kind === "resources") {
         const code = text("code");
         const name = text("name");
@@ -248,8 +382,18 @@ export function analyzeImport(
           report(row, errors);
           continue;
         }
-        const incoming = { name, unit, type: type ?? "other", notes: text("notes") };
         const existing = resourceByCode.get(normalizeCode(code));
+        if (existing && mode === "skip") {
+          summary.duplicates++;
+          continue;
+        }
+        const incoming = {
+          name,
+          unit,
+          type: type ?? "other",
+          categoryId: mapped.has("categoryId") ? ensureCategory(text("category")) : null,
+          notes: text("notes"),
+        };
         if (existing) {
           summary.duplicates++;
           if (mode === "update") {
@@ -290,11 +434,13 @@ export function analyzeImport(
         }
         const incoming = {
           name,
-          group: text("group"),
+          // Gán sau khi dòng hợp lệ (ensureCategory/ensureSupplier có thể tạo bản ghi mới).
+          categoryId: null as string | null,
           unit,
           description: text("description"),
           unitPrice,
           currency: text("currency"),
+          supplierId: null as string | null,
           source: text("source"),
           effectiveFrom,
           effectiveTo,
@@ -312,6 +458,16 @@ export function analyzeImport(
         if (errors.length > 0) {
           report(row, errors);
           continue;
+        }
+        if (existing && mode === "skip") {
+          summary.duplicates++;
+          continue;
+        }
+        if (mapped.has("categoryId")) {
+          candidate.categoryId = ensureCategory(text("category"));
+        }
+        if (mapped.has("supplierId")) {
+          candidate.supplierId = ensureSupplier(text("supplier"));
         }
         if (existing) {
           summary.duplicates++;
@@ -386,18 +542,30 @@ export function analyzeImport(
         }
         const existing =
           (row.meta?.id ? priceById.get(row.meta.id) : undefined) ?? priceByKey.get(key);
-        if (existing) {
+        if (existing && mode === "skip") {
           summary.duplicates++;
-          if (mode === "update") {
-            changes.resourcePrices.push({
-              ...mergeMapped(existing, incoming, new Set([...mapped, "resourceId"])),
-              updatedAt: now,
-            });
-            summary.updated++;
-          }
           continue;
         }
-        const created: ResourcePrice = { id: takeId(row), ...incoming, ...stamps(row) };
+        const supplierId = mapped.has("supplierId") ? ensureSupplier(text("supplier")) : null;
+        if (existing) {
+          summary.duplicates++;
+          changes.resourcePrices.push({
+            ...mergeMapped(
+              existing,
+              { ...incoming, supplierId },
+              new Set([...mapped, "resourceId"])
+            ),
+            updatedAt: now,
+          });
+          summary.updated++;
+          continue;
+        }
+        const created: ResourcePrice = {
+          id: takeId(row),
+          ...incoming,
+          supplierId,
+          ...stamps(row),
+        };
         changes.resourcePrices.push(created);
         priceByKey.set(key, created);
         summary.added++;
@@ -475,6 +643,7 @@ export function analyzeImport(
     issues,
     problems,
     changes,
+    createdFromReferences,
   };
 }
 

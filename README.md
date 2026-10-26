@@ -19,14 +19,16 @@ Microsoft Excel Add-in hỗ trợ lập báo giá thi công xây dựng **ngay t
   - Chống bấm lặp tạo dòng trùng.
   - Chữ bắt đầu bằng `= + - @` được lưu dạng chữ.
 - **Thư viện của tôi** (xem [docs/LIBRARY.md](docs/LIBRARY.md)):
-  - Gồm công tác, tài nguyên, giá có ngày hiệu lực và định mức.
-  - Thêm, sửa, sao chép, xóa (có xác nhận); tìm kiếm không cần gõ dấu.
+  - Gồm công tác, tài nguyên, giá có ngày hiệu lực, định mức, nhóm (danh mục) và nhà cung cấp.
+  - Phần tổng quan: tên thư viện, số liệu, cập nhật gần nhất, thao tác nhanh.
+  - Thêm, sửa, sao chép, xóa (có xác nhận); tìm kiếm không cần gõ dấu; lọc theo nhóm, loại, nhà cung cấp; sắp xếp theo mã, tên, đơn giá.
+  - Xóa nhóm không xóa bản ghi: chọn chuyển sang nhóm khác hoặc bỏ phân nhóm.
   - Kiểm tra thư viện: mã trùng, thiếu dữ liệu, liên kết hỏng, giá hết hạn, giá chồng thời gian.
   - Chèn vào báo giá dưới dạng bản sao giá trị.
   - Thư viện ban đầu **trống**, không có dữ liệu mẫu.
 - **Nhập/Xuất và sao lưu thư viện** (xem [docs/LIBRARY_SCHEMA.md](docs/LIBRARY_SCHEMA.md)):
   - Sao lưu ra file JSON, xuất ra workbook Excel mới, mở file mẫu trống.
-  - Nhập từ JSON, CSV UTF-8 hoặc một sheet trong workbook đang mở.
+  - Nhập từ JSON, CSV UTF-8, một sheet hoặc một Excel Table trong workbook đang mở.
   - Luồng nhập: nhận diện tiêu đề → chọn loại dữ liệu → map cột → xem trước → kiểm tra → chọn cách xử lý trùng → xác nhận → báo cáo.
   - Không ghi đè mặc định. Báo lỗi theo dòng và cột. Mỗi lần nhập ghi trong một giao dịch.
   - Nhắc khi thư viện chưa được sao lưu.

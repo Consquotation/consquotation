@@ -4,15 +4,26 @@
  */
 
 import {
+  Category,
   LibrarySnapshot,
   NormDefinition,
   Resource,
   ResourcePrice,
+  Supplier,
   WorkItem,
 } from "../domain/library/types";
 
 export interface LibraryRepository {
   loadAll(): Promise<LibrarySnapshot>;
+  putCategory(category: Category): Promise<void>;
+  /**
+   * Trong MỘT giao dịch: chuyển công tác/tài nguyên của danh mục sang `reassignTo`
+   * (null = bỏ phân nhóm), rồi xóa danh mục. Không bao giờ xóa công tác/tài nguyên.
+   */
+  deleteCategory(id: string, reassignTo: string | null, now: string): Promise<void>;
+  putSupplier(supplier: Supplier): Promise<void>;
+  /** Trong MỘT giao dịch: bỏ liên kết ở công tác/giá, rồi xóa nhà cung cấp. */
+  deleteSupplier(id: string, now: string): Promise<void>;
   putWorkItem(item: WorkItem): Promise<void>;
   /** Xóa công tác cùng mọi định mức của nó trong một giao dịch. */
   deleteWorkItem(id: string): Promise<void>;

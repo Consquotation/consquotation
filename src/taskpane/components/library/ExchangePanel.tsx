@@ -65,7 +65,11 @@ const ExchangePanel: React.FC<{
       }
     });
 
-  const meta = (now: Date) => ({ exportedAt: now.toISOString(), appVersion: APP_VERSION });
+  const meta = async (now: Date) => ({
+    exportedAt: now.toISOString(),
+    appVersion: APP_VERSION,
+    libraryName: await service.libraryName(),
+  });
 
   const backupJson = () =>
     run(async () => {
@@ -73,7 +77,7 @@ const ExchangePanel: React.FC<{
       const current = await service.load();
       const now = new Date();
       const fileName = backupFileName(now, "json");
-      downloadText(fileName, toBackupJson(current, meta(now)), "application/json");
+      downloadText(fileName, toBackupJson(current, await meta(now)), "application/json");
       await service.recordBackup(now);
       await onLibraryChanged();
       return s.jsonDone(fileName);
@@ -83,7 +87,7 @@ const ExchangePanel: React.FC<{
     run(async () => {
       const now = new Date();
       const data = empty ? EMPTY_LIBRARY : await service.load();
-      await gateway.openNewWorkbook(toBase64(buildXlsx(exportSheets(data, meta(now)))));
+      await gateway.openNewWorkbook(toBase64(buildXlsx(exportSheets(data, await meta(now)))));
       if (!empty) {
         await service.recordBackup(now);
         await onLibraryChanged();

@@ -103,6 +103,13 @@ export interface SheetSummary {
   columnCount: number;
 }
 
+export interface TableSummary {
+  name: string;
+  sheetName: string;
+  /** Số dòng dữ liệu (không gồm tiêu đề). */
+  rowCount: number;
+}
+
 export interface SheetRead {
   table: SourceTable;
   /** Tổng số dòng có dữ liệu trên sheet; lớn hơn số dòng đã đọc nếu vượt giới hạn. */
@@ -157,6 +164,10 @@ export interface WorkbookGateway {
   listSheets(): Promise<{ sheets: SheetSummary[]; activeSheet: string }>;
   /** Đọc vùng có dữ liệu của sheet (tối đa maxRows dòng), kèm chữ hiển thị và ngày (chỉ đọc). */
   readSheet(sheetName: string, maxRows: number): Promise<SheetRead>;
+  /** Excel Table trong workbook (mọi bảng, kể cả của người dùng) để chọn nguồn nhập thư viện (chỉ đọc). */
+  listTables(): Promise<TableSummary[]>;
+  /** Đọc một Excel Table (hàng tiêu đề + dữ liệu, tối đa maxRows dòng) làm nguồn nhập (chỉ đọc). */
+  readTableSource(tableName: string, maxRows: number): Promise<SheetRead>;
   /** Mở workbook mới từ nội dung .xlsx (base64); người dùng tự lưu bằng Excel. */
   openNewWorkbook(base64: string): Promise<void>;
   inspectAppend(tableName: string, position: InsertPosition): Promise<AppendInspection>;

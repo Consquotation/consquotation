@@ -4,6 +4,8 @@ import { DatasetKind } from "../domain/library/exchange/schema";
 export const EXCHANGE_STRINGS = {
   sectionTab: "Nhập/Xuất",
   kinds: {
+    categories: "Nhóm",
+    suppliers: "Nhà cung cấp",
     workItems: "Công tác",
     resources: "Tài nguyên",
     resourcePrices: "Giá tài nguyên",
@@ -47,10 +49,25 @@ export const EXCHANGE_STRINGS = {
     sheet: "Sheet",
     refreshSheets: "Làm mới danh sách sheet",
     readSheet: "Đọc sheet",
+    table: "Hoặc một Excel Table",
+    tableHint: "Đọc đúng vùng của bảng (tiêu đề + dữ liệu). Add-in chỉ đọc, không sửa bảng.",
+    tableOption: (name: string, sheet: string, rows: number) =>
+      `${name} (sheet "${sheet}", ${rows} dòng)`,
+    readTable: "Đọc bảng",
     sheetSize: (name: string, rows: number, cols: number) =>
       rows === 0 ? `${name} (trống)` : `${name} (${rows} dòng × ${cols} cột)`,
-    backupDetected: (exportedAt: string) =>
-      `Workbook này là bản xuất thư viện ConsQuotation${exportedAt ? ` (xuất lúc ${exportedAt})` : ""}.`,
+    backupDetected: (exportedAt: string, libraryName: string) =>
+      `Workbook này là bản xuất thư viện ConsQuotation${libraryName ? ` "${libraryName}"` : ""}${exportedAt ? ` (xuất lúc ${exportedAt})` : ""}.`,
+    backupFileLabel: (fileName: string, libraryName: string) =>
+      libraryName ? `File "${fileName}" (thư viện "${libraryName}")` : `File "${fileName}"`,
+    createdRefs: (categories: string[], suppliers: string[]) =>
+      [
+        categories.length > 0 ? `${categories.length} nhóm mới: ${categories.join(", ")}` : "",
+        suppliers.length > 0 ? `${suppliers.length} nhà cung cấp mới: ${suppliers.join(", ")}` : "",
+      ]
+        .filter(Boolean)
+        .join("; ") +
+      ". Các tên này có trong cột Nhóm/Nhà cung cấp nhưng chưa có trong thư viện; add-in sẽ tạo khi nhập.",
     readBackup: "Đọc toàn bộ bản xuất",
     reading: "Đang đọc dữ liệu…",
     readFailed: "Không đọc được nguồn dữ liệu",
@@ -98,9 +115,18 @@ export const EXCHANGE_STRINGS = {
     submit: (n: number) => `Nhập ${n} bản ghi vào thư viện`,
     cancel: "Hủy",
     confirmTitle: "Nhập vào thư viện?",
-    confirmBody: (added: number, updated: number, skipped: number, errors: number) =>
+    confirmBody: (
+      added: number,
+      updated: number,
+      skipped: number,
+      errors: number,
+      newCategories = 0,
+      newSuppliers = 0
+    ) =>
       [
         `Thêm mới ${added} bản ghi`,
+        newCategories > 0 ? `tạo ${newCategories} nhóm mới` : null,
+        newSuppliers > 0 ? `tạo ${newSuppliers} nhà cung cấp mới` : null,
         updated > 0 ? `cập nhật ${updated} bản ghi đã có` : null,
         skipped > 0 ? `bỏ qua ${skipped} bản ghi trùng` : null,
         errors > 0 ? `bỏ qua ${errors} dòng lỗi` : null,

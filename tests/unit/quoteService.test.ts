@@ -55,6 +55,12 @@ class FakeGateway implements WorkbookGateway {
     return false;
   }
   async markLibraryUsed() {}
+  async listTables() {
+    return [];
+  }
+  async readTableSource(): Promise<never> {
+    throw new Error("không dùng trong test này");
+  }
   async listSheets() {
     return { sheets: [], activeSheet: "Sheet1" };
   }

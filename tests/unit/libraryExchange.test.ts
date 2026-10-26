@@ -71,25 +71,27 @@ function analyze(datasets: ImportDataset[], library: LibrarySnapshot = EMPTY_LIB
 function sampleLibrary(): LibrarySnapshot {
   const stamp = { createdAt: "2026-01-02T03:04:05.000Z", updatedAt: "2026-02-03T04:05:06.000Z" };
   return {
+    categories: [{ id: "c1", name: "Móng", notes: "nhóm thử", ...stamp }],
+    suppliers: [{ id: "s1", name: "Công ty Thử A", contactInfo: "0901 000 000", notes: "", ...stamp }],
     workItems: [
       {
-        id: "w1", code: "007", name: "Bê tông lót móng \"đá 4x6\"", group: "Móng", unit: "m3",
-        description: "Dòng 1\nDòng 2", pricingMethod: "direct", unitPrice: 1234567.891, currency: "VND",
+        id: "w1", code: "007", name: "Bê tông lót móng \"đá 4x6\"", categoryId: "c1", unit: "m3",
+        description: "Dòng 1\nDòng 2", pricingMethod: "direct", unitPrice: 1234567.891, currency: "VND", supplierId: "s1",
         source: "Báo giá NCC A", effectiveFrom: "2026-01-01", effectiveTo: "2026-12-31", notes: "=SUM(A1)", ...stamp,
       },
       {
-        id: "w2", code: "DD-01", name: "Đào đất", group: "", unit: "m3", description: "",
-        pricingMethod: "direct", unitPrice: null, currency: "", source: "", effectiveFrom: null,
+        id: "w2", code: "DD-01", name: "Đào đất", categoryId: null, unit: "m3", description: "",
+        pricingMethod: "direct", unitPrice: null, currency: "", supplierId: null, source: "", effectiveFrom: null,
         effectiveTo: null, notes: "", ...stamp,
       },
     ],
     resources: [
-      { id: "r1", code: "XM", name: "Xi măng PCB40", type: "material", unit: "kg", notes: "", ...stamp },
-      { id: "r2", code: "NC3/7", name: "Nhân công 3/7", type: "labor", unit: "công", notes: "ghi chú", ...stamp },
+      { id: "r1", code: "XM", name: "Xi măng PCB40", type: "material", categoryId: "c1", unit: "kg", notes: "", ...stamp },
+      { id: "r2", code: "NC3/7", name: "Nhân công 3/7", type: "labor", categoryId: null, unit: "công", notes: "ghi chú", ...stamp },
     ],
     resourcePrices: [
-      { id: "p1", resourceId: "r1", price: 1.5, unit: "kg", currency: "VND", effectiveFrom: "2026-01-01", effectiveTo: null, source: "TB giá Q1", status: "active", notes: "", ...stamp },
-      { id: "p2", resourceId: "r1", price: 1.6, unit: "kg", currency: "VND", effectiveFrom: null, effectiveTo: null, source: "", status: "inactive", notes: "cũ", ...stamp },
+      { id: "p1", resourceId: "r1", price: 1.5, unit: "kg", currency: "VND", effectiveFrom: "2026-01-01", effectiveTo: null, supplierId: "s1", source: "TB giá Q1", status: "active", notes: "", ...stamp },
+      { id: "p2", resourceId: "r1", price: 1.6, unit: "kg", currency: "VND", effectiveFrom: null, effectiveTo: null, supplierId: null, source: "", status: "inactive", notes: "cũ", ...stamp },
     ],
     norms: [
       { id: "n1", workItemId: "w1", resourceId: "r1", quantity: 0.000123, notes: "", ...stamp },
@@ -193,12 +195,14 @@ describe("nhận diện tiêu đề, loại dữ liệu, map cột", () => {
       name: 1,
       unit: 2,
       unitPrice: 3,
-      group: null,
+      category: null,
     });
   });
 
   it("file mẫu công bố trong docs/templates khớp schema", () => {
     const files: Record<string, string> = {
+      categories: "nhom.csv",
+      suppliers: "nha-cung-cap.csv",
       workItems: "cong-tac.csv",
       resources: "tai-nguyen.csv",
       resourcePrices: "gia-tai-nguyen.csv",
@@ -287,7 +291,7 @@ describe("kiểm tra dữ liệu nhập (prompts/09)", () => {
     const updated = update.changes.workItems.find((w) => w.id === "w1")!;
     expect(updated).toMatchObject({ name: "Tên mới", unitPrice: 999, code: "007" });
     // Cột không có trong file giữ nguyên.
-    expect(updated).toMatchObject({ group: "Móng", source: "Báo giá NCC A", notes: "=SUM(A1)", effectiveTo: "2026-12-31" });
+    expect(updated).toMatchObject({ categoryId: "c1", supplierId: "s1", source: "Báo giá NCC A", notes: "=SUM(A1)", effectiveTo: "2026-12-31" });
     expect(updated.createdAt).toBe(lib.workItems[0].createdAt);
     expect(updated.updatedAt).toBe(T);
   });
@@ -345,14 +349,16 @@ describe("kiểm tra dữ liệu nhập (prompts/09)", () => {
 describe("sao lưu JSON", () => {
   it("round-trip vào thư viện trống: giữ nguyên mọi bản ghi, id và thời điểm", () => {
     const lib = sampleLibrary();
-    const json = toBackupJson(lib, { exportedAt: T, appVersion: "1.3.0" });
+    const json = toBackupJson(lib, { exportedAt: T, appVersion: "1.3.0", libraryName: "Thư viện thử" });
     const parsed = parseBackupJson(json);
     expect(parsed.ok).toBe(true);
     if (!parsed.ok) return;
-    expect(parsed.meta).toEqual({ schemaVersion: EXCHANGE_SCHEMA_VERSION, exportedAt: T, appVersion: "1.3.0" });
+    expect(parsed.meta).toEqual({ schemaVersion: EXCHANGE_SCHEMA_VERSION, exportedAt: T, appVersion: "1.3.0", libraryName: "Thư viện thử" });
     const a = analyze(parsed.datasets);
     expect(a.issues).toEqual([]);
     const sort = <X extends { id: string }>(xs: X[]) => [...xs].sort((p, q) => p.id.localeCompare(q.id));
+    expect(sort(a.changes.categories)).toEqual(sort(lib.categories));
+    expect(sort(a.changes.suppliers)).toEqual(sort(lib.suppliers));
     expect(sort(a.changes.workItems)).toEqual(sort(lib.workItems));
     expect(sort(a.changes.resources)).toEqual(sort(lib.resources));
     expect(sort(a.changes.resourcePrices)).toEqual(sort(lib.resourcePrices));
@@ -361,17 +367,17 @@ describe("sao lưu JSON", () => {
 
   it("nhập lại chính bản sao lưu vào thư viện đang có: toàn bộ là trùng, không thêm gì", () => {
     const lib = sampleLibrary();
-    const parsed = parseBackupJson(toBackupJson(lib, { exportedAt: T, appVersion: "x" }));
+    const parsed = parseBackupJson(toBackupJson(lib, { exportedAt: T, appVersion: "x", libraryName: "Thư viện thử" }));
     if (!parsed.ok) throw new Error();
     const a = analyze(parsed.datasets, lib);
     expect(changeCount(a.changes)).toBe(0);
-    expect(a.summaries.reduce((n, s) => n + s.duplicates, 0)).toBe(8);
+    expect(a.summaries.reduce((n, s) => n + s.duplicates, 0)).toBe(10);
   });
 
   it("chỉ chứa dữ liệu thư viện", () => {
-    const file = JSON.parse(toBackupJson(sampleLibrary(), { exportedAt: T, appVersion: "x" }));
-    expect(Object.keys(file)).toEqual(["format", "schemaVersion", "exportedAt", "appVersion", "data"]);
-    expect(Object.keys(file.data)).toEqual(["workItems", "resources", "resourcePrices", "norms"]);
+    const file = JSON.parse(toBackupJson(sampleLibrary(), { exportedAt: T, appVersion: "x", libraryName: "Thư viện thử" }));
+    expect(Object.keys(file)).toEqual(["format", "schemaVersion", "exportedAt", "appVersion", "library", "data"]);
+    expect(Object.keys(file.data)).toEqual(["categories", "suppliers", "workItems", "resources", "resourcePrices", "norms"]);
   });
 
   it("từ chối file lạ, sai cú pháp, schema mới hơn; báo tham chiếu hỏng", () => {
@@ -405,12 +411,13 @@ describe("xuất workbook", () => {
 
   it("round-trip qua các sheet: nội dung giữ nguyên (mã dạng chữ, thập phân, ngày, tiếng Việt)", () => {
     const lib = sampleLibrary();
-    const sheets = exportSheets(lib, { exportedAt: T, appVersion: "x" });
-    expect(sheets.map((s) => s.name)).toEqual(["Thông tin", "Công tác", "Tài nguyên", "Giá tài nguyên", "Định mức"]);
+    const sheets = exportSheets(lib, { exportedAt: T, appVersion: "x", libraryName: "Thư viện thử" });
+    expect(sheets.map((s) => s.name)).toEqual(["Thông tin", "Nhóm", "Nhà cung cấp", "Công tác", "Tài nguyên", "Giá tài nguyên", "Định mức"]);
     expect(checkBackupMeta(toTable("Thông tin", sheets[0].rows).rows)).toEqual({
       kind: "backup",
       schemaVersion: EXCHANGE_SCHEMA_VERSION,
       exportedAt: T,
+      libraryName: "Thư viện thử",
     });
     const datasets = DATASET_KINDS.map((kind) =>
       datasetFromBackupSheet(kind, toTable(DATASETS[kind].sheetName, sheets.find((s) => s.name === DATASETS[kind].sheetName)!.rows))
@@ -419,8 +426,19 @@ describe("xuất workbook", () => {
     expect(a.issues).toEqual([]);
     expect(a.problems).toEqual([]);
     const byCode = <X extends { code: string }>(xs: X[]) => [...xs].sort((p, q) => p.code.localeCompare(q.code));
-    expect(withoutStamps(byCode(a.changes.workItems))).toEqual(withoutStamps(byCode(lib.workItems)));
-    expect(withoutStamps(byCode(a.changes.resources))).toEqual(withoutStamps(byCode(lib.resources)));
+    // Dạng bảng tham chiếu nhóm/nhà cung cấp bằng tên: id mới, nhưng trỏ đúng bản ghi cùng tên.
+    const names = (snapshot: { categories: { id: string; name: string }[]; suppliers: { id: string; name: string }[] }) => {
+      const m = new Map([...snapshot.categories, ...snapshot.suppliers].map((x) => [x.id, x.name]));
+      return (id: string | null) => (id ? m.get(id) : null);
+    };
+    const named = names(a.changes);
+    const namedLib = names(lib);
+    const view = <X extends { id: string; createdAt: string; updatedAt: string; categoryId?: string | null; supplierId?: string | null }>(xs: X[], n: (id: string | null) => string | null | undefined) =>
+      withoutStamps(xs).map((x) => ({ ...x, categoryId: n(x.categoryId ?? null), supplierId: n(x.supplierId ?? null) }));
+    expect(view(byCode(a.changes.workItems), named)).toEqual(view(byCode(lib.workItems), namedLib));
+    expect(view(byCode(a.changes.resources), named)).toEqual(view(byCode(lib.resources), namedLib));
+    expect(withoutStamps(a.changes.categories)).toEqual(withoutStamps(lib.categories));
+    expect(withoutStamps(a.changes.suppliers)).toEqual(withoutStamps(lib.suppliers));
     expect(a.changes.resourcePrices.map((p) => [p.price, p.status, p.effectiveFrom])).toEqual(
       expect.arrayContaining([[1.5, "active", "2026-01-01"], [1.6, "inactive", null]])
     );
@@ -428,7 +446,7 @@ describe("xuất workbook", () => {
   });
 
   it("thư viện trống → file mẫu chỉ có tiêu đề", () => {
-    const sheets = exportSheets(EMPTY_LIBRARY, { exportedAt: T, appVersion: "x" });
+    const sheets = exportSheets(EMPTY_LIBRARY, { exportedAt: T, appVersion: "x", libraryName: "Thư viện thử" });
     for (const sheet of sheets.slice(1)) {
       expect(sheet.rows).toHaveLength(1);
     }
@@ -436,7 +454,7 @@ describe("xuất workbook", () => {
 
   it("workbook thường hoặc schema mới hơn không bị coi là bản xuất hợp lệ", () => {
     expect(checkBackupMeta([[{ value: "Tên" }, { value: "x" }]])).toEqual({ kind: "notBackup" });
-    expect(checkBackupMeta([[{ value: "format" }, { value: "consquotation-library" }], [{ value: "schemaVersion" }, { value: 2 }]]).kind).toBe(
+    expect(checkBackupMeta([[{ value: "format" }, { value: "consquotation-library" }], [{ value: "schemaVersion" }, { value: 3 }]]).kind).toBe(
       "unsupported"
     );
   });

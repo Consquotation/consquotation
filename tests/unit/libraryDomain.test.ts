@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { formatIsoDate, isIsoDate, periodsOverlap, todayIso, validityOn } from "../../src/domain/library/dates";
-import { distinctGroups, normalizeForSearch, searchWorkItems } from "../../src/domain/library/search";
+import { nameLookup, normalizeForSearch, searchWorkItems } from "../../src/domain/library/search";
 import { draftFromWorkItem, traceNote } from "../../src/domain/library/toQuote";
 import { LibrarySnapshot, NormDefinition, Resource, ResourcePrice, WorkItem } from "../../src/domain/library/types";
 import {
@@ -19,12 +19,13 @@ const T = "2026-01-01T00:00:00.000Z";
 function workItem(partial: Partial<WorkItem> & { id: string; code: string }): WorkItem {
   return {
     name: "Công tác",
-    group: "",
+    categoryId: null,
     unit: "m3",
     description: "",
     pricingMethod: "direct",
     unitPrice: 100,
     currency: "VND",
+    supplierId: null,
     source: "",
     effectiveFrom: null,
     effectiveTo: null,
@@ -36,7 +37,7 @@ function workItem(partial: Partial<WorkItem> & { id: string; code: string }): Wo
 }
 
 function resource(partial: Partial<Resource> & { id: string; code: string }): Resource {
-  return { name: "Tài nguyên", type: "material", unit: "kg", notes: "", createdAt: T, updatedAt: T, ...partial };
+  return { name: "Tài nguyên", type: "material", categoryId: null, unit: "kg", notes: "", createdAt: T, updatedAt: T, ...partial };
 }
 
 function price(partial: Partial<ResourcePrice> & { id: string; resourceId: string }): ResourcePrice {
@@ -46,6 +47,7 @@ function price(partial: Partial<ResourcePrice> & { id: string; resourceId: strin
     currency: "VND",
     effectiveFrom: null,
     effectiveTo: null,
+    supplierId: null,
     source: "",
     status: "active",
     notes: "",
@@ -62,11 +64,12 @@ function norm(partial: Partial<NormDefinition> & { id: string; workItemId: strin
 const FORM: WorkItemForm = {
   code: "BT-01",
   name: "Bê tông móng",
-  group: "Móng",
+  categoryId: "",
   unit: "m3",
   description: "",
   unitPrice: "1500000",
   currency: "VND",
+  supplierId: "",
   source: "Báo giá NCC A",
   effectiveFrom: "2026-01-01",
   effectiveTo: "2026-12-31",
@@ -109,33 +112,43 @@ describe("dates", () => {
 
 describe("search", () => {
   const items = [
-    workItem({ id: "1", code: "BT-02", name: "Bê tông lót", group: "Móng", unit: "m3" }),
-    workItem({ id: "2", code: "BT-01", name: "Bê tông móng", group: "Móng", unit: "m3" }),
-    workItem({ id: "3", code: "DD-01", name: "Đào đất hố móng", group: "Đất", unit: "m3" }),
-    workItem({ id: "4", code: "XT-10", name: "Xây tường gạch", group: "Thân", unit: "m2" }),
+    workItem({ id: "1", code: "BT-02", name: "Bê tông lót", categoryId: "c-mong", unit: "m3" }),
+    workItem({ id: "2", code: "BT-01", name: "Bê tông móng", categoryId: "c-mong", unit: "m3" }),
+    workItem({ id: "3", code: "DD-01", name: "Đào đất hố móng", categoryId: "c-dat", unit: "m3" }),
+    workItem({ id: "4", code: "XT-10", name: "Xây tường gạch", categoryId: "c-than", unit: "m2" }),
   ];
+  const lookup = nameLookup({
+    categories: [
+      { id: "c-mong", name: "Móng", notes: "", createdAt: T, updatedAt: T },
+      { id: "c-dat", name: "Đất", notes: "", createdAt: T, updatedAt: T },
+      { id: "c-than", name: "Thân", notes: "", createdAt: T, updatedAt: T },
+    ],
+    suppliers: [],
+  });
 
   it("không phân biệt dấu và hoa thường, kể cả chữ đ", () => {
     expect(normalizeForSearch("  Đào ĐẤT  ")).toBe("dao dat");
-    expect(searchWorkItems(items, "be tong").map((i) => i.code)).toEqual(["BT-01", "BT-02"]);
-    expect(searchWorkItems(items, "dao dat").map((i) => i.code)).toEqual(["DD-01"]);
+    expect(searchWorkItems(items, { query: "be tong" }).map((i) => i.code)).toEqual(["BT-01", "BT-02"]);
+    expect(searchWorkItems(items, { query: "dao dat" }).map((i) => i.code)).toEqual(["DD-01"]);
   });
 
   it("tìm theo mã, nhóm, đơn vị; mọi từ phải khớp", () => {
-    expect(searchWorkItems(items, "xt-10").map((i) => i.code)).toEqual(["XT-10"]);
-    expect(searchWorkItems(items, "m2").map((i) => i.code)).toEqual(["XT-10"]);
-    expect(searchWorkItems(items, "mong lot").map((i) => i.code)).toEqual(["BT-02"]);
+    expect(searchWorkItems(items, { query: "xt-10" }).map((i) => i.code)).toEqual(["XT-10"]);
+    expect(searchWorkItems(items, { query: "m2" }).map((i) => i.code)).toEqual(["XT-10"]);
+    expect(searchWorkItems(items, { query: "mong lot" }, lookup).map((i) => i.code)).toEqual(["BT-02"]);
+    expect(searchWorkItems(items, { query: "than" }, lookup).map((i) => i.code)).toEqual(["XT-10"]);
   });
 
   it("lọc theo nhóm và sắp theo mã (số tự nhiên)", () => {
-    expect(searchWorkItems(items, "", "Móng").map((i) => i.code)).toEqual(["BT-01", "BT-02"]);
-    expect(distinctGroups(items)).toEqual(["Đất", "Móng", "Thân"]);
+    expect(searchWorkItems(items, { categoryId: "c-mong" }).map((i) => i.code)).toEqual(["BT-01", "BT-02"]);
   });
 });
 
+const NOLIB = { workItems: [] as WorkItem[], categories: [], suppliers: [] };
+
 describe("validateWorkItemForm", () => {
   it("tạo dữ liệu hợp lệ, phương pháp giá direct", () => {
-    const result = validateWorkItemForm(FORM, [], null);
+    const result = validateWorkItemForm(FORM, NOLIB, null);
     expect(result.ok).toBe(true);
     if (result.ok) {
       expect(result.value.unitPrice).toBe(1500000);
@@ -144,37 +157,39 @@ describe("validateWorkItemForm", () => {
   });
 
   it("đơn giá trống là null (chưa có giá), không phải 0", () => {
-    const result = validateWorkItemForm({ ...FORM, unitPrice: "" }, [], null);
+    const result = validateWorkItemForm({ ...FORM, unitPrice: "" }, NOLIB, null);
     expect(result.ok && result.value.unitPrice).toBeNull();
   });
 
   it("bắt buộc mã, tên, đơn vị; báo đúng trường", () => {
-    const result = validateWorkItemForm({ ...FORM, code: " ", name: "", unit: "" }, [], null);
+    const result = validateWorkItemForm({ ...FORM, code: " ", name: "", unit: "" }, NOLIB, null);
     expect(!result.ok && result.errors.map((e) => e.field)).toEqual(["code", "name", "unit"]);
   });
 
   it("chặn mã trùng (không phân biệt hoa thường, khoảng trắng), nhưng cho sửa chính nó", () => {
     const existing = [workItem({ id: "x", code: "bt-01 " })];
-    expect(validateWorkItemForm(FORM, existing, null).ok).toBe(false);
-    expect(validateWorkItemForm(FORM, existing, "x").ok).toBe(true);
+    expect(validateWorkItemForm(FORM, { ...NOLIB, workItems: existing }, null).ok).toBe(false);
+    expect(validateWorkItemForm(FORM, { ...NOLIB, workItems: existing }, "x").ok).toBe(true);
     expect(normalizeCode(" BT-01 ")).toBe("bt-01");
   });
 
   it("kiểm tra ngày hiệu lực và tiền tệ khi có giá", () => {
-    const bad = validateWorkItemForm({ ...FORM, effectiveFrom: "2026-12-31", effectiveTo: "2026-01-01", currency: "" }, [], null);
+    const bad = validateWorkItemForm({ ...FORM, effectiveFrom: "2026-12-31", effectiveTo: "2026-01-01", currency: "" }, NOLIB, null);
     expect(!bad.ok && bad.errors.map((e) => e.field).sort()).toEqual(["currency", "effectiveTo"]);
-    const badDate = validateWorkItemForm({ ...FORM, effectiveFrom: "2026-02-30" }, [], null);
+    const badDate = validateWorkItemForm({ ...FORM, effectiveFrom: "2026-02-30" }, NOLIB, null);
     expect(!badDate.ok && badDate.errors[0].field).toBe("effectiveFrom");
   });
 
   it("từ chối đơn giá âm hoặc có dấu phân cách hàng nghìn mơ hồ", () => {
-    expect(validateWorkItemForm({ ...FORM, unitPrice: "-1" }, [], null).ok).toBe(false);
-    expect(validateWorkItemForm({ ...FORM, unitPrice: "1.500.000" }, [], null).ok).toBe(false);
+    expect(validateWorkItemForm({ ...FORM, unitPrice: "-1" }, NOLIB, null).ok).toBe(false);
+    expect(validateWorkItemForm({ ...FORM, unitPrice: "1.500.000" }, NOLIB, null).ok).toBe(false);
   });
 });
 
 describe("validateResourceForm / validatePriceForm / validateNormForm", () => {
   const lib: LibrarySnapshot = {
+    categories: [],
+    suppliers: [],
     workItems: [workItem({ id: "w1", code: "BT-01" })],
     resources: [resource({ id: "r1", code: "XM" }), resource({ id: "r2", code: "CAT" })],
     resourcePrices: [],
@@ -182,15 +197,15 @@ describe("validateResourceForm / validatePriceForm / validateNormForm", () => {
   };
 
   it("tài nguyên: bắt buộc và chặn mã trùng", () => {
-    expect(validateResourceForm({ code: "xm", name: "Xi măng", type: "material", unit: "kg", notes: "" }, lib.resources, null).ok).toBe(false);
-    expect(validateResourceForm({ code: "DA", name: "Đá", type: "material", unit: "m3", notes: "" }, lib.resources, null).ok).toBe(true);
+    expect(validateResourceForm({ code: "xm", name: "Xi măng", type: "material", categoryId: "", unit: "kg", notes: "" }, lib, null).ok).toBe(false);
+    expect(validateResourceForm({ code: "DA", name: "Đá", type: "material", categoryId: "", unit: "m3", notes: "" }, lib, null).ok).toBe(true);
   });
 
   it("giá: bắt buộc có đơn giá, không âm", () => {
-    const base = { price: "", unit: "kg", currency: "VND", effectiveFrom: "", effectiveTo: "", source: "", status: "active" as const, notes: "" };
-    expect(validatePriceForm(base).ok).toBe(false);
-    expect(validatePriceForm({ ...base, price: "-5" }).ok).toBe(false);
-    expect(validatePriceForm({ ...base, price: "1850,5" }).ok).toBe(true);
+    const base = { price: "", unit: "kg", currency: "VND", effectiveFrom: "", effectiveTo: "", supplierId: "", source: "", status: "active" as const, notes: "" };
+    expect(validatePriceForm(base, []).ok).toBe(false);
+    expect(validatePriceForm({ ...base, price: "-5" }, []).ok).toBe(false);
+    expect(validatePriceForm({ ...base, price: "1850,5" }, []).ok).toBe(true);
   });
 
   it("định mức: tài nguyên phải tồn tại, không trùng trong cùng công tác, hao phí > 0", () => {
@@ -206,12 +221,13 @@ describe("libraryIssues", () => {
   const today = "2026-10-20";
 
   it("thư viện sạch → không có vấn đề", () => {
-    expect(libraryIssues({ workItems: [workItem({ id: "1", code: "A" })], resources: [], resourcePrices: [], norms: [] }, today)).toEqual([]);
+    expect(libraryIssues({ categories: [], suppliers: [], workItems: [workItem({ id: "1", code: "A" })], resources: [], resourcePrices: [], norms: [] }, today)).toEqual([]);
   });
 
   it("phát hiện mã trùng, thiếu giá, giá hết hạn/chưa hiệu lực", () => {
-    const issues = libraryIssues(
-      {
+    const issues = libraryIssues({
+        categories: [],
+        suppliers: [],
         workItems: [
           workItem({ id: "1", code: "A" }),
           workItem({ id: "2", code: "a" }),
@@ -232,8 +248,9 @@ describe("libraryIssues", () => {
   });
 
   it("phát hiện liên kết hỏng, đơn vị không khớp, nhiều giá đang dùng chồng thời gian", () => {
-    const issues = libraryIssues(
-      {
+    const issues = libraryIssues({
+        categories: [],
+        suppliers: [],
         workItems: [workItem({ id: "w1", code: "W" })],
         resources: [resource({ id: "r1", code: "XM", unit: "kg" })],
         resourcePrices: [
@@ -254,8 +271,9 @@ describe("libraryIssues", () => {
   });
 
   it("giá ngưng dùng không bị tính là chồng thời gian", () => {
-    const issues = libraryIssues(
-      {
+    const issues = libraryIssues({
+        categories: [],
+        suppliers: [],
         workItems: [],
         resources: [resource({ id: "r1", code: "XM" })],
         resourcePrices: [price({ id: "p1", resourceId: "r1" }), price({ id: "p2", resourceId: "r1", status: "inactive" })],
@@ -272,7 +290,7 @@ describe("draftFromWorkItem (chèn vào báo giá)", () => {
     id: "1",
     code: "BT-01",
     name: "Bê tông móng",
-    group: "Móng",
+    categoryId: "c1",
     unit: "m3",
     unitPrice: 1500000.5,
     source: "NCC A",
@@ -281,7 +299,8 @@ describe("draftFromWorkItem (chèn vào báo giá)", () => {
   });
 
   it("chép giá trị (snapshot) kèm ghi chú truy vết nguồn giá; khối lượng để trống", () => {
-    const { draft, warnings } = draftFromWorkItem(item, "2026-10-20");
+    const lookup = nameLookup({ categories: [{ id: "c1", name: "Móng", notes: "", createdAt: T, updatedAt: T }], suppliers: [] });
+    const { draft, warnings } = draftFromWorkItem(item, "2026-10-20", lookup);
     expect(warnings).toEqual([]);
     expect(draft).toMatchObject({ code: "BT-01", group: "Móng", description: "Bê tông móng", unit: "m3", quantity: "", unitPrice: "1500000.5" });
     expect(draft.notes).toBe("Thư viện: BT-01; nguồn giá: NCC A; hiệu lực 01/01/2026 – 31/12/2026; tiền tệ: VND");
@@ -306,13 +325,14 @@ describe("draftFromWorkItem (chèn vào báo giá)", () => {
 describe("kiểm tra thư viện — giá bằng 0 (prompts/13)", () => {
   it("cảnh báo đơn giá 0, phân biệt với chưa có giá", () => {
     const stamp = { createdAt: "", updatedAt: "" };
-    const issues = libraryIssues(
-      {
+    const issues = libraryIssues({
+        categories: [],
+        suppliers: [],
         workItems: [
-          { id: "a", code: "A", name: "A", group: "", unit: "m3", description: "", pricingMethod: "direct", unitPrice: 0, currency: "VND", source: "", effectiveFrom: null, effectiveTo: null, notes: "", ...stamp },
+          { id: "a", code: "A", name: "A", categoryId: null, unit: "m3", description: "", pricingMethod: "direct", unitPrice: 0, currency: "VND", supplierId: null, source: "", effectiveFrom: null, effectiveTo: null, notes: "", ...stamp },
         ],
-        resources: [{ id: "r", code: "R", name: "R", type: "material", unit: "kg", notes: "", ...stamp }],
-        resourcePrices: [{ id: "p", resourceId: "r", price: 0, unit: "kg", currency: "VND", effectiveFrom: null, effectiveTo: null, source: "", status: "active", notes: "", ...stamp }],
+        resources: [{ id: "r", code: "R", name: "R", type: "material", categoryId: null, unit: "kg", notes: "", ...stamp }],
+        resourcePrices: [{ id: "p", resourceId: "r", price: 0, unit: "kg", currency: "VND", effectiveFrom: null, effectiveTo: null, supplierId: null, source: "", status: "active", notes: "", ...stamp }],
         norms: [],
       },
       "2026-10-21"

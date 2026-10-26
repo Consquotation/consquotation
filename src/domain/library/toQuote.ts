@@ -6,7 +6,10 @@
 
 import { WorkItemDraftInput } from "../workItemDraft";
 import { formatIsoDate, validityOn } from "./dates";
+import { NameLookup } from "./search";
 import { WorkItem } from "./types";
+
+const NO_NAMES: NameLookup = { category: new Map(), supplier: new Map() };
 
 export type InsertWarning =
   | { kind: "missingPrice" }
@@ -20,8 +23,12 @@ export interface LibraryDraft {
 }
 
 /** Ghi chú truy vết nguồn giá đi kèm dòng báo giá (prompts/10: hiển thị nguồn giá). */
-export function traceNote(item: WorkItem): string {
+export function traceNote(item: WorkItem, lookup: NameLookup = NO_NAMES): string {
   const parts = [`Thư viện: ${item.code}`];
+  const supplier = item.supplierId ? lookup.supplier.get(item.supplierId) : undefined;
+  if (supplier) {
+    parts.push(`nhà cung cấp: ${supplier}`);
+  }
   if (item.source) {
     parts.push(`nguồn giá: ${item.source}`);
   }
@@ -36,7 +43,12 @@ export function traceNote(item: WorkItem): string {
   return parts.join("; ");
 }
 
-export function draftFromWorkItem(item: WorkItem, today: string): LibraryDraft {
+/** `lookup` cho tên nhóm (chép vào cột Nhóm công tác) và tên nhà cung cấp (ghi chú truy vết). */
+export function draftFromWorkItem(
+  item: WorkItem,
+  today: string,
+  lookup: NameLookup = NO_NAMES
+): LibraryDraft {
   const warnings: InsertWarning[] = [];
   if (item.unitPrice === null) {
     warnings.push({ kind: "missingPrice" });
@@ -52,12 +64,12 @@ export function draftFromWorkItem(item: WorkItem, today: string): LibraryDraft {
   return {
     draft: {
       code: item.code,
-      group: item.group,
+      group: item.categoryId ? (lookup.category.get(item.categoryId) ?? "") : "",
       description: item.name,
       unit: item.unit,
       quantity: "",
       unitPrice: item.unitPrice === null ? "" : String(item.unitPrice),
-      notes: traceNote(item),
+      notes: traceNote(item, lookup),
     },
     warnings,
   };

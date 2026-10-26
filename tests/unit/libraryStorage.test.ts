@@ -1,7 +1,7 @@
 import { IDBFactory } from "fake-indexeddb";
 import { describe, expect, it } from "vitest";
 import { LibraryService, uniqueCopyCode } from "../../src/application/libraryService";
-import { LibrarySnapshot } from "../../src/domain/library/types";
+import { EMPTY_LIBRARY, LibrarySnapshot } from "../../src/domain/library/types";
 import { WorkItemForm } from "../../src/domain/library/validation";
 import {
   IndexedDbLibraryRepository,
@@ -25,7 +25,8 @@ function setup() {
 const FORM: WorkItemForm = {
   code: "BT-01",
   name: "Bê tông móng",
-  group: "Móng",
+  categoryId: "",
+  supplierId: "",
   unit: "m3",
   description: "",
   unitPrice: "1500000",
@@ -46,7 +47,7 @@ describe("libraryDatabaseName", () => {
 describe("IndexedDbLibraryRepository + LibraryService", () => {
   it("thư viện mới trống — không có dữ liệu mẫu", async () => {
     const { service } = setup();
-    expect(await service.load()).toEqual({ workItems: [], resources: [], resourcePrices: [], norms: [] });
+    expect(await service.load()).toEqual(EMPTY_LIBRARY);
   });
 
   it("lưu, đọc lại, sửa giữ createdAt, chặn mã trùng", async () => {
@@ -80,7 +81,7 @@ describe("IndexedDbLibraryRepository + LibraryService", () => {
     let lib = await service.load();
     const w = await service.saveWorkItem(FORM, null, lib);
     lib = await service.load();
-    const r = await service.saveResource({ code: "XM", name: "Xi măng", type: "material", unit: "kg", notes: "" }, null, lib);
+    const r = await service.saveResource({ code: "XM", name: "Xi măng", type: "material", categoryId: "", unit: "kg", notes: "" }, null, lib);
     lib = await service.load();
     if (!w.ok || !r.ok) throw new Error("setup");
     await service.saveNorm(w.value.id, { resourceId: r.value.id, quantity: "350", notes: "" }, null, lib);
@@ -99,7 +100,7 @@ describe("IndexedDbLibraryRepository + LibraryService", () => {
     let lib = await service.load();
     const w = await service.saveWorkItem(FORM, null, lib);
     lib = await service.load();
-    const r = await service.saveResource({ code: "XM", name: "Xi măng", type: "material", unit: "kg", notes: "" }, null, lib);
+    const r = await service.saveResource({ code: "XM", name: "Xi măng", type: "material", categoryId: "", unit: "kg", notes: "" }, null, lib);
     lib = await service.load();
     if (!w.ok || !r.ok) throw new Error("setup");
     await service.saveNorm(w.value.id, { resourceId: r.value.id, quantity: "1", notes: "" }, null, lib);
@@ -115,10 +116,10 @@ describe("IndexedDbLibraryRepository + LibraryService", () => {
     let lib = await service.load();
     const w = await service.saveWorkItem(FORM, null, lib);
     lib = await service.load();
-    const r = await service.saveResource({ code: "XM", name: "Xi măng", type: "material", unit: "kg", notes: "" }, null, lib);
+    const r = await service.saveResource({ code: "XM", name: "Xi măng", type: "material", categoryId: "", unit: "kg", notes: "" }, null, lib);
     lib = await service.load();
     if (!w.ok || !r.ok) throw new Error("setup");
-    await service.savePrice(r.value.id, { price: "1850", unit: "kg", currency: "VND", effectiveFrom: "", effectiveTo: "", source: "NCC", status: "active", notes: "" }, null, lib);
+    await service.savePrice(r.value.id, { price: "1850", unit: "kg", currency: "VND", effectiveFrom: "", effectiveTo: "", supplierId: "", source: "NCC", status: "active", notes: "" }, null, lib);
     lib = await service.load();
     const n = await service.saveNorm(w.value.id, { resourceId: r.value.id, quantity: "1", notes: "" }, null, lib);
     lib = await service.load();
@@ -167,7 +168,7 @@ describe("uniqueCopyCode", () => {
 });
 
 // Đảm bảo kiểu snapshot không đổi ngoài ý muốn.
-const _typecheck: LibrarySnapshot = { workItems: [], resources: [], resourcePrices: [], norms: [] };
+const _typecheck: LibrarySnapshot = { categories: [], suppliers: [], workItems: [], resources: [], resourcePrices: [], norms: [] };
 void _typecheck;
 
 describe("versionchange", () => {
@@ -182,7 +183,7 @@ describe("versionchange", () => {
     });
     expect(deleted).toBe("deleted");
     // Chính repo cũ (kết nối đã bị đóng) tự mở lại database mới (trống), không báo lỗi.
-    expect(await repo.loadAll()).toEqual({ workItems: [], resources: [], resourcePrices: [], norms: [] });
+    expect(await repo.loadAll()).toEqual(EMPTY_LIBRARY);
     expect(await repo.getSetting("x")).toBeUndefined();
   });
 });

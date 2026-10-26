@@ -11,7 +11,8 @@ import {
   makeStyles,
   tokens,
 } from "@fluentui/react-components";
-import { TextField, ValidityBadge, errorFor, formatMoney } from "./common";
+import { NEW_REF, RefSelect, TextField, ValidityBadge, errorFor, formatMoney } from "./common";
+import { createNewRefs } from "./newRefs";
 import ConfirmDialog from "../ConfirmDialog";
 import { LibraryService } from "../../../application/libraryService";
 import { formatIsoDate, todayIso, validityOn } from "../../../domain/library/dates";
@@ -23,7 +24,14 @@ import {
   ResourcePrice,
   ResourceType,
 } from "../../../domain/library/types";
-import { FieldError, PriceField, PriceForm, ResourceField, ResourceForm } from "../../../domain/library/validation";
+import {
+  FieldError,
+  PriceField,
+  PriceForm,
+  ResourceField,
+  ResourceForm,
+  sameNameRecords,
+} from "../../../domain/library/validation";
 import { LIBRARY_STRINGS } from "../../../shared/strings.library.vi";
 import { useExclusive } from "../../useExclusive";
 
@@ -61,21 +69,45 @@ const ResourceEditor: React.FC<ResourceEditorProps> = ({ service, library, editi
   const s = LIBRARY_STRINGS.resources;
   const [form, setForm] = React.useState<ResourceForm>(
     editing
-      ? { code: editing.code, name: editing.name, type: editing.type, unit: editing.unit, notes: editing.notes }
-      : { code: "", name: "", type: "material", unit: "", notes: "" }
+      ? {
+          code: editing.code,
+          name: editing.name,
+          type: editing.type,
+          categoryId: editing.categoryId ?? "",
+          unit: editing.unit,
+          notes: editing.notes,
+        }
+      : { code: "", name: "", type: "material", categoryId: "", unit: "", notes: "" }
   );
   const [errors, setErrors] = React.useState<FieldError<ResourceField>[]>([]);
   const [failure, setFailure] = React.useState<string | null>(null);
+  const [newCategory, setNewCategory] = React.useState("");
   const exclusive = useExclusive();
   const set = (field: ResourceField) => (value: string) => setForm((f) => ({ ...f, [field]: value }));
+  const sameName = sameNameRecords(form.name, library.resources, editing?.id ?? null);
 
   const save = () =>
     exclusive(async () => {
       setFailure(null);
       try {
-        const result = await service.saveResource(form, editing?.id ?? null, library);
+        const refs = await createNewRefs(service, library, {
+          category: form.categoryId === NEW_REF ? newCategory : undefined,
+        });
+        if (!refs.ok) {
+          setErrors([{ field: "categoryId", message: refs.message }]);
+          return;
+        }
+        const toSave: ResourceForm = { ...form, categoryId: refs.categoryId ?? form.categoryId };
+        if (refs.categoryId) {
+          setForm(toSave);
+          setNewCategory("");
+        }
+        const result = await service.saveResource(toSave, editing?.id ?? null, refs.library);
         if (!result.ok) {
           setErrors(result.errors);
+          if (refs.categoryId) {
+            await onLibraryChanged();
+          }
           return;
         }
         setErrors([]);
@@ -99,7 +131,18 @@ const ResourceEditor: React.FC<ResourceEditorProps> = ({ service, library, editi
       >
         <div className={styles.grid}>
           <TextField label={s.fields.code} required value={form.code} onChange={set("code")} error={errorFor(errors, "code")} />
-          <TextField label={s.fields.name} required value={form.name} onChange={set("name")} error={errorFor(errors, "name")} />
+          <TextField
+            label={s.fields.name}
+            required
+            value={form.name}
+            onChange={set("name")}
+            error={errorFor(errors, "name")}
+            hint={
+              sameName.length > 0
+                ? LIBRARY_STRINGS.sameName(sameName.map((r) => r.code).join(", "))
+                : undefined
+            }
+          />
           <Field label={s.fields.type}>
             <Select value={form.type} onChange={(_e, data) => setForm((f) => ({ ...f, type: data.value as ResourceType }))}>
               {RESOURCE_TYPES.map((t) => (
@@ -109,6 +152,18 @@ const ResourceEditor: React.FC<ResourceEditorProps> = ({ service, library, editi
               ))}
             </Select>
           </Field>
+          <RefSelect
+            label={s.fields.category}
+            value={form.categoryId}
+            options={library.categories}
+            noneLabel={LIBRARY_STRINGS.refs.noneCategory}
+            onChange={set("categoryId")}
+            error={errorFor(errors, "categoryId")}
+            newLabel={LIBRARY_STRINGS.refs.newCategory}
+            newName={newCategory}
+            newNameLabel={LIBRARY_STRINGS.refs.newCategoryName}
+            onNewNameChange={setNewCategory}
+          />
           <TextField label={s.fields.unit} required value={form.unit} onChange={set("unit")} error={errorFor(errors, "unit")} />
         </div>
         <TextField label={s.fields.notes} value={form.notes} onChange={set("notes")} multiline />
@@ -149,6 +204,7 @@ function emptyPriceForm(resource: Resource): PriceForm {
     currency: "VND",
     effectiveFrom: "",
     effectiveTo: "",
+    supplierId: "",
     source: "",
     status: "active",
     notes: "",
@@ -167,8 +223,11 @@ const PricesSection: React.FC<{
   const [editingId, setEditingId] = React.useState<string | null>(null);
   const [errors, setErrors] = React.useState<FieldError<PriceField>[]>([]);
   const [pendingDelete, setPendingDelete] = React.useState<ResourcePrice | null>(null);
+  const [failure, setFailure] = React.useState<string | null>(null);
+  const [newSupplier, setNewSupplier] = React.useState("");
   const exclusive = useExclusive();
   const today = todayIso();
+  const supplierName = new Map(library.suppliers.map((x) => [x.id, x.name]));
   const prices = library.resourcePrices
     .filter((p) => p.resourceId === resource.id)
     .sort((a, b) => (b.effectiveFrom ?? "").localeCompare(a.effectiveFrom ?? ""));
@@ -177,15 +236,35 @@ const PricesSection: React.FC<{
 
   const save = () =>
     exclusive(async () => {
-      const result = await service.savePrice(resource.id, form, editingId, library);
-      if (!result.ok) {
-        setErrors(result.errors);
-        return;
+      setFailure(null);
+      try {
+        const refs = await createNewRefs(service, library, {
+          supplier: form.supplierId === NEW_REF ? newSupplier : undefined,
+        });
+        if (!refs.ok) {
+          setErrors([{ field: "supplierId", message: refs.message }]);
+          return;
+        }
+        const toSave: PriceForm = { ...form, supplierId: refs.supplierId ?? form.supplierId };
+        if (refs.supplierId) {
+          setForm(toSave);
+          setNewSupplier("");
+        }
+        const result = await service.savePrice(resource.id, toSave, editingId, refs.library);
+        if (!result.ok) {
+          setErrors(result.errors);
+          if (refs.supplierId) {
+            await onLibraryChanged();
+          }
+          return;
+        }
+        setErrors([]);
+        setEditingId(null);
+        setForm(emptyPriceForm(resource));
+        await onLibraryChanged();
+      } catch (error) {
+        setFailure(error instanceof Error ? error.message : String(error));
       }
-      setErrors([]);
-      setEditingId(null);
-      setForm(emptyPriceForm(resource));
-      await onLibraryChanged();
     });
 
   const startEdit = (price: ResourcePrice) => {
@@ -197,6 +276,7 @@ const PricesSection: React.FC<{
       currency: price.currency,
       effectiveFrom: price.effectiveFrom ?? "",
       effectiveTo: price.effectiveTo ?? "",
+      supplierId: price.supplierId ?? "",
       source: price.source,
       status: price.status,
       notes: price.notes,
@@ -210,7 +290,13 @@ const PricesSection: React.FC<{
       }
       const id = pendingDelete.id;
       setPendingDelete(null);
-      await service.deletePrice(id);
+      setFailure(null);
+      try {
+        await service.deletePrice(id);
+      } catch (error) {
+        setFailure(error instanceof Error ? error.message : String(error));
+        return;
+      }
       if (editingId === id) {
         setEditingId(null);
         setForm(emptyPriceForm(resource));
@@ -221,6 +307,13 @@ const PricesSection: React.FC<{
   return (
     <section className={styles.root} aria-label={s.title}>
       <Subtitle2 as="h4">{s.title}</Subtitle2>
+      {failure && (
+        <MessageBar intent="error" layout="multiline" politeness="assertive">
+          <MessageBarBody>
+            {LIBRARY_STRINGS.saveFailed}: {failure}
+          </MessageBarBody>
+        </MessageBar>
+      )}
       {activeCount > 1 && (
         <MessageBar intent="warning" layout="multiline">
           <MessageBarBody>{s.noAutoPick}</MessageBarBody>
@@ -241,6 +334,7 @@ const PricesSection: React.FC<{
               p.effectiveFrom || p.effectiveTo
                 ? `${formatIsoDate(p.effectiveFrom) || "…"} – ${formatIsoDate(p.effectiveTo) || "…"}`
                 : "",
+              p.supplierId ? supplierName.get(p.supplierId) : "",
               p.source,
             ]
               .filter(Boolean)
@@ -269,6 +363,18 @@ const PricesSection: React.FC<{
           <TextField label={s.fields.price} required value={form.price} onChange={set("price")} error={errorFor(errors, "price")} inputMode="decimal" />
           <TextField label={s.fields.unit} required value={form.unit} onChange={set("unit")} error={errorFor(errors, "unit")} />
           <TextField label={s.fields.currency} required value={form.currency} onChange={set("currency")} error={errorFor(errors, "currency")} />
+          <RefSelect
+            label={s.fields.supplier}
+            value={form.supplierId}
+            options={library.suppliers}
+            noneLabel={LIBRARY_STRINGS.refs.noneSupplier}
+            onChange={set("supplierId")}
+            error={errorFor(errors, "supplierId")}
+            newLabel={LIBRARY_STRINGS.refs.newSupplier}
+            newName={newSupplier}
+            newNameLabel={LIBRARY_STRINGS.refs.newSupplierName}
+            onNewNameChange={setNewSupplier}
+          />
           <TextField label={s.fields.source} value={form.source} onChange={set("source")} />
           <TextField label={s.fields.effectiveFrom} type="date" value={form.effectiveFrom} onChange={set("effectiveFrom")} error={errorFor(errors, "effectiveFrom")} />
           <TextField label={s.fields.effectiveTo} type="date" value={form.effectiveTo} onChange={set("effectiveTo")} error={errorFor(errors, "effectiveTo")} />

@@ -1,4 +1,4 @@
-# Kiểm thử lớp tích hợp Excel (2026-10-26, bản 1.8.0)Đạt (2026-10-26, tự động) |Đạt (2026-10-26, tự động) |Đạt (2026-10-26, tự động) |Đạt (2026-10-26, tự động) |Đạt (2026-10-26, tự động) |Đạt (2026-10-26, tự động) |Đạt (2026-10-26, tự động) |Đạt (2026-10-26, tự động) |Đạt (sau khi sửa lỗi 2) (2026-10-26, tự động) |Đạt (2026-10-26, tự động) |Đạt (2026-10-26, tự động) |Đạt (2026-10-26, tự động) |Đạt (2026-10-26, tự động) |Đạt (Báo giá, Tính giá, Tổng quan, In ấn, Thư viện) (2026-10-26, tự động) |
+# Kiểm thử lớp tích hợp Excel (2026-10-26, bản 1.8.0)
 
 Phạm vi: lớp `src/office/core/` và khu vực Cài đặt › Kiểm thử Excel. Tài liệu: [docs/EXCEL_INTEGRATION.md](../../docs/EXCEL_INTEGRATION.md).
 

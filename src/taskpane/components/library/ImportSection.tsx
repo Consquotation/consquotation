@@ -16,7 +16,7 @@ import {
 } from "@fluentui/react-components";
 import ImportReview, { AnalysisDetails, ImportReport } from "./ImportReview";
 import { LibraryService } from "../../../application/libraryService";
-import { WorkbookGateway, SheetSummary } from "../../../application/workbookGateway";
+import { WorkbookGateway, SheetSummary, TableSummary } from "../../../application/workbookGateway";
 import { checkBackupMeta, datasetFromBackupSheet, parseBackupJson } from "../../../domain/library/exchange/backup";
 import { RawCell, parseTextCell } from "../../../domain/library/exchange/cells";
 import { decodeTextFile, parseCsv } from "../../../domain/library/exchange/csv";
@@ -96,7 +96,9 @@ const ImportSection: React.FC<{
   const [error, setError] = React.useState<string | null>(null);
   const [sheets, setSheets] = React.useState<SheetSummary[] | null>(null);
   const [sheetName, setSheetName] = React.useState("");
-  const [backupInfo, setBackupInfo] = React.useState<{ exportedAt: string } | null>(null);
+  const [tables, setTables] = React.useState<TableSummary[]>([]);
+  const [tableName, setTableName] = React.useState("");
+  const [backupInfo, setBackupInfo] = React.useState<{ exportedAt: string; libraryName: string } | null>(null);
   const fileInput = React.useRef<HTMLInputElement>(null);
   const exclusive = useExclusive();
 
@@ -105,12 +107,17 @@ const ImportSection: React.FC<{
       const { sheets: list, activeSheet } = await gateway.listSheets();
       setSheets(list);
       setSheetName((current) => (list.some((x) => x.name === current) ? current : activeSheet));
+      const tableList = await gateway.listTables();
+      setTables(tableList);
+      setTableName((current) =>
+        tableList.some((t) => t.name === current) ? current : (tableList[0]?.name ?? "")
+      );
       setBackupInfo(null);
       if (list.some((x) => x.name === META_SHEET_NAME)) {
         const meta = await gateway.readSheet(META_SHEET_NAME, 20);
         const check = checkBackupMeta(meta.table.rows);
         if (check.kind === "backup") {
-          setBackupInfo({ exportedAt: check.exportedAt });
+          setBackupInfo({ exportedAt: check.exportedAt, libraryName: check.libraryName });
         }
       }
     } catch (e) {
@@ -178,11 +185,30 @@ const ImportSection: React.FC<{
           setError(s.emptySource);
           return;
         }
-        setStep({ kind: "multi", label: `File "${file.name}"`, datasets: backup.datasets });
+        setStep({
+          kind: "multi",
+          label: s.backupFileLabel(file.name, backup.meta.libraryName),
+          datasets: backup.datasets,
+        });
         return;
       }
       const rows = parseCsv(decoded.text).map((row) => row.map((value): RawCell => ({ value })));
       const table: SourceTable = { label: `File "${file.name}"`, firstRowNumber: 1, firstColumnIndex: 0, rows };
+      if (detectHeaderRow(table) < 0) {
+        setError(s.emptySource);
+        return;
+      }
+      setStep(tableStep(table));
+    });
+
+  /** Excel Table làm nguồn (chỉ đọc), dùng lớp core của giai đoạn tích hợp Excel. */
+  const readTable = () =>
+    read(async () => {
+      const { table, totalRows } = await gateway.readTableSource(tableName, MAX_IMPORT_ROWS + SHEET_READ_MARGIN);
+      if (totalRows > MAX_IMPORT_ROWS + SHEET_READ_MARGIN) {
+        setError(s.sheetTooLarge(totalRows, MAX_IMPORT_ROWS));
+        return;
+      }
       if (detectHeaderRow(table) < 0) {
         setError(s.emptySource);
         return;
@@ -286,7 +312,10 @@ const ImportSection: React.FC<{
         <Subtitle2 as="h3">{s.fromWorkbook}</Subtitle2>
         {backupInfo && (
           <MessageBar intent="info" layout="multiline">
-            <MessageBarBody>{s.backupDetected(backupInfo.exportedAt && formatDateTime(backupInfo.exportedAt))}</MessageBarBody>
+            <MessageBarBody>{s.backupDetected(
+                backupInfo.exportedAt && formatDateTime(backupInfo.exportedAt),
+                backupInfo.libraryName
+              )}</MessageBarBody>
             <MessageBarActions>
               <Button size="small" appearance="primary" disabled={busy} onClick={() => void readBackupWorkbook()}>
                 {s.readBackup}
@@ -312,6 +341,22 @@ const ImportSection: React.FC<{
             </Button>
             <Button appearance="subtle" disabled={busy} onClick={() => void loadSheets()}>
               {s.refreshSheets}
+            </Button>
+          </div>
+        )}
+        {sheets !== null && tables.length > 0 && (
+          <div className={styles.row}>
+            <Field label={s.table} hint={s.tableHint}>
+              <Select value={tableName} onChange={(_e, data) => setTableName(data.value)}>
+                {tables.map((t) => (
+                  <option key={t.name} value={t.name}>
+                    {s.tableOption(t.name, t.sheetName, t.rowCount)}
+                  </option>
+                ))}
+              </Select>
+            </Field>
+            <Button disabled={busy || !tableName} onClick={() => void readTable()}>
+              {s.readTable}
             </Button>
           </div>
         )}

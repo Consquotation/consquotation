@@ -13,13 +13,33 @@ export const LIBRARY_STRINGS = {
     label: "Các phần của thư viện",
     workItems: "Công tác",
     resources: "Tài nguyên",
+    catalog: "Danh mục",
     check: "Kiểm tra",
   },
   emptyButUsed:
     "Thư viện trên máy này đang trống, nhưng workbook này từng dùng thư viện. Có thể cache Office đã bị xóa hoặc bạn đang dùng máy/tài khoản khác. Hãy khôi phục từ bản sao lưu (nếu có) trước khi nhập lại.",
-  search: "Tìm theo mã, tên, nhóm, đơn vị (không cần gõ dấu)",
+  search: "Tìm theo mã, tên, nhóm, đơn vị, nhà cung cấp (không cần gõ dấu)",
   allGroups: "Tất cả nhóm",
+  noGroup: "Chưa phân nhóm",
   group: "Nhóm",
+  supplier: "Nhà cung cấp",
+  allSuppliers: "Tất cả",
+  noSupplier: "Không có nhà cung cấp",
+  type: "Loại",
+  allTypes: "Tất cả loại",
+  sort: "Sắp xếp",
+  sortBy: { code: "Theo mã", name: "Theo tên", price: "Theo đơn giá" },
+  refs: {
+    noneCategory: "— Chưa phân nhóm —",
+    newCategory: "+ Nhóm mới…",
+    newCategoryName: "Tên nhóm mới",
+    noneSupplier: "— Không có —",
+    newSupplier: "+ Nhà cung cấp mới…",
+    newSupplierName: "Tên nhà cung cấp mới",
+  },
+  sameName: (codes: string) =>
+    `Đã có bản ghi cùng tên: ${codes}. Kiểm tra có bị nhập trùng không (vẫn lưu được).`,
+  actionFailed: "Thao tác thất bại",
   count: (shown: number, total: number) =>
     shown === total ? `${total} mục` : `${shown} / ${total} mục`,
   showMore: "Xem thêm",
@@ -50,11 +70,12 @@ export const LIBRARY_STRINGS = {
     fields: {
       code: "Mã công tác",
       name: "Tên công tác",
-      group: "Nhóm công tác",
+      group: "Nhóm",
       unit: "Đơn vị tính",
       description: "Mô tả",
       unitPrice: "Đơn giá",
       currency: "Tiền tệ",
+      supplier: "Nhà cung cấp",
       source: "Nguồn giá",
       effectiveFrom: "Hiệu lực từ ngày",
       effectiveTo: "Hiệu lực đến ngày",
@@ -63,8 +84,8 @@ export const LIBRARY_STRINGS = {
     priceHint: "Để trống nếu chưa có giá (không phải 0). Dùng . hoặc , làm dấu thập phân.",
     noPrice: "Chưa có giá",
     deleteTitle: "Xóa công tác?",
-    deleteBody: (code: string, norms: number) =>
-      `Xóa công tác "${code}"${norms > 0 ? ` cùng ${norms} dòng định mức` : ""} khỏi thư viện. Các báo giá đã chèn công tác này không bị thay đổi. Thao tác không hoàn tác được.`,
+    deleteBody: (code: string, name: string, norms: number) =>
+      `Xóa công tác "${code}: ${name}"${norms > 0 ? ` cùng ${norms} dòng định mức` : ""} khỏi thư viện. Các báo giá đã chèn công tác này không bị thay đổi. Thao tác không hoàn tác được.`,
   },
 
   norms: {
@@ -91,6 +112,7 @@ export const LIBRARY_STRINGS = {
       code: "Mã tài nguyên",
       name: "Tên tài nguyên",
       type: "Loại",
+      category: "Nhóm",
       unit: "Đơn vị tính",
       notes: "Ghi chú",
     },
@@ -101,9 +123,12 @@ export const LIBRARY_STRINGS = {
       other: "Khác",
     } as Record<ResourceType, string>,
     priceCount: (n: number) => (n === 0 ? "chưa có giá" : `${n} giá`),
+    currentPrice: (price: string) => `giá hiện hành ${price}`,
+    manyActive: (n: number) => `${n} giá đang dùng còn hiệu lực, tự chọn khi dùng`,
+    noActive: "chưa có giá còn hiệu lực",
     deleteTitle: "Xóa tài nguyên?",
-    deleteBody: (code: string, prices: number) =>
-      `Xóa tài nguyên "${code}"${prices > 0 ? ` cùng ${prices} giá` : ""} khỏi thư viện. Thao tác không hoàn tác được.`,
+    deleteBody: (code: string, name: string, prices: number) =>
+      `Xóa tài nguyên "${code}: ${name}"${prices > 0 ? ` cùng ${prices} giá` : ""} khỏi thư viện. Thao tác không hoàn tác được.`,
     inUse: (n: number) =>
       `Không thể xóa: tài nguyên đang được dùng trong ${n} định mức. Hãy xóa các định mức đó trước.`,
   },
@@ -119,6 +144,7 @@ export const LIBRARY_STRINGS = {
       currency: "Tiền tệ",
       effectiveFrom: "Hiệu lực từ ngày",
       effectiveTo: "Hiệu lực đến ngày",
+      supplier: "Nhà cung cấp",
       source: "Nguồn",
       status: "Trạng thái",
       notes: "Ghi chú",
@@ -159,12 +185,66 @@ export const LIBRARY_STRINGS = {
     noQuoteTable: "Chưa có bảng báo giá trong workbook. Hãy tạo bảng báo giá trước.",
   },
 
+  overview: {
+    nameLabel: "Tên thư viện",
+    rename: "Đổi tên",
+    saveName: "Lưu tên",
+    stats: (w: number, r: number, p: number, c: number, s: number) =>
+      `${w} công tác · ${r} tài nguyên · ${p} giá · ${c} nhóm · ${s} nhà cung cấp`,
+    lastChanged: (at: string) => `Cập nhật gần nhất: ${at}`,
+    neverChanged: "Chưa có thay đổi nào",
+    storage:
+      "Lưu trên máy này (bộ nhớ IndexedDB của add-in), không đồng bộ giữa các máy. Hãy sao lưu định kỳ.",
+    addWorkItem: "Thêm công tác",
+    addResource: "Thêm tài nguyên",
+    exchange: "Nhập / Xuất / Sao lưu",
+  },
+
+  categories: {
+    title: "Nhóm",
+    intro:
+      "Nhóm dùng chung cho công tác và tài nguyên (ví dụ do bạn tự đặt: vật liệu, cây xanh, vận chuyển). Không có nhóm mặc định.",
+    add: "Thêm nhóm",
+    empty: "Chưa có nhóm nào.",
+    name: "Tên nhóm",
+    notes: "Ghi chú",
+    newTitle: "Nhóm mới",
+    editTitle: (name: string) => `Sửa nhóm "${name}"`,
+    usage: (w: number, r: number) => `${w} công tác · ${r} tài nguyên`,
+    unassigned: (w: number, r: number) => `Chưa phân nhóm: ${w} công tác · ${r} tài nguyên`,
+    deleteTitle: "Xóa nhóm?",
+    deleteUnused: (name: string) =>
+      `Xóa nhóm "${name}". Nhóm đang không có công tác hay tài nguyên nào.`,
+    deleteUsed: (name: string, w: number, r: number) =>
+      `Nhóm "${name}" đang có ${w} công tác và ${r} tài nguyên. Các bản ghi này KHÔNG bị xóa; hãy chọn nơi chuyển chúng tới.`,
+    moveTo: "Chuyển công tác/tài nguyên sang",
+    unassign: "Bỏ phân nhóm",
+    deleteConfirm: "Xóa nhóm",
+  },
+
+  suppliers: {
+    title: "Nhà cung cấp",
+    intro:
+      "Thông tin cơ bản để ghi nguồn giá. Thông tin liên hệ chỉ lưu trên máy này và trong file sao lưu của bạn.",
+    add: "Thêm nhà cung cấp",
+    empty: "Chưa có nhà cung cấp nào.",
+    name: "Tên nhà cung cấp",
+    contactInfo: "Liên hệ (điện thoại, email, địa chỉ…)",
+    notes: "Ghi chú",
+    newTitle: "Nhà cung cấp mới",
+    editTitle: (name: string) => `Sửa nhà cung cấp "${name}"`,
+    usage: (w: number, p: number) => `${w} công tác · ${p} giá`,
+    deleteTitle: "Xóa nhà cung cấp?",
+    deleteBody: (name: string, w: number, p: number) =>
+      `Xóa nhà cung cấp "${name}".${w + p > 0 ? ` ${w} công tác và ${p} giá đang ghi nhà cung cấp này sẽ chỉ bị bỏ liên kết (giá và nguồn giá giữ nguyên).` : ""} Thao tác không hoàn tác được.`,
+  },
+
   storage: {
     title: "Thư viện của tôi — nơi lưu",
     where:
       "Lưu trong bộ nhớ cục bộ (IndexedDB) của add-in trên máy này, theo tài khoản Office và địa chỉ add-in. Không gửi lên máy chủ nào.",
-    counts: (w: number, r: number, p: number, n: number) =>
-      `${w} công tác · ${r} tài nguyên · ${p} giá · ${n} định mức`,
+    counts: (w: number, r: number, p: number, n: number, c: number, s: number) =>
+      `${w} công tác · ${r} tài nguyên · ${p} giá · ${n} định mức · ${c} nhóm · ${s} nhà cung cấp`,
     lastBackup: (at: string) => `Lần sao lưu/xuất gần nhất: ${at}.`,
     noBackup: "Chưa sao lưu lần nào (Thư viện › Nhập/Xuất).",
     risk: "Dữ liệu mất khi xóa cache Office; không tự đồng bộ giữa các máy hoặc giữa Excel desktop và Excel trên web.",

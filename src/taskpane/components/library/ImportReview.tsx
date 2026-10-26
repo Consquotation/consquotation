@@ -153,7 +153,10 @@ const ImportReview: React.FC<{
       try {
         const fresh = await service.load();
         const recheck = service.analyzeImport(datasets, fresh, mode);
-        if (JSON.stringify(recheck.summaries) !== JSON.stringify(analysis.summaries)) {
+        if (
+          JSON.stringify([recheck.summaries, recheck.createdFromReferences]) !==
+          JSON.stringify([analysis.summaries, analysis.createdFromReferences])
+        ) {
           setBase(fresh);
           setError(s.changedMeanwhile);
           return;
@@ -186,6 +189,18 @@ const ImportReview: React.FC<{
         </MessageBar>
       )}
       {!blocked && <AnalysisDetails analysis={analysis} />}
+      {!blocked &&
+        (analysis.createdFromReferences.categories.length > 0 ||
+          analysis.createdFromReferences.suppliers.length > 0) && (
+          <MessageBar intent="info" layout="multiline">
+            <MessageBarBody>
+              {EXCHANGE_STRINGS.import.createdRefs(
+                analysis.createdFromReferences.categories,
+                analysis.createdFromReferences.suppliers
+              )}
+            </MessageBarBody>
+          </MessageBar>
+        )}
       {!blocked && t.total > LARGE_IMPORT_ROWS && (
         <MessageBar intent="info">
           <MessageBarBody>{s.largeWarning(t.total)}</MessageBarBody>
@@ -221,7 +236,14 @@ const ImportReview: React.FC<{
       <ConfirmDialog
         open={confirming}
         title={s.confirmTitle}
-        body={s.confirmBody(t.added, t.updated, skippedDuplicates, t.errors)}
+        body={s.confirmBody(
+          t.added,
+          t.updated,
+          skippedDuplicates,
+          t.errors,
+          analysis.createdFromReferences.categories.length,
+          analysis.createdFromReferences.suppliers.length
+        )}
         confirmLabel={s.confirm}
         cancelLabel={s.cancel}
         onConfirm={() => void runImport()}

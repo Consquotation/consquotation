@@ -5,14 +5,18 @@
 
 import { parseDecimalInput } from "../workItemDraft";
 import { formatIsoDate, isIsoDate, periodsOverlap, validityOn } from "./dates";
+import { normalizeForSearch } from "./search";
 import {
+  Category,
   LibrarySnapshot,
   NormDefinition,
   PriceStatus,
   Resource,
   ResourcePrice,
   ResourceType,
+  Supplier,
   WorkItem,
+  normalizeName,
 } from "./types";
 
 export interface FieldError<F extends string = string> {
@@ -71,16 +75,53 @@ function required<F extends string>(
   return trimmed;
 }
 
+/** Tham chiếu danh mục/nhà cung cấp trên form: "" = không chọn. Phải trỏ tới bản ghi còn tồn tại. */
+function checkRef<F extends string>(
+  id: string,
+  list: readonly { id: string }[],
+  field: F,
+  what: string,
+  errors: FieldError<F>[]
+): string | null {
+  if (id === "") {
+    return null;
+  }
+  if (!list.some((x) => x.id === id)) {
+    errors.push({ field, message: `${what} đã chọn không còn tồn tại. Hãy chọn lại.` });
+    return null;
+  }
+  return id;
+}
+
+/**
+ * Bản ghi cùng tên (không phân biệt dấu, hoa thường) nhưng là bản ghi khác: chỉ để CẢNH BÁO
+ * "có khả năng trùng", không chặn và không tự gộp (hai vật tư cùng tên khác mã là chuyện thường).
+ */
+export function sameNameRecords<T extends { id: string; name: string }>(
+  name: string,
+  items: readonly T[],
+  editingId: string | null
+): T[] {
+  const key = normalizeForSearch(name);
+  if (key === "") {
+    return [];
+  }
+  return items.filter((x) => x.id !== editingId && normalizeForSearch(x.name) === key);
+}
+
 // ---------- Công tác ----------
 
 export interface WorkItemForm {
   code: string;
   name: string;
-  group: string;
+  /** id danh mục; "" = chưa phân nhóm. */
+  categoryId: string;
   unit: string;
   description: string;
   unitPrice: string;
   currency: string;
+  /** id nhà cung cấp; "" = không có. */
+  supplierId: string;
   source: string;
   effectiveFrom: string;
   effectiveTo: string;
@@ -93,9 +134,10 @@ export type WorkItemData = Omit<WorkItem, "id" | "createdAt" | "updatedAt">;
 
 export function validateWorkItemForm(
   form: WorkItemForm,
-  existing: readonly WorkItem[],
+  library: Pick<LibrarySnapshot, "workItems" | "categories" | "suppliers">,
   editingId: string | null
 ): FormResult<WorkItemData, WorkItemField> {
+  const existing = library.workItems;
   const errors: FieldError<WorkItemField>[] = [];
   const code = required(form.code, "code", "mã công tác", errors);
   const name = required(form.name, "name", "tên công tác", errors);
@@ -126,6 +168,14 @@ export function validateWorkItemForm(
     "effectiveTo",
     errors
   );
+  const categoryId = checkRef(form.categoryId, library.categories, "categoryId", "Nhóm", errors);
+  const supplierId = checkRef(
+    form.supplierId,
+    library.suppliers,
+    "supplierId",
+    "Nhà cung cấp",
+    errors
+  );
 
   if (errors.length > 0) {
     return { ok: false, errors };
@@ -135,12 +185,13 @@ export function validateWorkItemForm(
     value: {
       code,
       name,
-      group: form.group.trim(),
+      categoryId,
       unit,
       description: form.description.trim(),
       pricingMethod: "direct",
       unitPrice,
       currency,
+      supplierId,
       source: form.source.trim(),
       ...dates,
       notes: form.notes.trim(),
@@ -152,11 +203,12 @@ export function workItemToForm(item: WorkItem): WorkItemForm {
   return {
     code: item.code,
     name: item.name,
-    group: item.group,
+    categoryId: item.categoryId ?? "",
     unit: item.unit,
     description: item.description,
     unitPrice: item.unitPrice === null ? "" : String(item.unitPrice),
     currency: item.currency,
+    supplierId: item.supplierId ?? "",
     source: item.source,
     effectiveFrom: item.effectiveFrom ?? "",
     effectiveTo: item.effectiveTo ?? "",
@@ -170,6 +222,8 @@ export interface ResourceForm {
   code: string;
   name: string;
   type: ResourceType;
+  /** id danh mục; "" = chưa phân nhóm. */
+  categoryId: string;
   unit: string;
   notes: string;
 }
@@ -179,9 +233,10 @@ export type ResourceData = Omit<Resource, "id" | "createdAt" | "updatedAt">;
 
 export function validateResourceForm(
   form: ResourceForm,
-  existing: readonly Resource[],
+  library: Pick<LibrarySnapshot, "resources" | "categories">,
   editingId: string | null
 ): FormResult<ResourceData, ResourceField> {
+  const existing = library.resources;
   const errors: FieldError<ResourceField>[] = [];
   const code = required(form.code, "code", "mã tài nguyên", errors);
   const name = required(form.name, "name", "tên tài nguyên", errors);
@@ -192,10 +247,14 @@ export function validateResourceForm(
   ) {
     errors.push({ field: "code", message: `Mã "${code}" đã có trong thư viện.` });
   }
+  const categoryId = checkRef(form.categoryId, library.categories, "categoryId", "Nhóm", errors);
   if (errors.length > 0) {
     return { ok: false, errors };
   }
-  return { ok: true, value: { code, name, type: form.type, unit, notes: form.notes.trim() } };
+  return {
+    ok: true,
+    value: { code, name, type: form.type, categoryId, unit, notes: form.notes.trim() },
+  };
 }
 
 // ---------- Giá tài nguyên ----------
@@ -206,6 +265,8 @@ export interface PriceForm {
   currency: string;
   effectiveFrom: string;
   effectiveTo: string;
+  /** id nhà cung cấp; "" = không có. */
+  supplierId: string;
   source: string;
   status: PriceStatus;
   notes: string;
@@ -214,7 +275,10 @@ export interface PriceForm {
 export type PriceField = keyof PriceForm;
 export type PriceData = Omit<ResourcePrice, "id" | "resourceId" | "createdAt" | "updatedAt">;
 
-export function validatePriceForm(form: PriceForm): FormResult<PriceData, PriceField> {
+export function validatePriceForm(
+  form: PriceForm,
+  suppliers: readonly Supplier[]
+): FormResult<PriceData, PriceField> {
   const errors: FieldError<PriceField>[] = [];
   const parsed = parseDecimalInput(form.price);
   let price = 0;
@@ -236,6 +300,7 @@ export function validatePriceForm(form: PriceForm): FormResult<PriceData, PriceF
     "effectiveTo",
     errors
   );
+  const supplierId = checkRef(form.supplierId, suppliers, "supplierId", "Nhà cung cấp", errors);
   if (errors.length > 0) {
     return { ok: false, errors };
   }
@@ -246,11 +311,86 @@ export function validatePriceForm(form: PriceForm): FormResult<PriceData, PriceF
       unit,
       currency,
       ...dates,
+      supplierId,
       source: form.source.trim(),
       status: form.status,
       notes: form.notes.trim(),
     },
   };
+}
+
+// ---------- Danh mục và nhà cung cấp ----------
+
+export const NAME_MAX = 120;
+export const CONTACT_MAX = 500;
+
+export interface CategoryForm {
+  name: string;
+  notes: string;
+}
+export type CategoryField = keyof CategoryForm;
+export type CategoryData = Omit<Category, "id" | "createdAt" | "updatedAt">;
+
+function uniqueName<F extends string>(
+  name: string,
+  existing: readonly { id: string; name: string }[],
+  editingId: string | null,
+  field: F,
+  what: string,
+  errors: FieldError<F>[]
+): void {
+  if (name.length > NAME_MAX) {
+    errors.push({ field, message: `Tên tối đa ${NAME_MAX} ký tự.` });
+  }
+  if (
+    name &&
+    existing.some((x) => x.id !== editingId && normalizeName(x.name) === normalizeName(name))
+  ) {
+    errors.push({ field, message: `Đã có ${what} tên "${name}".` });
+  }
+}
+
+export function validateCategoryForm(
+  form: CategoryForm,
+  existing: readonly Category[],
+  editingId: string | null
+): FormResult<CategoryData, CategoryField> {
+  const errors: FieldError<CategoryField>[] = [];
+  const name = required(form.name.replace(/\s+/g, " "), "name", "tên nhóm", errors);
+  uniqueName(name, existing, editingId, "name", "nhóm", errors);
+  if (errors.length > 0) {
+    return { ok: false, errors };
+  }
+  return { ok: true, value: { name, notes: form.notes.trim() } };
+}
+
+export interface SupplierForm {
+  name: string;
+  contactInfo: string;
+  notes: string;
+}
+export type SupplierField = keyof SupplierForm;
+export type SupplierData = Omit<Supplier, "id" | "createdAt" | "updatedAt">;
+
+export function validateSupplierForm(
+  form: SupplierForm,
+  existing: readonly Supplier[],
+  editingId: string | null
+): FormResult<SupplierData, SupplierField> {
+  const errors: FieldError<SupplierField>[] = [];
+  const name = required(form.name.replace(/\s+/g, " "), "name", "tên nhà cung cấp", errors);
+  uniqueName(name, existing, editingId, "name", "nhà cung cấp", errors);
+  const contactInfo = form.contactInfo.trim();
+  if (contactInfo.length > CONTACT_MAX) {
+    errors.push({
+      field: "contactInfo",
+      message: `Thông tin liên hệ tối đa ${CONTACT_MAX} ký tự.`,
+    });
+  }
+  if (errors.length > 0) {
+    return { ok: false, errors };
+  }
+  return { ok: true, value: { name, contactInfo, notes: form.notes.trim() } };
 }
 
 // ---------- Định mức ----------
@@ -316,7 +456,10 @@ export type IssueKind =
   | "brokenNormResource"
   | "brokenPriceResource"
   | "overlappingPrices"
-  | "priceUnitMismatch";
+  | "priceUnitMismatch"
+  | "brokenCategory"
+  | "brokenSupplier"
+  | "sameName";
 
 export interface LibraryIssue {
   kind: IssueKind;
@@ -516,6 +659,93 @@ export function libraryIssues(library: LibrarySnapshot, today: string): LibraryI
       });
     }
   }
+
+  // Tham chiếu danh mục/nhà cung cấp hỏng (chỉ xảy ra với dữ liệu sửa tay hoặc lỗi lưu trữ).
+  const categoryIds = new Set(library.categories.map((c) => c.id));
+  const supplierIds = new Set(library.suppliers.map((s) => s.id));
+  const refs: {
+    entity: "workItem" | "resource" | "price";
+    id: string;
+    label: string;
+    categoryId?: string | null;
+    supplierId?: string | null;
+  }[] = [
+    ...library.workItems.map((w) => ({
+      entity: "workItem" as const,
+      id: w.id,
+      label: w.code,
+      categoryId: w.categoryId,
+      supplierId: w.supplierId,
+    })),
+    ...library.resources.map((r) => ({
+      entity: "resource" as const,
+      id: r.id,
+      label: r.code,
+      categoryId: r.categoryId,
+    })),
+    ...library.resourcePrices.map((p) => ({
+      entity: "price" as const,
+      id: p.id,
+      label: resourcesById.get(p.resourceId)?.code ?? p.id,
+      supplierId: p.supplierId,
+    })),
+  ];
+  for (const ref of refs) {
+    if (ref.categoryId && !categoryIds.has(ref.categoryId)) {
+      issues.push({
+        kind: "brokenCategory",
+        severity: "warning",
+        entity: ref.entity,
+        entityId: ref.id,
+        label: ref.label,
+        detail: "Trỏ tới nhóm không còn tồn tại; hãy chọn lại nhóm.",
+      });
+    }
+    if (ref.supplierId && !supplierIds.has(ref.supplierId)) {
+      issues.push({
+        kind: "brokenSupplier",
+        severity: "warning",
+        entity: ref.entity,
+        entityId: ref.id,
+        label: ref.label,
+        detail: "Trỏ tới nhà cung cấp không còn tồn tại; hãy chọn lại.",
+      });
+    }
+  }
+
+  // Cùng tên (không phân biệt dấu, hoa thường) nhưng khác bản ghi: có khả năng trùng. Chỉ cảnh báo, không gộp.
+  const sameNames = <T extends { id: string; code: string; name: string }>(
+    items: readonly T[],
+    entity: "workItem" | "resource",
+    what: string
+  ) => {
+    const byName = new Map<string, T[]>();
+    for (const item of items) {
+      const key = normalizeForSearch(item.name);
+      if (key) {
+        byName.set(key, [...(byName.get(key) ?? []), item]);
+      }
+    }
+    for (const list of byName.values()) {
+      if (list.length > 1) {
+        for (const item of list) {
+          issues.push({
+            kind: "sameName",
+            severity: "warning",
+            entity,
+            entityId: item.id,
+            label: item.code,
+            detail: `${what} cùng tên "${item.name}" với mã ${list
+              .filter((x) => x.id !== item.id)
+              .map((x) => x.code)
+              .join(", ")}: kiểm tra có bị nhập trùng không.`,
+          });
+        }
+      }
+    }
+  };
+  sameNames(library.workItems, "workItem", "Công tác");
+  sameNames(library.resources, "resource", "Tài nguyên");
 
   // Nhiều giá đang dùng có thời gian hiệu lực chồng nhau: add-in không tự chọn giá nào là đúng.
   for (const r of library.resources) {

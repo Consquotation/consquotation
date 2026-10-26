@@ -6,8 +6,16 @@
  */
 
 import { XlsxCell, XlsxSheet } from "../../../shared/xlsx";
-import { LibrarySnapshot, NormDefinition, Resource, ResourcePrice, WorkItem } from "../types";
-import { compareCodes } from "../search";
+import {
+  Category,
+  LibrarySnapshot,
+  NormDefinition,
+  Resource,
+  ResourcePrice,
+  Supplier,
+  WorkItem,
+} from "../types";
+import { compareCodes, compareText } from "../search";
 import { RawCell, parseTextCell } from "./cells";
 import {
   ImportDataset,
@@ -31,6 +39,8 @@ import {
 export interface BackupMeta {
   exportedAt: string;
   appVersion: string;
+  /** Tên thư viện người dùng đặt (thông tin thư viện trong file sao lưu). */
+  libraryName: string;
 }
 
 export interface BackupFile {
@@ -38,6 +48,7 @@ export interface BackupFile {
   schemaVersion: number;
   exportedAt: string;
   appVersion: string;
+  library: { name: string };
   data: LibrarySnapshot;
 }
 
@@ -47,7 +58,10 @@ export function toBackupJson(library: LibrarySnapshot, meta: BackupMeta): string
     schemaVersion: EXCHANGE_SCHEMA_VERSION,
     exportedAt: meta.exportedAt,
     appVersion: meta.appVersion,
+    library: { name: meta.libraryName },
     data: {
+      categories: library.categories,
+      suppliers: library.suppliers,
       workItems: library.workItems,
       resources: library.resources,
       resourcePrices: library.resourcePrices,
@@ -67,7 +81,7 @@ export function backupFileName(now: Date, extension: "json" | "xlsx"): string {
 export type ParsedBackup =
   | {
       ok: true;
-      meta: { schemaVersion: number; exportedAt: string; appVersion: string };
+      meta: { schemaVersion: number; exportedAt: string; appVersion: string; libraryName: string };
       datasets: ImportDataset[];
     }
   | { ok: false; message: string };
@@ -135,6 +149,19 @@ export function parseBackupJson(text: string): ParsedBackup {
       workItemCodeById.set(w.id, w.code);
     }
   }
+  // v2: nhóm và nhà cung cấp tham chiếu bằng id trong file; đổi sang tên như dạng bảng.
+  const nameById = (kind: "categories" | "suppliers") => {
+    const map = new Map<string, unknown>();
+    for (const x of list(kind)) {
+      if (isObject(x) && typeof x.id === "string") {
+        map.set(x.id, x.name);
+      }
+    }
+    return map;
+  };
+  const categoryNameById = nameById("categories");
+  const supplierNameById = nameById("suppliers");
+  const version = parsed.schemaVersion as number;
 
   const datasets = DATASET_KINDS.map((kind): ImportDataset => {
     const fields = DATASETS[kind].fields.map((field) => field.key);
@@ -147,6 +174,49 @@ export function parseBackupJson(text: string): ParsedBackup {
       const preErrors: { field?: string; message: string }[] = [];
       for (const key of fields) {
         cells[key] = cell(record[key]);
+      }
+      // Tham chiếu nhóm/nhà cung cấp: v1 ghi tên nhóm ở "group"; v2 ghi id ở "categoryId"/"supplierId".
+      const resolveRef = (
+        idKey: "categoryId" | "supplierId",
+        cellKey: "category" | "supplier",
+        names: Map<string, unknown>,
+        what: string
+      ) => {
+        const id = record[idKey];
+        if (id === null || id === undefined || id === "") {
+          cells[cellKey] = cell(null);
+        } else if (typeof id === "string" && names.has(id)) {
+          cells[cellKey] = cell(names.get(id));
+        } else {
+          cells[cellKey] = cell(null);
+          preErrors.push({
+            field: cellKey,
+            message: `Tham chiếu ${what} id "${String(id)}" không có trong file.`,
+          });
+        }
+      };
+      if (kind === "workItems") {
+        if (version < 2) {
+          cells.category = cell(record.group ?? null);
+          cells.supplier = cell(null);
+        } else {
+          resolveRef("categoryId", "category", categoryNameById, "nhóm");
+          resolveRef("supplierId", "supplier", supplierNameById, "nhà cung cấp");
+        }
+      }
+      if (kind === "resources") {
+        if (version < 2) {
+          cells.category = cell(null);
+        } else {
+          resolveRef("categoryId", "category", categoryNameById, "nhóm");
+        }
+      }
+      if (kind === "resourcePrices") {
+        if (version < 2) {
+          cells.supplier = cell(null);
+        } else {
+          resolveRef("supplierId", "supplier", supplierNameById, "nhà cung cấp");
+        }
       }
       if (kind === "resourcePrices" || kind === "norms") {
         const resourceId = str(record.resourceId) ?? "";
@@ -196,9 +266,10 @@ export function parseBackupJson(text: string): ParsedBackup {
   return {
     ok: true,
     meta: {
-      schemaVersion: parsed.schemaVersion as number,
+      schemaVersion: version,
       exportedAt: str(parsed.exportedAt) ?? "",
       appVersion: str(parsed.appVersion) ?? "",
+      libraryName: isObject(parsed.library) ? (str(parsed.library.name) ?? "") : "",
     },
     datasets: datasets.filter((d) => d.rows.length > 0),
   };
@@ -224,15 +295,28 @@ function dataSheet(kind: DatasetKind, rows: XlsxCell[][]): XlsxSheet {
 export function exportSheets(library: LibrarySnapshot, meta: BackupMeta): XlsxSheet[] {
   const resourceCode = new Map(library.resources.map((r) => [r.id, r.code]));
   const workItemCode = new Map(library.workItems.map((w) => [w.id, w.code]));
+  const categoryName = new Map(library.categories.map((c) => [c.id, c.name]));
+  const supplierName = new Map(library.suppliers.map((s) => [s.id, s.name]));
+  const cat = (id: string | null) => (id ? (categoryName.get(id) ?? null) : null);
+  const sup = (id: string | null) => (id ? (supplierName.get(id) ?? null) : null);
+  const byName = <T extends { name: string }>(items: readonly T[]) =>
+    [...items].sort((a, b) => compareText(a.name, b.name));
 
+  const categories = byName(library.categories).map((c: Category): XlsxCell[] => [c.name, c.notes]);
+  const suppliers = byName(library.suppliers).map((s: Supplier): XlsxCell[] => [
+    s.name,
+    s.contactInfo,
+    s.notes,
+  ]);
   const workItems = sortByCode(library.workItems).map((w: WorkItem): XlsxCell[] => [
     w.code,
     w.name,
-    w.group,
+    cat(w.categoryId),
     w.unit,
     w.description,
     w.unitPrice,
     w.currency,
+    sup(w.supplierId),
     w.source,
     w.effectiveFrom,
     w.effectiveTo,
@@ -242,6 +326,7 @@ export function exportSheets(library: LibrarySnapshot, meta: BackupMeta): XlsxSh
     r.code,
     r.name,
     RESOURCE_TYPE_LABELS[r.type] ?? r.type,
+    cat(r.categoryId),
     r.unit,
     r.notes,
   ]);
@@ -259,6 +344,7 @@ export function exportSheets(library: LibrarySnapshot, meta: BackupMeta): XlsxSh
       p.currency,
       p.effectiveFrom,
       p.effectiveTo,
+      sup(p.supplierId),
       p.source,
       PRICE_STATUS_LABELS[p.status] ?? p.status,
       p.notes,
@@ -283,6 +369,7 @@ export function exportSheets(library: LibrarySnapshot, meta: BackupMeta): XlsxSh
       ["schemaVersion", String(EXCHANGE_SCHEMA_VERSION)],
       ["exportedAt", meta.exportedAt],
       ["appVersion", meta.appVersion],
+      ["libraryName", meta.libraryName],
       [null, null],
       [
         "Hướng dẫn",
@@ -294,7 +381,7 @@ export function exportSheets(library: LibrarySnapshot, meta: BackupMeta): XlsxSh
       ],
       [
         null,
-        "Không đổi tên sheet hay tiêu đề cột. Ngày dạng yyyy-mm-dd hoặc dd/mm/yyyy. Giá và định mức tham chiếu bằng mã.",
+        "Không đổi tên sheet hay tiêu đề cột. Ngày dạng yyyy-mm-dd hoặc dd/mm/yyyy. Giá và định mức tham chiếu bằng mã; nhóm và nhà cung cấp tham chiếu bằng tên.",
       ],
     ],
     headerRows: 0,
@@ -302,6 +389,8 @@ export function exportSheets(library: LibrarySnapshot, meta: BackupMeta): XlsxSh
 
   return [
     metaSheet,
+    dataSheet("categories", categories),
+    dataSheet("suppliers", suppliers),
     dataSheet("workItems", workItems),
     dataSheet("resources", resources),
     dataSheet("resourcePrices", prices),
@@ -311,7 +400,7 @@ export function exportSheets(library: LibrarySnapshot, meta: BackupMeta): XlsxSh
 
 export type WorkbookBackupCheck =
   | { kind: "notBackup" }
-  | { kind: "backup"; schemaVersion: number; exportedAt: string }
+  | { kind: "backup"; schemaVersion: number; exportedAt: string; libraryName: string }
   | { kind: "unsupported"; message: string };
 
 /** Đọc sheet "Thông tin": workbook có phải bản xuất thư viện ConsQuotation không. */
@@ -331,7 +420,12 @@ export function checkBackupMeta(metaRows: RawCell[][]): WorkbookBackupCheck {
   if (problem) {
     return { kind: "unsupported", message: problem };
   }
-  return { kind: "backup", schemaVersion: version, exportedAt: values.get("exportedAt") ?? "" };
+  return {
+    kind: "backup",
+    schemaVersion: version,
+    exportedAt: values.get("exportedAt") ?? "",
+    libraryName: values.get("libraryName") ?? "",
+  };
 }
 
 /** Sheet dữ liệu của workbook xuất: tiêu đề ở dòng đầu, map theo tên cột chuẩn. */

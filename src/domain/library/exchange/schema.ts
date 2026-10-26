@@ -4,19 +4,26 @@
  *
  * Dạng bảng (Excel/CSV) tham chiếu giữa các loại bằng MÃ, không bằng id nội bộ:
  * giá → "Mã tài nguyên", định mức → "Mã công tác" + "Mã tài nguyên".
+ * Nhóm và nhà cung cấp tham chiếu bằng TÊN (cột "Nhóm", "Nhà cung cấp").
+ *
+ * v1: công tác, tài nguyên, giá, định mức. v2 (ADR-0012): thêm "Nhóm" (danh mục), "Nhà cung cấp",
+ * cột Nhóm cho tài nguyên, cột Nhà cung cấp cho công tác và giá. File v1 vẫn nhập được.
  */
 
 import { normalizeForSearch } from "../search";
 
 export const EXCHANGE_FORMAT = "consquotation-library";
-export const EXCHANGE_SCHEMA_VERSION = 1;
+export const EXCHANGE_SCHEMA_VERSION = 2;
 
 /** Sheet chứa thông tin file sao lưu dạng workbook (dòng "format" / "schemaVersion"…). */
 export const META_SHEET_NAME = "Thông tin";
 
-export type DatasetKind = "workItems" | "resources" | "resourcePrices" | "norms";
+export type DatasetKind =
+  "categories" | "suppliers" | "workItems" | "resources" | "resourcePrices" | "norms";
 
 export const DATASET_KINDS: readonly DatasetKind[] = [
+  "categories",
+  "suppliers",
   "workItems",
   "resources",
   "resourcePrices",
@@ -54,6 +61,24 @@ const f = (
 ): FieldDef => ({ key, header, type, required, aliases, width });
 
 export const DATASETS: Record<DatasetKind, DatasetDef> = {
+  categories: {
+    kind: "categories",
+    sheetName: "Nhóm",
+    fields: [
+      // Không nhận tên cột "Nhóm" ở đây: đó là cột tham chiếu trên sheet công tác/tài nguyên.
+      f("name", "Tên nhóm", "text", true, ["ten danh muc", "danh muc", "category name"], 30),
+      f("notes", "Ghi chú", "text", false, ["notes"], 40),
+    ],
+  },
+  suppliers: {
+    kind: "suppliers",
+    sheetName: "Nhà cung cấp",
+    fields: [
+      f("name", "Tên nhà cung cấp", "text", true, ["ten ncc", "supplier name"], 30),
+      f("contactInfo", "Liên hệ", "text", false, ["thong tin lien he", "contact"], 40),
+      f("notes", "Ghi chú", "text", false, ["notes"], 40),
+    ],
+  },
   workItems: {
     kind: "workItems",
     sheetName: "Công tác",
@@ -67,11 +92,12 @@ export const DATASETS: Record<DatasetKind, DatasetDef> = {
         ["noi dung cong viec", "ten cong viec", "work item name"],
         40
       ),
-      f("group", "Nhóm", "text", false, ["nhom cong tac", "group"]),
+      f("category", "Nhóm", "text", false, ["nhom cong tac", "group", "danh muc", "category"]),
       f("unit", "Đơn vị tính", "text", true, ["don vi", "dvt", "unit"], 10),
       f("description", "Mô tả", "text", false, ["description"], 30),
       f("unitPrice", "Đơn giá", "number", false, ["gia", "unit price", "price"]),
       f("currency", "Tiền tệ", "text", false, ["currency"], 8),
+      f("supplier", "Nhà cung cấp", "text", false, ["ncc", "supplier"], 20),
       f("source", "Nguồn giá", "text", false, ["nguon", "source"], 20),
       f(
         "effectiveFrom",
@@ -99,6 +125,7 @@ export const DATASETS: Record<DatasetKind, DatasetDef> = {
       f("code", "Mã tài nguyên", "text", true, ["ma vat tu", "resource code"]),
       f("name", "Tên tài nguyên", "text", true, ["ten vat tu", "resource name"], 40),
       f("type", "Loại", "resourceType", false, ["loai tai nguyen", "type"], 14),
+      f("category", "Nhóm", "text", false, ["danh muc", "category"]),
       f("unit", "Đơn vị tính", "text", true, ["don vi", "dvt", "unit"], 10),
       f("notes", "Ghi chú", "text", false, ["notes"], 30),
     ],
@@ -127,6 +154,7 @@ export const DATASETS: Record<DatasetKind, DatasetDef> = {
         ["hieu luc den", "den ngay", "effective to"],
         14
       ),
+      f("supplier", "Nhà cung cấp", "text", false, ["ncc", "supplier"], 20),
       f("source", "Nguồn", "text", false, ["nguon gia", "source"], 20),
       f("status", "Trạng thái", "priceStatus", false, ["status"], 12),
       f("notes", "Ghi chú", "text", false, ["notes"], 30),

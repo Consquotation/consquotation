@@ -17,6 +17,7 @@ import {
   SheetRead,
   SheetSummary,
   QuoteTableInfo,
+  TableSummary,
   TargetBlocker,
   TargetChangedError,
   TargetInspection,
@@ -59,7 +60,7 @@ import {
   labelMatches,
 } from "../domain/quoteInfo";
 import { asLiteralText } from "../domain/workItemDraft";
-import { loadTakenNames } from "./core/tables";
+import { listTables as listCoreTables, loadTakenNames, requireTable } from "./core/tables";
 import { RawCell, excelSerialToIso, isDateNumberFormat } from "../domain/library/exchange/cells";
 
 const SETTINGS_KEY = "ConsQuotation.quoteTables";
@@ -72,6 +73,60 @@ interface QuoteTableRecord {
   tableName: string;
   createdAt: string;
   schemaVersion: 1;
+}
+
+/**
+ * Đọc vùng thành RawCell theo từng khối READ_CHUNK_ROWS dòng (chỉ đọc). Số giữ nguyên giá trị,
+ * kèm chữ hiển thị; ô định dạng ngày được đổi sang ngày ISO.
+ */
+async function readRawRows(
+  context: Excel.RequestContext,
+  sheet: Excel.Worksheet,
+  area: { rowIndex: number; columnIndex: number; rowCount: number; columnCount: number },
+  maxRows: number,
+  label: string
+): Promise<SheetRead> {
+  const rowsToRead = Math.min(area.rowCount, maxRows);
+  const rows: RawCell[][] = [];
+  for (let offset = 0; offset < rowsToRead; offset += READ_CHUNK_ROWS) {
+    const count = Math.min(READ_CHUNK_ROWS, rowsToRead - offset);
+    const chunk = sheet.getRangeByIndexes(
+      area.rowIndex + offset,
+      area.columnIndex,
+      count,
+      area.columnCount
+    );
+    chunk.load("values,text,numberFormat");
+    // Mỗi khối một lần sync: giữ kích thước phản hồi nhỏ (Excel trên web giới hạn ~5 MB).
+    // eslint-disable-next-line office-addins/no-context-sync-in-loop
+    await context.sync();
+    const { values, text, numberFormat } = chunk;
+    for (let r = 0; r < count; r++) {
+      rows.push(
+        values[r].map((value, c): RawCell => {
+          const cell: RawCell = {
+            value: value === "" ? null : (value as string | number | boolean),
+          };
+          if (typeof value === "number") {
+            cell.text = text[r][c];
+            if (isDateNumberFormat(String(numberFormat[r][c] ?? ""))) {
+              cell.date = excelSerialToIso(value) ?? undefined;
+            }
+          }
+          return cell;
+        })
+      );
+    }
+  }
+  return {
+    table: {
+      label,
+      firstRowNumber: area.rowIndex + 1,
+      firstColumnIndex: area.columnIndex,
+      rows,
+    },
+    totalRows: area.rowCount,
+  };
 }
 
 async function inspectInContext(
@@ -749,47 +804,45 @@ export class ExcelWorkbookGateway implements WorkbookGateway {
       if (used.isNullObject) {
         return { table: { label, firstRowNumber: 1, firstColumnIndex: 0, rows: [] }, totalRows: 0 };
       }
-      const rowsToRead = Math.min(used.rowCount, maxRows);
-      const rows: RawCell[][] = [];
-      for (let offset = 0; offset < rowsToRead; offset += READ_CHUNK_ROWS) {
-        const count = Math.min(READ_CHUNK_ROWS, rowsToRead - offset);
-        const chunk = sheet.getRangeByIndexes(
-          used.rowIndex + offset,
-          used.columnIndex,
-          count,
-          used.columnCount
-        );
-        chunk.load("values,text,numberFormat");
-        // Mỗi khối một lần sync: giữ kích thước phản hồi nhỏ (Excel trên web giới hạn ~5 MB).
-        // eslint-disable-next-line office-addins/no-context-sync-in-loop
-        await context.sync();
-        const { values, text, numberFormat } = chunk;
-        for (let r = 0; r < count; r++) {
-          rows.push(
-            values[r].map((value, c): RawCell => {
-              const cell: RawCell = {
-                value: value === "" ? null : (value as string | number | boolean),
-              };
-              if (typeof value === "number") {
-                cell.text = text[r][c];
-                if (isDateNumberFormat(String(numberFormat[r][c] ?? ""))) {
-                  cell.date = excelSerialToIso(value) ?? undefined;
-                }
-              }
-              return cell;
-            })
-          );
-        }
-      }
-      return {
-        table: {
-          label,
-          firstRowNumber: used.rowIndex + 1,
-          firstColumnIndex: used.columnIndex,
-          rows,
+      return readRawRows(context, sheet, used, maxRows, label);
+    });
+  }
+
+  async listTables(): Promise<TableSummary[]> {
+    return Excel.run(async (context) => {
+      const tables = await listCoreTables(context);
+      return tables.map((t) => ({
+        name: t.name,
+        sheetName: t.sheetName,
+        rowCount: t.dataRowCount,
+      }));
+    });
+  }
+
+  async readTableSource(tableName: string, maxRows: number): Promise<SheetRead> {
+    return Excel.run(async (context) => {
+      const table = await requireTable(context, tableName, false);
+      const sheet = table.worksheet;
+      sheet.load("name");
+      // Cả bảng (tiêu đề + dữ liệu, không gồm dòng tổng) để nhận diện dòng tiêu đề như với sheet.
+      const header = table.getHeaderRowRange();
+      header.load("rowIndex,columnIndex,columnCount");
+      const body = table.getDataBodyRange();
+      body.load("rowCount");
+      await context.sync();
+      const label = `Bảng "${table.name}" (sheet "${sheet.name}")`;
+      return readRawRows(
+        context,
+        sheet,
+        {
+          rowIndex: header.rowIndex,
+          columnIndex: header.columnIndex,
+          rowCount: body.rowCount + 1,
+          columnCount: header.columnCount,
         },
-        totalRows: used.rowCount,
-      };
+        maxRows,
+        label
+      );
     });
   }
 

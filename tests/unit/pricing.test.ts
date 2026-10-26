@@ -141,24 +141,26 @@ describe("bảng tổng hợp (chiết khấu, phụ phí, thuế)", () => {
 describe("phân tích đơn giá từ định mức", () => {
   const stamp = { createdAt: "", updatedAt: "" };
   const library: LibrarySnapshot = {
+    categories: [],
+    suppliers: [],
     workItems: [
       {
-        id: "w1", code: "007", name: "Bê tông lót", group: "", unit: "m3", description: "",
+        id: "w1", code: "007", name: "Bê tông lót", categoryId: null, supplierId: null, unit: "m3", description: "",
         pricingMethod: "direct", unitPrice: null, currency: "", source: "", effectiveFrom: null,
         effectiveTo: null, notes: "", ...stamp,
       },
     ],
     resources: [
-      { id: "xm", code: "XM", name: "Xi măng", type: "material", unit: "kg", notes: "", ...stamp },
-      { id: "nc", code: "NC", name: "Nhân công", type: "labor", unit: "công", notes: "", ...stamp },
-      { id: "ca", code: "CAT", name: "Cát", type: "material", unit: "m3", notes: "", ...stamp },
+      { id: "xm", code: "XM", name: "Xi măng", type: "material", categoryId: null, unit: "kg", notes: "", ...stamp },
+      { id: "nc", code: "NC", name: "Nhân công", type: "labor", categoryId: null, unit: "công", notes: "", ...stamp },
+      { id: "ca", code: "CAT", name: "Cát", type: "material", categoryId: null, unit: "m3", notes: "", ...stamp },
     ],
     resourcePrices: [
-      { id: "p1", resourceId: "xm", price: 1500, unit: "kg", currency: "VND", effectiveFrom: "2026-01-01", effectiveTo: "2026-12-31", source: "NCC A", status: "active", notes: "", ...stamp },
-      { id: "p2", resourceId: "xm", price: 1.5, unit: "tấn", currency: "VND", effectiveFrom: null, effectiveTo: null, source: "", status: "active", notes: "", ...stamp },
-      { id: "p3", resourceId: "nc", price: 300000, unit: "công", currency: "VND", effectiveFrom: null, effectiveTo: null, source: "", status: "active", notes: "", ...stamp },
-      { id: "p4", resourceId: "nc", price: 320000, unit: "công", currency: "VND", effectiveFrom: "2026-07-01", effectiveTo: null, source: "", status: "active", notes: "", ...stamp },
-      { id: "p5", resourceId: "ca", price: 10, unit: "m3", currency: "USD", effectiveFrom: null, effectiveTo: null, source: "", status: "active", notes: "", ...stamp },
+      { id: "p1", resourceId: "xm", price: 1500, unit: "kg", currency: "VND", effectiveFrom: "2026-01-01", effectiveTo: "2026-12-31", supplierId: null, source: "NCC A", status: "active", notes: "", ...stamp },
+      { id: "p2", resourceId: "xm", price: 1.5, unit: "tấn", currency: "VND", effectiveFrom: null, effectiveTo: null, supplierId: null, source: "", status: "active", notes: "", ...stamp },
+      { id: "p3", resourceId: "nc", price: 300000, unit: "công", currency: "VND", effectiveFrom: null, effectiveTo: null, supplierId: null, source: "", status: "active", notes: "", ...stamp },
+      { id: "p4", resourceId: "nc", price: 320000, unit: "công", currency: "VND", effectiveFrom: "2026-07-01", effectiveTo: null, supplierId: null, source: "", status: "active", notes: "", ...stamp },
+      { id: "p5", resourceId: "ca", price: 10, unit: "m3", currency: "USD", effectiveFrom: null, effectiveTo: null, supplierId: null, source: "", status: "active", notes: "", ...stamp },
     ],
     norms: [
       { id: "n1", workItemId: "w1", resourceId: "xm", quantity: 230.5, notes: "", ...stamp },
@@ -375,8 +377,10 @@ describe("kiểm tra báo giá — bổ sung prompts/13", () => {
   });
   const stamp = { createdAt: "", updatedAt: "" };
   const library: LibrarySnapshot = {
+    categories: [],
+    suppliers: [],
     workItems: [
-      { id: "w", code: "BT-01", name: "", group: "", unit: "m3", description: "", pricingMethod: "direct", unitPrice: 1200, currency: "VND", source: "", effectiveFrom: null, effectiveTo: null, notes: "", ...stamp },
+      { id: "w", code: "BT-01", name: "", categoryId: null, supplierId: null, unit: "m3", description: "", pricingMethod: "direct", unitPrice: 1200, currency: "VND", source: "", effectiveFrom: null, effectiveTo: null, notes: "", ...stamp },
     ],
     resources: [],
     resourcePrices: [],

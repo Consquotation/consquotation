@@ -1,14 +1,15 @@
 import * as React from "react";
-import { Button, Caption1, Field, Input, MessageBar, MessageBarBody, Text, makeStyles, tokens } from "@fluentui/react-components";
+import { Button, Caption1, MessageBar, MessageBarBody, Text, makeStyles, tokens } from "@fluentui/react-components";
+import { formatMoney } from "./common";
+import ListFilters, { useListFilter } from "./ListFilters";
 import ResourceEditor from "./ResourceEditor";
 import ConfirmDialog from "../ConfirmDialog";
 import { LibraryService } from "../../../application/libraryService";
-import { searchResources } from "../../../domain/library/search";
+import { todayIso } from "../../../domain/library/dates";
+import { currentPrice, nameLookup, searchResources } from "../../../domain/library/search";
 import { LibrarySnapshot, Resource } from "../../../domain/library/types";
 import { LIBRARY_STRINGS } from "../../../shared/strings.library.vi";
 import { useExclusive } from "../../useExclusive";
-
-/* global clearTimeout, setTimeout */
 
 const PAGE_SIZE = 50;
 
@@ -23,6 +24,7 @@ const useStyles = makeStyles({
     backgroundColor: tokens.colorNeutralBackground2,
     borderRadius: tokens.borderRadiusMedium,
   },
+  name: { wordBreak: "break-word" },
   actions: { display: "flex", flexWrap: "wrap", gap: tokens.spacingHorizontalXS },
 });
 
@@ -33,23 +35,36 @@ const ResourcesPanel: React.FC<{
   library: LibrarySnapshot;
   reload: () => Promise<void>;
   notify: (message: string) => void;
-}> = ({ service, library, reload, notify }) => {
+  /** Mở thẳng form thêm mới (nút ở phần tổng quan thư viện). */
+  startNew?: number;
+}> = ({ service, library, reload, notify, startNew }) => {
   const styles = useStyles();
   const s = LIBRARY_STRINGS;
   const [mode, setMode] = React.useState<Mode>({ kind: "list" });
-  const [query, setQuery] = React.useState("");
-  const [debounced, setDebounced] = React.useState("");
+  const { filter, rawQuery, setQuery, update } = useListFilter();
   const [limit, setLimit] = React.useState(PAGE_SIZE);
   const [pendingDelete, setPendingDelete] = React.useState<Resource | null>(null);
   const [blocked, setBlocked] = React.useState<string | null>(null);
   const exclusive = useExclusive();
+  const today = todayIso();
 
   React.useEffect(() => {
-    const timer = setTimeout(() => setDebounced(query), 200);
-    return () => clearTimeout(timer);
-  }, [query]);
-  React.useEffect(() => setLimit(PAGE_SIZE), [debounced]);
-  const results = React.useMemo(() => searchResources(library.resources, debounced), [library.resources, debounced]);
+    if (startNew) {
+      setMode({ kind: "edit", id: null });
+    }
+  }, [startNew]);
+  React.useEffect(() => setLimit(PAGE_SIZE), [filter]);
+
+  const lookup = React.useMemo(() => nameLookup(library), [library]);
+  const results = React.useMemo(
+    () => searchResources(library.resources, library.resourcePrices, filter, lookup, today),
+    [library.resources, library.resourcePrices, filter, lookup, today]
+  );
+  const priceCounts = React.useMemo(() => {
+    const counts = new Map<string, number>();
+    library.resourcePrices.forEach((p) => counts.set(p.resourceId, (counts.get(p.resourceId) ?? 0) + 1));
+    return counts;
+  }, [library.resourcePrices]);
 
   if (mode.kind === "edit") {
     const editing = mode.id ? library.resources.find((r) => r.id === mode.id) ?? null : null;
@@ -78,15 +93,31 @@ const ResourcesPanel: React.FC<{
       }
       const resource = pendingDelete;
       setPendingDelete(null);
-      const result = await service.deleteResource(resource.id, library);
-      if (!result.ok) {
-        setBlocked(s.resources.inUse(result.normCount));
+      try {
+        const result = await service.deleteResource(resource.id, library);
+        if (!result.ok) {
+          setBlocked(s.resources.inUse(result.normCount));
+          return;
+        }
+      } catch (error) {
+        setBlocked(`${s.actionFailed}: ${error instanceof Error ? error.message : String(error)}`);
         return;
       }
       setBlocked(null);
       await reload();
       notify(s.deleted(resource.code));
     });
+
+  const priceText = (r: Resource): string => {
+    const current = currentPrice(r.id, library.resourcePrices, today);
+    if (current.price) {
+      return s.resources.currentPrice(`${formatMoney(current.price.price, current.price.currency)} / ${current.price.unit}`);
+    }
+    if (current.activeCount > 1) {
+      return s.resources.manyActive(current.activeCount);
+    }
+    return (priceCounts.get(r.id) ?? 0) === 0 ? s.resources.priceCount(0) : s.resources.noActive;
+  };
 
   return (
     <section className={styles.root} aria-label={s.sections.resources}>
@@ -106,45 +137,56 @@ const ResourcesPanel: React.FC<{
         </MessageBar>
       ) : (
         <>
-          <Field label={s.search}>
-            <Input type="search" value={query} onChange={(_e, data) => setQuery(data.value)} />
-          </Field>
+          <ListFilters
+            rawQuery={rawQuery}
+            setQuery={setQuery}
+            filter={filter}
+            update={update}
+            categories={library.categories}
+            suppliers={library.suppliers}
+            showType
+          />
           <Caption1 aria-live="polite">{s.count(results.length, library.resources.length)}</Caption1>
           {results.length === 0 && <Caption1>{s.noResults}</Caption1>}
           <ul className={styles.list}>
-            {results.slice(0, limit).map((r) => {
-              const priceCount = library.resourcePrices.filter((p) => p.resourceId === r.id).length;
-              return (
-                <li key={r.id} className={styles.item}>
-                  <Text weight="semibold">
-                    {r.code} — {r.name}
-                  </Text>
-                  <Caption1>
-                    {s.resources.types[r.type]} · {r.unit} · {s.resources.priceCount(priceCount)}
-                  </Caption1>
-                  <div className={styles.actions}>
-                    <Button size="small" onClick={() => setMode({ kind: "edit", id: r.id })}>
-                      {s.actions.edit}
-                    </Button>
-                    <Button
-                      size="small"
-                      onClick={() => {
-                        // Đang được định mức dùng → báo ngay, không hỏi "Xóa?" rồi mới chặn.
-                        const normCount = library.norms.filter((n) => n.resourceId === r.id).length;
-                        if (normCount > 0) {
-                          setBlocked(s.resources.inUse(normCount));
-                          return;
-                        }
-                        setBlocked(null);
-                        setPendingDelete(r);
-                      }}
-                    >
-                      {s.actions.delete}
-                    </Button>
-                  </div>
-                </li>
-              );
-            })}
+            {results.slice(0, limit).map((r) => (
+              <li key={r.id} className={styles.item}>
+                <Text weight="semibold" className={styles.name}>
+                  {r.code}: {r.name}
+                </Text>
+                <Caption1>
+                  {[
+                    s.resources.types[r.type],
+                    r.categoryId ? lookup.category.get(r.categoryId) : s.noGroup,
+                    r.unit,
+                    priceText(r),
+                    s.resources.priceCount(priceCounts.get(r.id) ?? 0),
+                  ]
+                    .filter(Boolean)
+                    .join(" · ")}
+                </Caption1>
+                <div className={styles.actions}>
+                  <Button size="small" onClick={() => setMode({ kind: "edit", id: r.id })}>
+                    {s.actions.edit}
+                  </Button>
+                  <Button
+                    size="small"
+                    onClick={() => {
+                      // Đang được định mức dùng → báo ngay, không hỏi "Xóa?" rồi mới chặn.
+                      const normCount = library.norms.filter((n) => n.resourceId === r.id).length;
+                      if (normCount > 0) {
+                        setBlocked(s.resources.inUse(normCount));
+                        return;
+                      }
+                      setBlocked(null);
+                      setPendingDelete(r);
+                    }}
+                  >
+                    {s.actions.delete}
+                  </Button>
+                </div>
+              </li>
+            ))}
           </ul>
           {results.length > limit && <Button onClick={() => setLimit((l) => l + PAGE_SIZE)}>{s.showMore}</Button>}
         </>
@@ -158,7 +200,8 @@ const ResourcesPanel: React.FC<{
             <p>
               {s.resources.deleteBody(
                 pendingDelete.code,
-                library.resourcePrices.filter((p) => p.resourceId === pendingDelete.id).length
+                pendingDelete.name,
+                priceCounts.get(pendingDelete.id) ?? 0
               )}
             </p>
           }

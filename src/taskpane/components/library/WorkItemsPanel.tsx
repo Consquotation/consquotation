@@ -2,26 +2,22 @@ import * as React from "react";
 import {
   Button,
   Caption1,
-  Field,
-  Input,
   MessageBar,
   MessageBarBody,
-  Select,
   Text,
   makeStyles,
   tokens,
 } from "@fluentui/react-components";
 import { ValidityBadge, formatMoney } from "./common";
+import ListFilters, { useListFilter } from "./ListFilters";
 import WorkItemEditor from "./WorkItemEditor";
 import ConfirmDialog from "../ConfirmDialog";
 import { LibraryService } from "../../../application/libraryService";
-import { todayIso, validityOn } from "../../../domain/library/dates";
-import { distinctGroups, searchWorkItems } from "../../../domain/library/search";
+import { formatIsoDate, todayIso, validityOn } from "../../../domain/library/dates";
+import { nameLookup, searchWorkItems } from "../../../domain/library/search";
 import { LibrarySnapshot, WorkItem } from "../../../domain/library/types";
 import { LIBRARY_STRINGS } from "../../../shared/strings.library.vi";
 import { useExclusive } from "../../useExclusive";
-
-/* global clearTimeout, setTimeout */
 
 const PAGE_SIZE = 50;
 
@@ -38,6 +34,7 @@ const useStyles = makeStyles({
     borderRadius: tokens.borderRadiusMedium,
   },
   itemHead: { display: "flex", justifyContent: "space-between", columnGap: tokens.spacingHorizontalS, alignItems: "baseline" },
+  itemName: { wordBreak: "break-word" },
   itemActions: { display: "flex", flexWrap: "wrap", gap: tokens.spacingHorizontalXS },
 });
 
@@ -49,32 +46,38 @@ export interface WorkItemsPanelProps {
   reload: () => Promise<void>;
   onInsert: (item: WorkItem) => void;
   notify: (message: string) => void;
+  /** Mở thẳng form thêm mới (nút ở phần tổng quan thư viện). */
+  startNew?: number;
 }
 
-const WorkItemsPanel: React.FC<WorkItemsPanelProps> = ({ service, library, reload, onInsert, notify }) => {
+const WorkItemsPanel: React.FC<WorkItemsPanelProps> = ({ service, library, reload, onInsert, notify, startNew }) => {
   const styles = useStyles();
   const s = LIBRARY_STRINGS;
   const [mode, setMode] = React.useState<Mode>({ kind: "list" });
-  const [query, setQuery] = React.useState("");
-  const [debounced, setDebounced] = React.useState("");
-  const [group, setGroup] = React.useState("");
+  const { filter, rawQuery, setQuery, update } = useListFilter();
   const [limit, setLimit] = React.useState(PAGE_SIZE);
   const [pendingDelete, setPendingDelete] = React.useState<WorkItem | null>(null);
+  const [failure, setFailure] = React.useState<string | null>(null);
   const exclusive = useExclusive();
   const today = todayIso();
 
-  // Debounce tìm kiếm cho thư viện lớn (prompts/17).
   React.useEffect(() => {
-    const timer = setTimeout(() => setDebounced(query), 200);
-    return () => clearTimeout(timer);
-  }, [query]);
-  React.useEffect(() => setLimit(PAGE_SIZE), [debounced, group]);
+    if (startNew) {
+      setMode({ kind: "edit", item: null });
+    }
+  }, [startNew]);
+  React.useEffect(() => setLimit(PAGE_SIZE), [filter]);
 
+  const lookup = React.useMemo(() => nameLookup(library), [library]);
   const results = React.useMemo(
-    () => searchWorkItems(library.workItems, debounced, group),
-    [library.workItems, debounced, group]
+    () => searchWorkItems(library.workItems, filter, lookup),
+    [library.workItems, filter, lookup]
   );
-  const groups = React.useMemo(() => distinctGroups(library.workItems), [library.workItems]);
+  const normCounts = React.useMemo(() => {
+    const counts = new Map<string, number>();
+    library.norms.forEach((n) => counts.set(n.workItemId, (counts.get(n.workItemId) ?? 0) + 1));
+    return counts;
+  }, [library.norms]);
 
   if (mode.kind === "edit") {
     // Lấy bản mới nhất từ thư viện (định mức có thể vừa thay đổi).
@@ -97,15 +100,26 @@ const WorkItemsPanel: React.FC<WorkItemsPanelProps> = ({ service, library, reloa
     );
   }
 
-  const copy = (item: WorkItem) =>
+  /** Lỗi lưu trữ (IndexedDB) sau khi người dùng đã xác nhận: báo rõ, không im lặng. */
+  const guarded = (task: () => Promise<void>) =>
     exclusive(async () => {
+      setFailure(null);
+      try {
+        await task();
+      } catch (error) {
+        setFailure(error instanceof Error ? error.message : String(error));
+      }
+    });
+
+  const copy = (item: WorkItem) =>
+    guarded(async () => {
       const created = await service.copyWorkItem(item.id, library);
       await reload();
       notify(s.copied(created.code));
     });
 
   const confirmDelete = () =>
-    exclusive(async () => {
+    guarded(async () => {
       if (!pendingDelete) {
         return;
       }
@@ -123,6 +137,13 @@ const WorkItemsPanel: React.FC<WorkItemsPanelProps> = ({ service, library, reloa
           {s.workItems.add}
         </Button>
       </div>
+      {failure && (
+        <MessageBar intent="error" layout="multiline" politeness="assertive">
+          <MessageBarBody>
+            {s.actionFailed}: {failure}
+          </MessageBarBody>
+        </MessageBar>
+      )}
 
       {library.workItems.length === 0 ? (
         <MessageBar intent="info" layout="multiline">
@@ -130,43 +151,44 @@ const WorkItemsPanel: React.FC<WorkItemsPanelProps> = ({ service, library, reloa
         </MessageBar>
       ) : (
         <>
-          <div className={styles.toolbar}>
-            <Field label={s.search} style={{ flexGrow: 1 }}>
-              <Input type="search" value={query} onChange={(_e, data) => setQuery(data.value)} />
-            </Field>
-            {groups.length > 0 && (
-              <Field label={s.group}>
-                <Select value={group} onChange={(_e, data) => setGroup(data.value)}>
-                  <option value="">{s.allGroups}</option>
-                  {groups.map((g) => (
-                    <option key={g} value={g}>
-                      {g}
-                    </option>
-                  ))}
-                </Select>
-              </Field>
-            )}
-          </div>
+          <ListFilters
+            rawQuery={rawQuery}
+            setQuery={setQuery}
+            filter={filter}
+            update={update}
+            categories={library.categories}
+            suppliers={library.suppliers}
+          />
           <Caption1 aria-live="polite">{s.count(results.length, library.workItems.length)}</Caption1>
           {results.length === 0 && <Caption1>{s.noResults}</Caption1>}
           <ul className={styles.list}>
             {results.slice(0, limit).map((item) => {
-              const normCount = library.norms.filter((n) => n.workItemId === item.id).length;
+              const normCount = normCounts.get(item.id) ?? 0;
+              const dates =
+                item.effectiveFrom || item.effectiveTo
+                  ? `${formatIsoDate(item.effectiveFrom) || "…"} – ${formatIsoDate(item.effectiveTo) || "…"}`
+                  : "";
               return (
                 <li key={item.id} className={styles.item}>
                   <div className={styles.itemHead}>
-                    <Text weight="semibold">
-                      {item.code} — {item.name}
+                    <Text weight="semibold" className={styles.itemName}>
+                      {item.code}: {item.name}
                     </Text>
                     {item.unitPrice !== null && (
                       <ValidityBadge validity={validityOn(item.effectiveFrom, item.effectiveTo, today)} />
                     )}
                   </div>
                   <Caption1>
-                    {[item.group, item.unit, formatMoney(item.unitPrice, item.currency), item.source]
+                    {[
+                      `${formatMoney(item.unitPrice, item.currency)} / ${item.unit}`,
+                      item.categoryId ? lookup.category.get(item.categoryId) : s.noGroup,
+                      item.supplierId ? lookup.supplier.get(item.supplierId) : "",
+                      item.source,
+                      dates,
+                      normCount > 0 ? `${normCount} định mức` : "",
+                    ]
                       .filter(Boolean)
                       .join(" · ")}
-                    {normCount > 0 ? ` · ${normCount} định mức` : ""}
                   </Caption1>
                   <div className={styles.itemActions}>
                     <Button size="small" appearance="primary" onClick={() => onInsert(item)}>
@@ -200,7 +222,8 @@ const WorkItemsPanel: React.FC<WorkItemsPanelProps> = ({ service, library, reloa
             <p>
               {s.workItems.deleteBody(
                 pendingDelete.code,
-                library.norms.filter((n) => n.workItemId === pendingDelete.id).length
+                pendingDelete.name,
+                normCounts.get(pendingDelete.id) ?? 0
               )}
             </p>
           }
