@@ -14,6 +14,7 @@ Mỗi ADR ghi một quyết định kiến trúc quan trọng: bối cảnh, quy
 | [0008](0008-tinh-don-gia-va-thanh-tien.md) | Tính đơn giá và thành tiền | Chấp nhận | 2026-10-21 |
 | [0009](0009-mau-bao-gia-va-in-an.md) | Mẫu báo giá, ghi chú/điều khoản và in ấn | Chấp nhận | 2026-10-21 |
 | [0010](0010-dich-theo-browserslist-bo-polyfill.md) | Biên dịch theo browserslist, bỏ polyfill | Chấp nhận | 2026-10-21 |
+| [0011](0011-lop-thao-tac-excel-dung-chung.md) | Lớp thao tác Excel dùng chung | Đề xuất | 2026-10-26 |
 
 Trạng thái có thể là: Đề xuất · Chấp nhận · Thay thế bởi ADR-xxxx · Hủy bỏ.
 

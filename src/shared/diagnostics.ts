@@ -11,6 +11,8 @@ export interface DiagnosticEntry {
   operation: string;
   /** Mã lỗi Office (ví dụ AccessDenied) hoặc tên lỗi JS (ví dụ QuotaExceededError). */
   code: string;
+  /** Vị trí lỗi do Office.js báo (debugInfo.errorLocation, ví dụ "Range.values"); không chứa dữ liệu ô. */
+  location?: string;
 }
 
 const MAX_ENTRIES = 50;
@@ -29,18 +31,37 @@ export function errorCode(error: unknown): string {
   return typeof error;
 }
 
+/** Chỉ lấy debugInfo.errorLocation (tên API), không lấy debugInfo.statement (có thể chứa giá trị ô). */
+export function errorLocation(error: unknown): string | undefined {
+  const info = (error as { debugInfo?: { errorLocation?: unknown } } | null)?.debugInfo;
+  return typeof info?.errorLocation === "string" && info.errorLocation
+    ? info.errorLocation
+    : undefined;
+}
+
+/** Lỗi đã ghi (theo đối tượng lỗi): lớp ngoài không ghi lặp cùng một lỗi. */
+const recorded = new WeakSet<object>();
+
 export function recordError(operation: string, error: unknown): void {
+  if (typeof error === "object" && error !== null) {
+    if (recorded.has(error)) {
+      return;
+    }
+    recorded.add(error);
+  }
+  const location = errorLocation(error);
   const entry: DiagnosticEntry = {
     at: new Date().toISOString(),
     operation,
     code: errorCode(error),
+    ...(location ? { location } : {}),
   };
   entries.push(entry);
   if (entries.length > MAX_ENTRIES) {
     entries.shift();
   }
   // Để chẩn đoán trong DevTools; cùng mức an toàn: chỉ mã lỗi.
-  console.warn(`[ConsQuotation] ${operation}: ${entry.code}`);
+  console.warn(`[ConsQuotation] ${operation}: ${entry.code}${location ? ` @ ${location}` : ""}`);
   listeners.forEach((listener) => listener());
 }
 

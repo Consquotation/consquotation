@@ -47,7 +47,7 @@ Microsoft Excel Add-in hỗ trợ lập báo giá thi công xây dựng **ngay t
 
 Chưa làm: đặc tả 12 (lưu trữ và quyền riêng tư), 18, 19 và 21.
 
-Tài liệu thêm: [tương thích](docs/COMPATIBILITY.md) · [bảo mật](docs/SECURITY.md) · [hiệu năng](docs/PERFORMANCE.md) · [regression](tests/manual/regression-checklist.md) · [nghiệm thu](tests/manual/acceptance-checklist.md).
+Tài liệu thêm: [lớp tích hợp Excel](docs/EXCEL_INTEGRATION.md) · [tương thích](docs/COMPATIBILITY.md) · [bảo mật](docs/SECURITY.md) · [hiệu năng](docs/PERFORMANCE.md) · [regression](tests/manual/regression-checklist.md) · [nghiệm thu](tests/manual/acceptance-checklist.md).
 
 ### Hạn chế đã biết
 
@@ -81,10 +81,12 @@ src/compat/compat-gate.js   Kiểm tra webview viết bằng ES5, chạy trướ
 src/domain/                 Nghiệp vụ thuần (mẫu báo giá, thư viện, tính giá, in ấn) — không gọi Office.js
 src/application/            Điều phối: kiểm tra → xác nhận → ghi; interface gateway
 src/office/                 Adapter Office.js (đọc/ghi workbook, requirement set, lỗi Excel)
+src/office/core/            Lớp thao tác Excel dùng chung: sheet, vùng ô, Table, định dạng (docs/EXCEL_INTEGRATION.md)
 src/storage/                Thư viện cá nhân trong IndexedDB
 src/shared/                 Chuỗi tiếng Việt, tiện ích dùng chung (A1, zip/xlsx, nhật ký lỗi)
 src/help/help.html          Trang trợ giúp (SupportUrl của manifest)
 tests/unit/                 Unit test (Vitest)
+tests/integration/          Kịch bản kiểm thử trên Excel thật, chạy qua DevTools của task pane
 tests/manual/               Checklist kiểm thử tay trong Excel
 docs/ADR/                   Quyết định kiến trúc
 docs/SIDELOAD.md            Cài đặt môi trường, sideload, xử lý sự cố
@@ -135,6 +137,8 @@ npm run build          # build production vào dist/; đặt CQ_PROD_URL để s
 npm run validate:prod  # kiểm tra dist/manifest.prod.xml
 npm run check          # chạy lần lượt typecheck, lint, test, validate, build
 ```
+
+Kiểm thử lớp tích hợp Excel trên Excel thật (cần `npm start` và task pane đang mở): `node tests/integration/run-in-taskpane.mjs tests/integration/excel-core.scenarios.js`. Chi tiết: [docs/EXCEL_INTEGRATION.md](docs/EXCEL_INTEGRATION.md#kiểm-thử).
 
 Excel trên web: `npm run start:web -- --document "<link workbook OneDrive>"` (chưa kiểm thử). Hướng dẫn đầy đủ: [docs/SIDELOAD.md](docs/SIDELOAD.md); triển khai bản production: [docs/DEPLOY.md](docs/DEPLOY.md).
 

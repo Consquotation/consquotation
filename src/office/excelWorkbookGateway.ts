@@ -59,6 +59,7 @@ import {
   labelMatches,
 } from "../domain/quoteInfo";
 import { asLiteralText } from "../domain/workItemDraft";
+import { loadTakenNames } from "./core/tables";
 import { RawCell, excelSerialToIso, isDateNumberFormat } from "../domain/library/exchange/cells";
 
 const SETTINGS_KEY = "ConsQuotation.quoteTables";
@@ -71,28 +72,6 @@ interface QuoteTableRecord {
   tableName: string;
   createdAt: string;
   schemaVersion: 1;
-}
-
-/** Tên Table và tên đã đặt (cấp workbook và cấp sheet) — Table không được trùng các tên này. */
-async function loadTakenNames(context: Excel.RequestContext): Promise<string[]> {
-  const tables = context.workbook.tables;
-  tables.load("items/name");
-  const names = context.workbook.names;
-  names.load("items/name");
-  const sheets = context.workbook.worksheets;
-  sheets.load("items/name");
-  await context.sync();
-  const sheetNames = sheets.items.map((sheet) => {
-    const scoped = sheet.names;
-    scoped.load("items/name");
-    return scoped;
-  });
-  await context.sync();
-  return [
-    ...tables.items.map((t) => t.name),
-    ...names.items.map((n) => n.name),
-    ...sheetNames.flatMap((scoped) => scoped.items.map((n) => n.name)),
-  ];
 }
 
 async function inspectInContext(

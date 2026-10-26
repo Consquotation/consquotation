@@ -19,7 +19,14 @@ export const FEATURE_REQUIREMENTS = {
   tablesAndRanges: { name: "ExcelApi", version: "1.1" },
   worksheetProtection: { name: "ExcelApi", version: "1.2" },
   nullObjectsAndSettings: { name: "ExcelApi", version: "1.4" },
+  /** Tự điều chỉnh độ rộng cột (src/office/core/formatting.ts). */
+  autofit: { name: "ExcelApi", version: "1.2" },
   worksheetEvents: { name: "ExcelApi", version: "1.7" },
+  /** Workbook.name, Workbook.protection, Worksheet.freezePanes (src/office/core/). */
+  workbookInfo: { name: "ExcelApi", version: "1.7" },
+  freezePanes: { name: "ExcelApi", version: "1.7" },
+  /** Workbook.readOnly. */
+  workbookReadOnly: { name: "ExcelApi", version: "1.8" },
   createWorkbook: { name: "ExcelApi", version: "1.8" },
   dataValidation: { name: "ExcelApi", version: "1.8" },
   /** Thiết lập trang in (prompts/11). Không có → hướng dẫn thao tác trong Excel. */

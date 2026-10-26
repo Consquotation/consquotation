@@ -20,6 +20,9 @@ Mức tối thiểu lúc chạy là **ExcelApi 1.8**; thiếu mức này thì ad
 |---|---|---|---|---|
 | Tạo bảng báo giá, chèn dòng, Table, công thức có cấu trúc | `tables.add`, `rows.add`, `Range.formulas` | 1.1 | — | Có |
 | Kiểm tra sheet bị bảo vệ | `worksheet.protection` | 1.2 | — | Có |
+| Lớp core: tự điều chỉnh độ rộng cột và chiều cao hàng | `autofitColumns`, `autofitRows` | 1.2 | — | Có (kịch bản tích hợp, 2026-10-26) |
+| Lớp core: tên workbook, cấu trúc workbook bị khóa, cố định hàng tiêu đề | `Workbook.name`, `Workbook.protection`, `freezePanes` | 1.7 | (mức tối thiểu) | Có (kịch bản tích hợp, 2026-10-26) |
+| Lớp core: workbook chỉ đọc | `Workbook.readOnly` | 1.8 | (mức tối thiểu) | Có (kịch bản tích hợp, 2026-10-26) |
 | Đối tượng null, settings, tên đã đặt (khu vực điều khoản) | `getItemOrNullObject`, `settings`, `names.add` | 1.4 | — | Có |
 | Vùng chọn đổi khi pane mở | `DocumentSelectionChanged` (Common API) | Common | — | Có |
 | Xuất workbook mới (sao lưu thư viện) | `Excel.createWorkbook` | 1.8 | (mức tối thiểu) | Có |

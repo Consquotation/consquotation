@@ -33,7 +33,7 @@ const DiagnosticsPanel: React.FC = () => {
           <InfoList
             items={recent.map((e) => ({
               label: new Date(e.at).toLocaleTimeString("vi-VN"),
-              value: `${e.operation}: ${e.code}`,
+              value: `${e.operation}: ${e.code}${e.location ? ` (${e.location})` : ""}`,
             }))}
           />
           <Button size="small" onClick={clearDiagnostics}>

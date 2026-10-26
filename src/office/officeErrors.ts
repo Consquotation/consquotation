@@ -3,6 +3,7 @@
  * Chỉ dùng mã lỗi, không đưa nội dung ô hay dữ liệu báo giá vào thông báo/log.
  */
 
+import { ExcelOpError } from "../domain/excel/errors";
 import { recordError } from "../shared/diagnostics";
 
 const MESSAGES: Record<string, string> = {
@@ -31,6 +32,11 @@ interface OfficeLikeError {
 }
 
 export function describeOfficeError(error: unknown): string {
+  // Lỗi kiểm tra của lớp src/office/core/: thông báo đã là tiếng Việt, không kèm nội dung ô.
+  if (error instanceof ExcelOpError) {
+    recordError("kiểm tra trước khi ghi", { code: error.kind });
+    return error.message;
+  }
   // Ghi mã lỗi vào nhật ký phiên (không ghi nội dung) — lỗi không bị nuốt im lặng.
   recordError("ui", error);
   const code = (error as OfficeLikeError | null)?.code;

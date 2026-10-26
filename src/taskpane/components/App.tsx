@@ -50,6 +50,17 @@ import { View, parseInitialView } from "../navigation";
 
 /* global clearTimeout, document, indexedDB, performance, setTimeout, window */
 
+declare const __CQ_BUILD_MODE__: string;
+
+/**
+ * Khu vực Kiểm thử Excel: chỉ bản phát triển. webpack thay __CQ_BUILD_MODE__ lúc build nên ở bản
+ * production nhánh này bị loại và module kiểm thử không được đóng gói.
+ */
+const ExcelLabSection =
+  typeof __CQ_BUILD_MODE__ !== "undefined" && __CQ_BUILD_MODE__ === "development"
+    ? React.lazy(() => import("./ExcelLabSection"))
+    : null;
+
 function createLibraryService(): LibraryService {
   const repo = new IndexedDbLibraryRepository(indexedDB, libraryDatabaseName(readPartitionKey()));
   return new LibraryService(repo, { now: () => new Date(), newId: randomId });
@@ -309,6 +320,11 @@ const App: React.FC<{
               <EnvironmentPanel />
               <StorageProbePanel />
               <DiagnosticsPanel />
+              {ExcelLabSection && (
+                <React.Suspense fallback={null}>
+                  <ExcelLabSection />
+                </React.Suspense>
+              )}
             </div>
           )}
         </>

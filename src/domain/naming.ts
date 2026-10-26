@@ -89,3 +89,62 @@ export function uniqueQuoteTableName(existingNames: Iterable<string>): string {
 export function isQuoteTableName(name: string): boolean {
   return new RegExp(`^${QUOTE_TABLE_PREFIX}\\d+$`, "i").test(name);
 }
+
+/** Tiền tố chung của mọi Excel Table do ConsQuotation tạo (CQ_Quote_n, CQ_Summary_n, CQ_Analysis…). */
+export const OWNED_TABLE_PREFIX = "CQ_";
+export const TABLE_NAME_MAX = 255;
+
+/** Excel so tên sheet, Table và tên đã đặt không phân biệt hoa thường. */
+export function sameName(a: string, b: string): boolean {
+  return a.toLocaleLowerCase("vi-VN") === b.toLocaleLowerCase("vi-VN");
+}
+
+/** Bảng do add-in tạo; các thao tác sửa/xóa dòng, thêm cột chỉ được chạy trên bảng loại này. */
+export function isOwnedTableName(name: string): boolean {
+  return name.toUpperCase().startsWith(OWNED_TABLE_PREFIX);
+}
+
+export type NameCheck = SheetNameCheck;
+
+/**
+ * Quy tắc tên Table/tên đã đặt của Excel: bắt đầu bằng chữ cái, "_" hoặc "\"; chỉ gồm chữ cái,
+ * chữ số, "_" và "."; không có khoảng trắng; tối đa 255 ký tự; không trùng dạng tham chiếu ô
+ * (A1, R1C1) và không là "R"/"C".
+ */
+export function checkTableName(input: string): NameCheck {
+  const name = input.trim();
+  if (name === "") {
+    return { ok: false, message: "Nhập tên bảng." };
+  }
+  if (name.length > TABLE_NAME_MAX) {
+    return { ok: false, message: `Tên bảng tối đa ${TABLE_NAME_MAX} ký tự.` };
+  }
+  if (/\s/.test(name)) {
+    return { ok: false, message: "Tên bảng không được có khoảng trắng (dùng _ thay thế)." };
+  }
+  if (!/^[\p{L}_\\][\p{L}\p{N}_.]*$/u.test(name)) {
+    return {
+      ok: false,
+      message: 'Tên bảng phải bắt đầu bằng chữ cái hoặc "_", và chỉ gồm chữ cái, chữ số, "_", ".".',
+    };
+  }
+  if (/^[rc]$/i.test(name)) {
+    return { ok: false, message: 'Excel không cho đặt tên là "R" hoặc "C".' };
+  }
+  if (/^[A-Za-z]{1,3}\d+$/.test(name) || /^r\d*c\d*$/i.test(name)) {
+    return { ok: false, message: "Tên bảng trông giống địa chỉ ô (ví dụ A1, R1C1)." };
+  }
+  return { ok: true, name };
+}
+
+/** base, base_2, base_3… — không trùng (không phân biệt hoa thường) với tên Table và tên đã đặt. */
+export function uniqueTableName(base: string, existingNames: Iterable<string>): string {
+  const taken = lowerSet(existingNames);
+  for (let n = 1; ; n++) {
+    const suffix = n === 1 ? "" : `_${n}`;
+    const candidate = base.slice(0, TABLE_NAME_MAX - suffix.length) + suffix;
+    if (!taken.has(candidate.toLocaleLowerCase("vi-VN"))) {
+      return candidate;
+    }
+  }
+}

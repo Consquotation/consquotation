@@ -8,10 +8,17 @@ import { officeIsSetSupported } from "../office/environment";
 
 /* global document, Office, performance, window */
 
+declare const __CQ_BUILD_MODE__: string;
+
 declare global {
   interface Window {
     /** Đặt bởi compat-gate.js khi phát hiện IE11/EdgeHTML (ADR-0001). */
     __CQ_UNSUPPORTED_WEBVIEW__?: boolean;
+    /**
+     * Chỉ bản phát triển: lớp src/office/core/ để kịch bản kiểm thử tích hợp
+     * (tests/integration/excel-core.scenarios.js) gọi trực tiếp qua DevTools.
+     */
+    __CQ_DEV_EXCEL_CORE__?: typeof import("../office/core");
   }
 }
 
@@ -37,6 +44,16 @@ if (!window.__CQ_UNSUPPORTED_WEBVIEW__) {
     // Mốc đo hiệu năng (prompts/17): xem bằng performance.getEntriesByType("mark") trong DevTools.
     performance.mark("cq-office-ready");
     const reason = resolveUnsupportedReason(info.host);
+    // webpack thay __CQ_BUILD_MODE__ lúc build: bản production không có nhánh này.
+    if (
+      !reason &&
+      typeof __CQ_BUILD_MODE__ !== "undefined" &&
+      __CQ_BUILD_MODE__ === "development"
+    ) {
+      void import("../office/core").then((core) => {
+        window.__CQ_DEV_EXCEL_CORE__ = core;
+      });
+    }
     render(reason ? <UnsupportedScreen reason={reason} /> : <App />);
   });
 }
