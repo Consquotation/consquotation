@@ -173,7 +173,7 @@ const ResourcesPanel: React.FC<{
                     size="small"
                     onClick={() => {
                       // Đang được định mức dùng → báo ngay, không hỏi "Xóa?" rồi mới chặn.
-                      const normCount = library.norms.filter((n) => n.resourceId === r.id).length;
+                      const normCount = library.normComponents.filter((c) => c.resourceId === r.id).length;
                       if (normCount > 0) {
                         setBlocked(s.resources.inUse(normCount));
                         return;

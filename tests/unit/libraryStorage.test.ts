@@ -76,38 +76,39 @@ describe("IndexedDbLibraryRepository + LibraryService", () => {
     expect((await reopened.loadAll()).workItems.map((w) => w.code)).toEqual(["BT-01"]);
   });
 
-  it("sao chép công tác: mã mới không trùng, chép kèm định mức", async () => {
+  it("sao chép công tác: mã mới không trùng; định mức (có phiên bản) không bị chép theo", async () => {
     const { service } = setup();
     let lib = await service.load();
     const w = await service.saveWorkItem(FORM, null, lib);
     lib = await service.load();
     const r = await service.saveResource({ code: "XM", name: "Xi măng", type: "material", categoryId: "", unit: "kg", notes: "" }, null, lib);
-    lib = await service.load();
     if (!w.ok || !r.ok) throw new Error("setup");
-    await service.saveNorm(w.value.id, { resourceId: r.value.id, quantity: "350", notes: "" }, null, lib);
+    await addNorm(service, w.value.id, r.value.id, "350");
     lib = await service.load();
 
     const copy = await service.copyWorkItem(w.value.id, lib);
     expect(copy.code).toBe("BT-01 (2)");
     lib = await service.load();
-    expect(lib.norms.filter((n) => n.workItemId === copy.id)).toHaveLength(1);
+    expect(lib.norms.filter((n) => n.workItemId === copy.id)).toHaveLength(0);
+    expect(lib.norms).toHaveLength(1);
     const again = await service.copyWorkItem(w.value.id, lib);
     expect(again.code).toBe("BT-01 (3)");
   });
 
-  it("xóa công tác xóa luôn định mức của nó (một giao dịch)", async () => {
+  it("xóa công tác: định mức liên kết được giữ lại và chỉ bị bỏ liên kết", async () => {
     const { service } = setup();
     let lib = await service.load();
     const w = await service.saveWorkItem(FORM, null, lib);
     lib = await service.load();
     const r = await service.saveResource({ code: "XM", name: "Xi măng", type: "material", categoryId: "", unit: "kg", notes: "" }, null, lib);
-    lib = await service.load();
     if (!w.ok || !r.ok) throw new Error("setup");
-    await service.saveNorm(w.value.id, { resourceId: r.value.id, quantity: "1", notes: "" }, null, lib);
+    await addNorm(service, w.value.id, r.value.id, "1");
     await service.deleteWorkItem(w.value.id);
     lib = await service.load();
     expect(lib.workItems).toEqual([]);
-    expect(lib.norms).toEqual([]);
+    expect(lib.norms).toHaveLength(1);
+    expect(lib.norms[0].workItemId).toBeNull();
+    expect(lib.normComponents).toHaveLength(1);
     expect(lib.resources).toHaveLength(1);
   });
 
@@ -120,16 +121,15 @@ describe("IndexedDbLibraryRepository + LibraryService", () => {
     lib = await service.load();
     if (!w.ok || !r.ok) throw new Error("setup");
     await service.savePrice(r.value.id, { price: "1850", unit: "kg", currency: "VND", effectiveFrom: "", effectiveTo: "", supplierId: "", source: "NCC", status: "active", notes: "" }, null, lib);
-    lib = await service.load();
-    const n = await service.saveNorm(w.value.id, { resourceId: r.value.id, quantity: "1", notes: "" }, null, lib);
+    const normId = await addNorm(service, w.value.id, r.value.id, "1");
     lib = await service.load();
 
     expect(await service.deleteResource(r.value.id, lib)).toEqual({ ok: false, reason: "inUse", normCount: 1 });
     expect((await service.load()).resources).toHaveLength(1);
 
-    if (!n.ok) throw new Error("setup");
-    await service.deleteNorm(n.value.id);
+    await service.deleteNorm(normId, lib);
     lib = await service.load();
+    expect(lib.normComponents).toEqual([]);
     expect(await service.deleteResource(r.value.id, lib)).toEqual({ ok: true });
     lib = await service.load();
     expect(lib.resources).toEqual([]);
@@ -168,7 +168,7 @@ describe("uniqueCopyCode", () => {
 });
 
 // Đảm bảo kiểu snapshot không đổi ngoài ý muốn.
-const _typecheck: LibrarySnapshot = { categories: [], suppliers: [], workItems: [], resources: [], resourcePrices: [], norms: [] };
+const _typecheck: LibrarySnapshot = { categories: [], suppliers: [], workItems: [], resources: [], resourcePrices: [], norms: [], normComponents: [] };
 void _typecheck;
 
 describe("versionchange", () => {
@@ -187,3 +187,18 @@ describe("versionchange", () => {
     expect(await repo.getSetting("x")).toBeUndefined();
   });
 });
+
+/** Tạo định mức nháp liên kết công tác, có một thành phần; trả về id định mức. */
+async function addNorm(service: LibraryService, workItemId: string, resourceId: string, consumption: string): Promise<string> {
+  let lib = await service.load();
+  const saved = await service.saveNorm(
+    { code: "DM-01", name: "Định mức thử", unit: "m3", categoryId: "", workItemId, version: "1", effectiveFrom: "", sourceType: "user", source: "", sourceVerified: false, wasteIncluded: false, notes: "" },
+    null,
+    lib
+  );
+  if (!saved.ok) throw new Error("norm");
+  lib = await service.load();
+  const added = await service.saveNormComponent(saved.value.id, { resourceId, consumption, wastePercent: "", notes: "" }, null, lib);
+  if (!added.ok) throw new Error("component");
+  return saved.value.id;
+}

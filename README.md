@@ -40,6 +40,12 @@ Microsoft Excel Add-in hỗ trợ lập báo giá thi công xây dựng **ngay t
   - Khu vực **ghi chú và điều khoản** theo cấu hình (phạm vi, giả định, loại trừ, điều khoản thương mại, ghi chú). Nội dung do người dùng nhập; khu vực tự dời theo khi thêm dòng.
   - **Thiết lập trang in** qua PageLayout (ExcelApi 1.9): vùng in, lặp tiêu đề, khổ/hướng giấy, co giãn, số trang, xuống dòng. Không hỗ trợ thì có hướng dẫn thao tác trong Excel.
   - In và xuất PDF bằng chức năng có sẵn của Excel.
+- **Định mức** (tab Thư viện › Định mức; xem [ADR-0013](docs/ADR/0013-dinh-muc-phien-ban-va-bo-may-tinh.md) và [docs/LIBRARY.md](docs/LIBRARY.md#định-mức)):
+  - Định mức có mã, phiên bản, ngày áp dụng, nguồn (tự xây dựng hoặc tài liệu, có ô đã đối chiếu) và trạng thái Nháp / Đang dùng / Ngừng dùng. Phiên bản đã duyệt bị khóa; sửa bằng cách sao chép thành phiên bản mới.
+  - Thành phần: tài nguyên trong thư viện, hao phí cơ sở, hao hụt (%). Hao phí tính toán = hao phí cơ sở × (1 + hao hụt). Không quy đổi đơn vị.
+  - Bộ máy tính độc lập với giao diện, số học thập phân chính xác: chi phí vật liệu, nhân công, máy, khác và đơn giá tổng hợp. Thiếu giá hoặc sai đơn vị thì báo lỗi theo mã, không trả về 0.
+  - Xuất bảng diễn giải ra sheet mới bằng công thức Excel để đối chiếu. Báo giá dùng phiên bản Đang dùng khi phân tích từ định mức.
+  - Add-in không kèm định mức nào và không xác nhận tính pháp lý của định mức.
 - **Tính giá** (tab mới; xem [ADR-0008](docs/ADR/0008-tinh-don-gia-va-thanh-tien.md)):
   - Đơn giá có thể nhập trực tiếp, lấy từ thư viện, hoặc **phân tích từ định mức**. Phần phân tích nằm ở sheet "Phân tích đơn giá" bằng công thức Excel, nên truy vết được từng tài nguyên.
   - Chiết khấu, phụ phí, thuế do người dùng cấu hình và áp dụng theo thứ tự. Không có tỷ lệ mặc định.

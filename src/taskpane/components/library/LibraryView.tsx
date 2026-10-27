@@ -16,6 +16,7 @@ import {
   tokens,
 } from "@fluentui/react-components";
 import CatalogPanel from "./CatalogPanel";
+import NormsPanel from "./NormsPanel";
 import ExchangePanel from "./ExchangePanel";
 import { TextField } from "./common";
 import LibraryCheckPanel from "./LibraryCheckPanel";
@@ -24,6 +25,7 @@ import WorkItemsPanel from "./WorkItemsPanel";
 import { useLibrary } from "./useLibrary";
 import { BackupStatus, LibraryService } from "../../../application/libraryService";
 import { WorkbookGateway } from "../../../application/workbookGateway";
+import { NormExportGateway } from "../../../application/normExportGateway";
 import { formatDateTime } from "../../../domain/library/dates";
 import {
   DEFAULT_LIBRARY_NAME,
@@ -38,7 +40,7 @@ import { useExclusive } from "../../useExclusive";
 
 /* global navigator */
 
-type Section = "workItems" | "resources" | "catalog" | "check" | "exchange";
+type Section = "workItems" | "resources" | "norms" | "catalog" | "check" | "exchange";
 
 const useStyles = makeStyles({
   root: { display: "flex", flexDirection: "column", rowGap: tokens.spacingVerticalM },
@@ -59,8 +61,9 @@ const useStyles = makeStyles({
 const LibraryView: React.FC<{
   service: LibraryService;
   gateway: WorkbookGateway;
+  normExporter: NormExportGateway;
   onInsert: (item: WorkItem) => void;
-}> = ({ service, gateway, onInsert }) => {
+}> = ({ service, gateway, normExporter, onInsert }) => {
   const styles = useStyles();
   const s = LIBRARY_STRINGS;
   const { state, reload } = useLibrary(service);
@@ -178,6 +181,7 @@ const LibraryView: React.FC<{
           >
             <Tab value="workItems">{s.sections.workItems}</Tab>
             <Tab value="resources">{s.sections.resources}</Tab>
+            <Tab value="norms">{s.sections.norms}</Tab>
             <Tab value="catalog">{s.sections.catalog}</Tab>
             <Tab value="check">{s.sections.check}</Tab>
             <Tab value="exchange">{EXCHANGE_STRINGS.sectionTab}</Tab>
@@ -200,6 +204,15 @@ const LibraryView: React.FC<{
               reload={reloadAfterWrite}
               notify={setNotice}
               startNew={newResource}
+            />
+          )}
+          {section === "norms" && (
+            <NormsPanel
+              service={service}
+              library={state.library}
+              reload={reloadAfterWrite}
+              notify={setNotice}
+              exporter={normExporter}
             />
           )}
           {section === "catalog" && (

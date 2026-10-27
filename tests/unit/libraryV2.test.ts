@@ -505,7 +505,7 @@ describe("nhập dữ liệu có cột Nhóm / Nhà cung cấp", () => {
       "Mã công tác,Tên công tác,Nhóm,Đơn vị tính,Nhà cung cấp\nT1,Thử 1,Cây xanh,cây,NCC Thử\nT2,Thử 2,cây  xanh,cây,\nT3,,Nhóm từ dòng lỗi,cây,NCC lỗi\n"
     );
     expect(a.summaries[0]).toMatchObject({ added: 2, errors: 1 });
-    expect(a.createdFromReferences).toEqual({ categories: ["Cây xanh"], suppliers: ["NCC Thử"] });
+    expect(a.createdFromReferences).toEqual({ categories: ["Cây xanh"], suppliers: ["NCC Thử"], norms: [] });
     expect(a.changes.workItems.map((w) => w.categoryId)).toEqual([
       a.changes.categories[0].id,
       a.changes.categories[0].id,

@@ -75,7 +75,12 @@ const WorkItemsPanel: React.FC<WorkItemsPanelProps> = ({ service, library, reloa
   );
   const normCounts = React.useMemo(() => {
     const counts = new Map<string, number>();
-    library.norms.forEach((n) => counts.set(n.workItemId, (counts.get(n.workItemId) ?? 0) + 1));
+    // Số phiên bản định mức liên kết với công tác.
+    library.norms.forEach((n) => {
+      if (n.workItemId) {
+        counts.set(n.workItemId, (counts.get(n.workItemId) ?? 0) + 1);
+      }
+    });
     return counts;
   }, [library.norms]);
 
@@ -185,7 +190,7 @@ const WorkItemsPanel: React.FC<WorkItemsPanelProps> = ({ service, library, reloa
                       item.supplierId ? lookup.supplier.get(item.supplierId) : "",
                       item.source,
                       dates,
-                      normCount > 0 ? `${normCount} định mức` : "",
+                      normCount > 0 ? s.norms.linkedCount(normCount) : "",
                     ]
                       .filter(Boolean)
                       .join(" · ")}

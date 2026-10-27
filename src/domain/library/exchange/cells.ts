@@ -7,8 +7,14 @@
 import { parseDecimalInput } from "../../workItemDraft";
 import { isIsoDate } from "../dates";
 import { normalizeForSearch } from "../search";
-import { PriceStatus, ResourceType } from "../types";
-import { PRICE_STATUS_LABELS, RESOURCE_TYPE_LABELS } from "./schema";
+import { NormSourceType, NormStatus, PriceStatus, ResourceType } from "../types";
+import {
+  NORM_SOURCE_TYPE_LABELS,
+  NORM_STATUS_LABELS,
+  PRICE_STATUS_LABELS,
+  RESOURCE_TYPE_LABELS,
+  YES_NO_LABELS,
+} from "./schema";
 
 /**
  * Một ô nguồn.
@@ -144,4 +150,25 @@ export function parseResourceTypeCell(cell: RawCell | undefined): CellParse<Reso
 
 export function parsePriceStatusCell(cell: RawCell | undefined): CellParse<PriceStatus | null> {
   return parseLabel(cell, PRICE_STATUS_LABELS, "Trạng thái");
+}
+
+export function parseNormStatusCell(cell: RawCell | undefined): CellParse<NormStatus | null> {
+  return parseLabel(cell, NORM_STATUS_LABELS, "Trạng thái");
+}
+
+export function parseNormSourceTypeCell(
+  cell: RawCell | undefined
+): CellParse<NormSourceType | null> {
+  return parseLabel(cell, NORM_SOURCE_TYPE_LABELS, "Loại nguồn");
+}
+
+/** "Có"/"Không" (không cần dấu), hoặc ô đúng/sai của Excel. Trống = null. */
+export function parseYesNoCell(cell: RawCell | undefined): CellParse<boolean | null> {
+  if (cell && typeof cell.value === "boolean") {
+    return { ok: true, value: cell.value };
+  }
+  const parsed = parseLabel(cell, YES_NO_LABELS, "Giá trị Có/Không");
+  return parsed.ok
+    ? { ok: true, value: parsed.value === null ? null : parsed.value === "yes" }
+    : parsed;
 }

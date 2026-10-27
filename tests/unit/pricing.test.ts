@@ -138,6 +138,24 @@ describe("bảng tổng hợp (chiết khấu, phụ phí, thuế)", () => {
   });
 });
 
+const NORM_SET = {
+  id: "nset", code: "007", name: "Bê tông lót", unit: "m3", categoryId: null, workItemId: "w1", version: "1",
+  effectiveFrom: null, sourceType: "user" as const, source: "", sourceVerified: false, status: "approved" as const,
+  wasteIncluded: false, notes: "", createdAt: "", updatedAt: "",
+};
+function normComponent(id: string, resourceId: string, consumption: number, sortOrder: number) {
+  const snapshots: Record<string, [string, string, string, "material" | "labor"]> = {
+    xm: ["XM", "Xi măng", "kg", "material"],
+    nc: ["NC", "Nhân công", "công", "labor"],
+    ca: ["CAT", "Cát", "m3", "material"],
+  };
+  const [code, name, unit, type] = snapshots[resourceId];
+  return {
+    id, normId: "nset", resourceId, resourceCodeSnapshot: code, resourceNameSnapshot: name, resourceUnitSnapshot: unit,
+    resourceTypeSnapshot: type, consumption, wasteRate: 0, sortOrder, notes: "", createdAt: "", updatedAt: "",
+  };
+}
+
 describe("phân tích đơn giá từ định mức", () => {
   const stamp = { createdAt: "", updatedAt: "" };
   const library: LibrarySnapshot = {
@@ -162,9 +180,10 @@ describe("phân tích đơn giá từ định mức", () => {
       { id: "p4", resourceId: "nc", price: 320000, unit: "công", currency: "VND", effectiveFrom: "2026-07-01", effectiveTo: null, supplierId: null, source: "", status: "active", notes: "", ...stamp },
       { id: "p5", resourceId: "ca", price: 10, unit: "m3", currency: "USD", effectiveFrom: null, effectiveTo: null, supplierId: null, source: "", status: "active", notes: "", ...stamp },
     ],
-    norms: [
-      { id: "n1", workItemId: "w1", resourceId: "xm", quantity: 230.5, notes: "", ...stamp },
-      { id: "n2", workItemId: "w1", resourceId: "nc", quantity: 1.25, notes: "", ...stamp },
+    norms: [NORM_SET],
+    normComponents: [
+      normComponent("n1", "xm", 230.5, 1),
+      normComponent("n2", "nc", 1.25, 2),
     ],
   };
   const item = library.workItems[0];
@@ -172,8 +191,8 @@ describe("phân tích đơn giá từ định mức", () => {
 
   it("chỉ chọn sẵn khi có đúng một giá dùng được; nhiều giá → người dùng tự chọn", () => {
     const lines = compositionLines(item, library, today);
-    const xm = lines.find((l) => l.norm.id === "n1")!;
-    const nc = lines.find((l) => l.norm.id === "n2")!;
+    const xm = lines.find((l) => l.component.id === "n1")!;
+    const nc = lines.find((l) => l.component.id === "n2")!;
     expect(xm.defaultPriceId).toBe("p1");
     expect(xm.options.find((o) => o.price.id === "p2")!.unitMatches).toBe(false);
     expect(nc.defaultPriceId).toBeNull();
@@ -189,7 +208,7 @@ describe("phân tích đơn giá từ định mức", () => {
     expect(result.rows).toHaveLength(2);
     const nc = result.rows[1];
     expect(nc[8]).toBe("");
-    expect(nc[11]).toBe("'Chưa chọn giá — nhập Đơn giá nguồn");
+    expect(nc[11]).toBe("'Chưa chọn giá: nhập Đơn giá nguồn; định mức 007 v1");
   });
 
   it("đủ giá → tạm tính theo quy tắc làm tròn; mã/chữ ghi dạng chữ; công thức Excel cho từng dòng", () => {
@@ -209,7 +228,7 @@ describe("phân tích đơn giá từ định mức", () => {
   it("chặn giá khác đơn vị và giá khác tiền tệ", () => {
     const lines = compositionLines(item, library, today);
     expect(buildComposition(item, lines, { n1: "p2", n2: "p3" }, NO_ROUNDING).errors.join()).toContain("khác đơn vị");
-    const withSand = { ...library, norms: [...library.norms, { id: "n3", workItemId: "w1", resourceId: "ca", quantity: 1, notes: "", ...stamp }] };
+    const withSand = { ...library, normComponents: [...library.normComponents, normComponent("n3", "ca", 1, 3)] };
     const lines2 = compositionLines(item, withSand, today);
     expect(buildComposition(item, lines2, { n1: "p1", n2: "p3", n3: "p5" }, NO_ROUNDING).errors.join()).toContain("khác tiền tệ");
   });
@@ -385,6 +404,7 @@ describe("kiểm tra báo giá — bổ sung prompts/13", () => {
     resources: [],
     resourcePrices: [],
     norms: [],
+    normComponents: [],
   };
 
   it("thiếu đơn vị tính; giá trị lớn bất thường; mọi vấn đề có hướng khắc phục", () => {

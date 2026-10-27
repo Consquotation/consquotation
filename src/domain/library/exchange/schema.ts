@@ -8,18 +8,27 @@
  *
  * v1: công tác, tài nguyên, giá, định mức. v2 (ADR-0012): thêm "Nhóm" (danh mục), "Nhà cung cấp",
  * cột Nhóm cho tài nguyên, cột Nhà cung cấp cho công tác và giá. File v1 vẫn nhập được.
+ * v3 (ADR-0013): "Định mức" là bản ghi định mức (mã, phiên bản, trạng thái, nguồn…); thành phần nằm ở
+ * "Thành phần định mức" (tham chiếu Mã định mức + Phiên bản). Bảng định mức kiểu v1/v2 (Mã công tác,
+ * Mã tài nguyên, Hao phí) vẫn nhập được: mỗi mã công tác thành một định mức phiên bản "1".
  */
 
 import { normalizeForSearch } from "../search";
 
 export const EXCHANGE_FORMAT = "consquotation-library";
-export const EXCHANGE_SCHEMA_VERSION = 2;
+export const EXCHANGE_SCHEMA_VERSION = 3;
 
 /** Sheet chứa thông tin file sao lưu dạng workbook (dòng "format" / "schemaVersion"…). */
 export const META_SHEET_NAME = "Thông tin";
 
 export type DatasetKind =
-  "categories" | "suppliers" | "workItems" | "resources" | "resourcePrices" | "norms";
+  | "categories"
+  | "suppliers"
+  | "workItems"
+  | "resources"
+  | "resourcePrices"
+  | "norms"
+  | "normComponents";
 
 export const DATASET_KINDS: readonly DatasetKind[] = [
   "categories",
@@ -28,9 +37,18 @@ export const DATASET_KINDS: readonly DatasetKind[] = [
   "resources",
   "resourcePrices",
   "norms",
+  "normComponents",
 ];
 
-export type FieldType = "text" | "number" | "date" | "resourceType" | "priceStatus";
+export type FieldType =
+  | "text"
+  | "number"
+  | "date"
+  | "resourceType"
+  | "priceStatus"
+  | "normStatus"
+  | "normSourceType"
+  | "yesNo";
 
 export interface FieldDef {
   key: string;
@@ -164,13 +182,38 @@ export const DATASETS: Record<DatasetKind, DatasetDef> = {
     kind: "norms",
     sheetName: "Định mức",
     fields: [
-      f("workItemCode", "Mã công tác", "text", true, [
+      f("code", "Mã định mức", "text", true, ["ma dm", "norm code"]),
+      f("name", "Tên công tác", "text", true, ["noi dung cong viec", "ten cong viec"], 40),
+      f("unit", "Đơn vị tính", "text", true, ["don vi", "dvt", "unit"], 10),
+      f("category", "Nhóm", "text", false, ["danh muc", "category"]),
+      f("version", "Phiên bản", "text", false, ["version"], 10),
+      f("effectiveFrom", "Ngày áp dụng", "date", false, ["hieu luc tu", "effective from"], 14),
+      f("sourceType", "Loại nguồn", "normSourceType", false, ["source type"], 14),
+      f("source", "Nguồn", "text", false, ["tai lieu", "so hieu", "source"], 30),
+      f("sourceVerified", "Đã đối chiếu nguồn", "yesNo", false, ["da xac minh", "verified"], 12),
+      f("status", "Trạng thái", "normStatus", false, ["status"], 12),
+      f("wasteIncluded", "Hao phí đã gồm hao hụt", "yesNo", false, ["da gom hao hut"], 12),
+      f("workItemCode", "Mã công tác liên kết", "text", false, ["cong tac lien ket"], 14),
+      f("notes", "Ghi chú", "text", false, ["notes"], 30),
+    ],
+  },
+  normComponents: {
+    kind: "normComponents",
+    // Bảng định mức kiểu cũ (Mã công tác, Mã tài nguyên, Hao phí) khớp loại này nhờ bí danh.
+    sheetName: "Thành phần định mức",
+    fields: [
+      f("normCode", "Mã định mức", "text", true, [
+        "ma cong tac",
         "ma hieu",
         "ma hieu cong tac",
         "work item code",
+        "norm code",
       ]),
+      f("version", "Phiên bản", "text", false, ["version"], 10),
       f("resourceCode", "Mã tài nguyên", "text", true, ["ma vat tu", "resource code"]),
-      f("quantity", "Hao phí", "number", true, ["dinh muc", "hao phi dinh muc", "quantity"]),
+      f("consumption", "Hao phí", "number", true, ["dinh muc", "hao phi dinh muc", "quantity"]),
+      f("wastePercent", "Hao hụt (%)", "number", false, ["hao hut", "ty le hao hut", "waste"], 10),
+      f("sortOrder", "Thứ tự", "number", false, ["stt", "order"], 8),
       f("notes", "Ghi chú", "text", false, ["notes"], 30),
     ],
   },
@@ -205,6 +248,22 @@ export const RESOURCE_TYPE_LABELS = {
 export const PRICE_STATUS_LABELS = {
   active: "Đang dùng",
   inactive: "Ngưng dùng",
+} as const;
+
+export const NORM_STATUS_LABELS = {
+  draft: "Nháp",
+  approved: "Đang dùng",
+  inactive: "Ngừng dùng",
+} as const;
+
+export const NORM_SOURCE_TYPE_LABELS = {
+  user: "Người dùng",
+  document: "Tài liệu",
+} as const;
+
+export const YES_NO_LABELS = {
+  yes: "Có",
+  no: "Không",
 } as const;
 
 /** Dòng tiêu đề CSV mẫu (UTF-8) cho từng loại — giống file trong docs/templates/. */

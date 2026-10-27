@@ -10,7 +10,8 @@ export const EXCHANGE_STRINGS = {
     resources: "Tài nguyên",
     resourcePrices: "Giá tài nguyên",
     norms: "Định mức",
-  } as Record<DatasetKind, string>,
+    normComponents: "Thành phần định mức",
+  } satisfies Record<DatasetKind, string>,
 
   backup: {
     title: "Sao lưu và xuất",
@@ -94,7 +95,7 @@ export const EXCHANGE_STRINGS = {
     skip: "Bỏ qua (giữ nguyên dữ liệu trong thư viện)",
     update: "Cập nhật theo file (chỉ các cột có trong file)",
     updateHint:
-      "Trùng: công tác/tài nguyên cùng mã; giá giống hệt (cùng tài nguyên, đơn giá, đơn vị, tiền tệ, hiệu lực, nguồn); định mức cùng công tác và tài nguyên.",
+      "Trùng: công tác/tài nguyên cùng mã; giá giống hệt (cùng tài nguyên, đơn giá, đơn vị, tiền tệ, hiệu lực, nguồn); định mức cùng mã và phiên bản; thành phần cùng định mức (mã, phiên bản) và tài nguyên.",
     largeWarning: (rows: number) => `Nhập ${rows} dòng có thể mất vài giây.`,
     summaryTitle: "Kết quả kiểm tra",
     columns: {

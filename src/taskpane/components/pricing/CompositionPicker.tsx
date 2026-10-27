@@ -59,14 +59,14 @@ const CompositionPicker: React.FC<{
         </MessageBar>
       )}
       {lines.map((line) => {
-        const chosen = selection[line.norm.id] ?? "";
+        const chosen = selection[line.component.id] ?? "";
         const option = line.options.find((o) => o.price.id === chosen);
         const usableCount = line.options.filter((o) => o.usable).length;
         const label = line.resource
           ? `${line.resource.code} — ${line.resource.name}`
           : s.missingResource;
         return (
-          <div key={line.norm.id} className={styles.line}>
+          <div key={line.component.id} className={styles.line}>
             <Field
               label={label}
               hint={
@@ -82,7 +82,7 @@ const CompositionPicker: React.FC<{
               <Select
                 value={chosen}
                 disabled={existing !== null}
-                onChange={(_e, data) => onChange({ ...selection, [line.norm.id]: data.value })}
+                onChange={(_e, data) => onChange({ ...selection, [line.component.id]: data.value })}
               >
                 <option value="">{s.noPrice}</option>
                 {line.options.map((o) => (
@@ -102,8 +102,8 @@ const CompositionPicker: React.FC<{
               </Select>
             </Field>
             <Caption1>
-              {s.quantity(formatQuantity(line.norm.quantity), line.resource?.unit ?? "")}
-              {option ? ` × ${formatMoney(option.price.price, "")} ${s.lineAmount(formatMoney(line.norm.quantity * option.price.price, ""))}` : ""}
+              {s.quantity(formatQuantity(line.consumption), line.resource?.unit ?? "")}
+              {option ? ` × ${formatMoney(option.price.price, "")} ${s.lineAmount(formatMoney(line.consumption * option.price.price, ""))}` : ""}
             </Caption1>
           </div>
         );

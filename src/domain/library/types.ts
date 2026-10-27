@@ -8,8 +8,11 @@
  * v1: công tác, tài nguyên, giá, định mức; nhóm công tác là chữ tự do.
  * v2 (2026-10-26, ADR-0012): thêm danh mục (nhóm) và nhà cung cấp là bản ghi riêng có id;
  * công tác/tài nguyên trỏ tới danh mục, công tác/giá trỏ tới nhà cung cấp.
+ * v3 (2026-10-27, ADR-0013): định mức là bản ghi riêng (mã, phiên bản, trạng thái, nguồn) gồm các
+ * thành phần tài nguyên có hao hụt và ảnh chụp thông tin tài nguyên; dòng định mức v2 (gắn thẳng
+ * vào công tác) được chuyển thành định mức phiên bản "1".
  */
-export const LIBRARY_SCHEMA_VERSION = 2;
+export const LIBRARY_SCHEMA_VERSION = 3;
 
 /** Danh mục (nhóm) do người dùng tự tạo. Không có danh mục mặc định. */
 export interface Category {
@@ -95,12 +98,65 @@ export interface ResourcePrice {
   updatedAt: string;
 }
 
-/** Định mức: hao phí `quantity` (theo đơn vị tài nguyên) cho 1 đơn vị công tác. */
-export interface NormDefinition {
+/**
+ * Trạng thái phiên bản định mức:
+ * - draft (nháp): sửa tự do;
+ * - approved (đang dùng): khóa thành phần và hao phí; dùng khi phân tích đơn giá cho báo giá;
+ * - inactive (ngừng dùng): giữ lịch sử, không dùng cho báo giá mới.
+ * Muốn đổi định mức đang dùng: sao chép thành phiên bản mới (nháp), sửa, rồi chuyển sang đang dùng.
+ */
+export type NormStatus = "draft" | "approved" | "inactive";
+
+export const NORM_STATUSES: readonly NormStatus[] = ["draft", "approved", "inactive"];
+
+/** Nguồn định mức: người dùng tự xây dựng, hoặc lấy từ tài liệu bên ngoài (ghi mã/tên tài liệu). */
+export type NormSourceType = "user" | "document";
+
+/** Định mức hao phí cho 1 đơn vị công tác. Add-in không kèm sẵn định mức nào. */
+export interface Norm {
   id: string;
-  workItemId: string;
+  /** Mã định mức; cùng mã có thể có nhiều phiên bản. */
+  code: string;
+  name: string;
+  /** Đơn vị của công tác (khác đơn vị tài nguyên của từng thành phần). */
+  unit: string;
+  categoryId: string | null;
+  /** Công tác trong thư viện dùng định mức này khi "Phân tích từ định mức" (không bắt buộc). */
+  workItemId: string | null;
+  version: string;
+  /** Ngày áp dụng theo nguồn (YYYY-MM-DD), không bắt buộc. */
+  effectiveFrom: string | null;
+  sourceType: NormSourceType;
+  /** Mã/tên tài liệu, số hiệu, hoặc mô tả nguồn. */
+  source: string;
+  /** Người dùng đã đối chiếu với tài liệu gốc. Mặc định false = chưa xác minh. */
+  sourceVerified: boolean;
+  status: NormStatus;
+  /** Hao phí trong nguồn đã gồm hao hụt: khi đó add-in không cộng thêm hao hụt (tránh tính trùng). */
+  wasteIncluded: boolean;
+  notes: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+/**
+ * Thành phần tài nguyên của định mức: hao phí `consumption` (theo đơn vị tài nguyên) cho 1 đơn vị
+ * công tác, tỷ lệ hao hụt `wasteRate` (0,05 = 5%).
+ *
+ * Các trường snapshot ghi mã/tên/đơn vị/loại tài nguyên lúc liên kết. Tính toán LUÔN dùng tài nguyên
+ * hiện tại trong thư viện; snapshot chỉ để truy vết và để cảnh báo khi tài nguyên bị đổi hoặc bị xóa.
+ */
+export interface NormComponent {
+  id: string;
+  normId: string;
   resourceId: string;
-  quantity: number;
+  resourceCodeSnapshot: string;
+  resourceNameSnapshot: string;
+  resourceUnitSnapshot: string;
+  resourceTypeSnapshot: ResourceType;
+  consumption: number;
+  wasteRate: number;
+  sortOrder: number;
   notes: string;
   createdAt: string;
   updatedAt: string;
@@ -112,7 +168,8 @@ export interface LibrarySnapshot {
   workItems: WorkItem[];
   resources: Resource[];
   resourcePrices: ResourcePrice[];
-  norms: NormDefinition[];
+  norms: Norm[];
+  normComponents: NormComponent[];
 }
 
 export const EMPTY_LIBRARY: LibrarySnapshot = {
@@ -122,6 +179,7 @@ export const EMPTY_LIBRARY: LibrarySnapshot = {
   resources: [],
   resourcePrices: [],
   norms: [],
+  normComponents: [],
 };
 
 export function isLibraryEmpty(library: LibrarySnapshot): boolean {
@@ -131,7 +189,8 @@ export function isLibraryEmpty(library: LibrarySnapshot): boolean {
     library.workItems.length === 0 &&
     library.resources.length === 0 &&
     library.resourcePrices.length === 0 &&
-    library.norms.length === 0
+    library.norms.length === 0 &&
+    library.normComponents.length === 0
   );
 }
 

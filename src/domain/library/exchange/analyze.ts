@@ -9,12 +9,14 @@
  * Hàm thuần: không ghi gì; bước ghi dùng `changes` trong một giao dịch.
  */
 
-import { normalizeCode } from "../validation";
+import { normalizeCode, percentToRate } from "../validation";
 import { normalizeForSearch } from "../search";
 import {
   Category,
   LibrarySnapshot,
-  NormDefinition,
+  Norm,
+  NormComponent,
+  NormStatus,
   Resource,
   ResourcePrice,
   Supplier,
@@ -25,8 +27,11 @@ import {
   CellParse,
   isBlankCell,
   parseDateCell,
+  parseNormSourceTypeCell,
+  parseNormStatusCell,
   parseNumberCell,
   parsePriceStatusCell,
+  parseYesNoCell,
   parseResourceTypeCell,
   parseTextCell,
 } from "./cells";
@@ -63,7 +68,7 @@ export interface ImportAnalysis {
   problems: string[];
   changes: ImportChanges;
   /** Tên nhóm/nhà cung cấp chưa có, sẽ được tạo vì được dùng ở cột "Nhóm"/"Nhà cung cấp". */
-  createdFromReferences: { categories: string[]; suppliers: string[] };
+  createdFromReferences: { categories: string[]; suppliers: string[]; norms: string[] };
 }
 
 export interface AnalyzeOptions {
@@ -120,6 +125,7 @@ const KIND_ORDER: Record<DatasetKind, number> = {
   workItems: 3,
   resourcePrices: 4,
   norms: 5,
+  normComponents: 6,
 };
 
 /** Trường "category"/"supplier" của file tương ứng thuộc tính "categoryId"/"supplierId" của bản ghi. */
@@ -130,6 +136,12 @@ function recordKeys(mapped: Set<string>): Set<string> {
   }
   if (mapped.has("supplier")) {
     keys.add("supplierId");
+  }
+  if (mapped.has("wastePercent")) {
+    keys.add("wasteRate");
+  }
+  if (mapped.has("workItemCode")) {
+    keys.add("workItemId");
   }
   return keys;
 }
@@ -149,8 +161,13 @@ export function analyzeImport(
     resources: [],
     resourcePrices: [],
     norms: [],
+    normComponents: [],
   };
-  const createdFromReferences = { categories: [] as string[], suppliers: [] as string[] };
+  const createdFromReferences = {
+    categories: [] as string[],
+    suppliers: [] as string[],
+    norms: [] as string[],
+  };
 
   // Trạng thái thư viện sau các thay đổi đã lập (để giá/định mức tham chiếu được dữ liệu vừa nhập).
   const resourceByCode = new Map<string, Resource>();
@@ -190,7 +207,28 @@ export function analyzeImport(
       normalizeForSearch(p.source),
     ].join("|");
   const priceByKey = new Map(library.resourcePrices.map((p) => [priceKey(p), p]));
-  const normByPair = new Map(library.norms.map((n) => [`${n.workItemId}|${n.resourceId}`, n]));
+  const normKey = (code: string, version: string) =>
+    `${normalizeCode(code)}|${normalizeCode(version)}`;
+  const normByKey = new Map(library.norms.map((n) => [normKey(n.code, n.version), n]));
+  /** Định mức tạo trong lần nhập này: được thêm thành phần dù trạng thái không phải nháp. */
+  const newNormIds = new Set<string>();
+  const componentByPair = new Map(
+    library.normComponents.map((c) => [`${c.normId}|${c.resourceId}`, c])
+  );
+  const approvedConflict = (code: string, workItemId: string | null): string | null => {
+    for (const n of normByKey.values()) {
+      if (n.status !== "approved") {
+        continue;
+      }
+      if (normalizeCode(n.code) === normalizeCode(code)) {
+        return `Mã "${code}" đã có phiên bản đang dùng (${n.version}). Nhập phiên bản này ở trạng thái Nháp hoặc Ngừng dùng.`;
+      }
+      if (workItemId && n.workItemId === workItemId) {
+        return `Công tác liên kết đã dùng định mức "${n.code}" phiên bản ${n.version}.`;
+      }
+    }
+    return null;
+  };
   const usedIds = new Set<string>([
     ...library.categories.map((x) => x.id),
     ...library.suppliers.map((x) => x.id),
@@ -198,6 +236,7 @@ export function analyzeImport(
     ...library.resources.map((x) => x.id),
     ...library.resourcePrices.map((x) => x.id),
     ...library.norms.map((x) => x.id),
+    ...library.normComponents.map((x) => x.id),
   ]);
 
   const takeId = (row: ImportRow): string => {
@@ -258,6 +297,64 @@ export function analyzeImport(
     supplierByName.set(key, created);
     createdFromReferences.suppliers.push(cleaned);
     return id;
+  };
+
+  /**
+   * Định mức cho dòng thành phần: theo mã + phiên bản; không ghi phiên bản thì phải có đúng một
+   * phiên bản. Bảng kiểu cũ (Mã công tác + Mã tài nguyên + Hao phí): chưa có định mức mã đó mà có
+   * công tác cùng mã thì tạo định mức phiên bản "1" từ công tác (liệt kê trong bản xem trước).
+   */
+  const resolveNormFor = (code: string, version: string): { norm?: Norm; message: string } => {
+    if (version) {
+      const norm = normByKey.get(normKey(code, version));
+      return norm
+        ? { norm, message: "" }
+        : {
+            message: `Không có định mức "${code}" phiên bản "${version}" trong thư viện hoặc trong file.`,
+          };
+    }
+    const candidates = [...normByKey.values()].filter(
+      (n) => normalizeCode(n.code) === normalizeCode(code)
+    );
+    if (candidates.length === 1) {
+      return { norm: candidates[0], message: "" };
+    }
+    if (candidates.length > 1) {
+      return {
+        message: `Định mức "${code}" có ${candidates.length} phiên bản: ghi rõ cột Phiên bản.`,
+      };
+    }
+    const workItem = workItemByCode.get(normalizeCode(code));
+    if (!workItem) {
+      return {
+        message: `Không có định mức hoặc công tác mã "${code}" trong thư viện hoặc trong file.`,
+      };
+    }
+    const id = newId();
+    usedIds.add(id);
+    const norm: Norm = {
+      id,
+      code: workItem.code,
+      name: workItem.name,
+      unit: workItem.unit,
+      categoryId: workItem.categoryId,
+      workItemId: workItem.id,
+      version: "1",
+      effectiveFrom: null,
+      sourceType: "user",
+      source: "",
+      sourceVerified: false,
+      status: approvedConflict(workItem.code, workItem.id) ? "draft" : "approved",
+      wasteIncluded: false,
+      notes: "Tạo khi nhập bảng định mức kiểu cũ (Mã công tác, Mã tài nguyên, Hao phí).",
+      createdAt: now,
+      updatedAt: now,
+    };
+    changes.norms.push(norm);
+    normByKey.set(normKey(norm.code, norm.version), norm);
+    newNormIds.add(norm.id);
+    createdFromReferences.norms.push(`${norm.code} v1`);
+    return { norm, message: "" };
   };
 
   const ordered = [...datasets].sort((a, b) => KIND_ORDER[a.kind] - KIND_ORDER[b.kind]);
@@ -572,67 +669,232 @@ export function analyzeImport(
         continue;
       }
 
-      // norms
-      const workItemCode = text("workItemCode");
+      if (dataset.kind === "norms") {
+        const code = text("code");
+        const name = text("name");
+        const unit = text("unit");
+        const version = text("version") || "1";
+        const effectiveFrom = read(
+          errors,
+          "effectiveFrom",
+          parseDateCell(cells.effectiveFrom),
+          null
+        );
+        const sourceType = read(
+          errors,
+          "sourceType",
+          parseNormSourceTypeCell(cells.sourceType),
+          null
+        );
+        const sourceVerified = read(
+          errors,
+          "sourceVerified",
+          parseYesNoCell(cells.sourceVerified),
+          null
+        );
+        const status = read(errors, "status", parseNormStatusCell(cells.status), null);
+        const wasteIncluded = read(
+          errors,
+          "wasteIncluded",
+          parseYesNoCell(cells.wasteIncluded),
+          null
+        );
+        requireText(errors, "code", code, "mã định mức");
+        requireText(errors, "name", name, "tên công tác");
+        requireText(errors, "unit", unit, "đơn vị tính");
+        const workItemCode = text("workItemCode");
+        const workItem = workItemCode ? workItemByCode.get(normalizeCode(workItemCode)) : undefined;
+        if (workItemCode && !workItem) {
+          errors.push({
+            field: "workItemCode",
+            message: `Không có công tác mã "${workItemCode}" trong thư viện hoặc trong file.`,
+          });
+        }
+        if (code) {
+          firstOccurrence(
+            normKey(code, version),
+            row,
+            errors,
+            "version",
+            `Định mức "${code}" phiên bản "${version}"`
+          );
+        }
+        if (errors.length > 0) {
+          report(row, errors);
+          continue;
+        }
+        const existing = normByKey.get(normKey(code, version));
+        if (existing && mode === "skip") {
+          summary.duplicates++;
+          continue;
+        }
+        const incoming = {
+          name,
+          categoryId: mapped.has("categoryId") ? ensureCategory(text("category")) : null,
+          effectiveFrom,
+          sourceType: sourceType ?? "user",
+          source: text("source"),
+          sourceVerified: sourceVerified ?? false,
+          workItemId: workItem?.id ?? null,
+          notes: text("notes"),
+        };
+        if (existing) {
+          // Cập nhật chỉ đổi thông tin mô tả; mã, phiên bản, đơn vị, cờ hao hụt và trạng thái giữ nguyên
+          // (phiên bản đã dùng không bị đổi âm thầm; trạng thái đổi qua giao diện có kiểm tra).
+          const updated: Norm = { ...mergeMapped(existing, incoming, mapped), updatedAt: now };
+          const linkTaken =
+            updated.status === "approved" &&
+            updated.workItemId &&
+            updated.workItemId !== existing.workItemId
+              ? [...normByKey.values()].find(
+                  (n) =>
+                    n.id !== existing.id &&
+                    n.status === "approved" &&
+                    n.workItemId === updated.workItemId
+                )
+              : undefined;
+          if (linkTaken) {
+            report(row, [
+              {
+                field: "workItemCode",
+                message: `Công tác liên kết đã dùng định mức "${linkTaken.code}" phiên bản ${linkTaken.version}.`,
+              },
+            ]);
+            continue;
+          }
+          summary.duplicates++;
+          changes.norms.push(updated);
+          normByKey.set(normKey(code, version), updated);
+          summary.updated++;
+          continue;
+        }
+        const nextStatus: NormStatus = status ?? "draft";
+        if (nextStatus === "approved") {
+          const conflict = approvedConflict(code, incoming.workItemId);
+          if (conflict) {
+            report(row, [{ field: "status", message: conflict }]);
+            continue;
+          }
+        }
+        const created: Norm = {
+          id: takeId(row),
+          code,
+          version,
+          unit,
+          wasteIncluded: wasteIncluded ?? false,
+          status: nextStatus,
+          ...incoming,
+          ...stamps(row),
+        };
+        changes.norms.push(created);
+        normByKey.set(normKey(code, version), created);
+        newNormIds.add(created.id);
+        summary.added++;
+        continue;
+      }
+
+      // normComponents
+      const normCode = text("normCode");
+      const normVersion = text("version");
       const resourceCode = text("resourceCode");
-      const quantity = read(errors, "quantity", parseNumberCell(cells.quantity), null);
+      const consumption = read(errors, "consumption", parseNumberCell(cells.consumption), null);
+      const wastePercent = read(errors, "wastePercent", parseNumberCell(cells.wastePercent), null);
+      const sortOrder = read(errors, "sortOrder", parseNumberCell(cells.sortOrder), null);
       if (!row.preErrors) {
-        requireText(errors, "workItemCode", workItemCode, "mã công tác");
+        requireText(errors, "normCode", normCode, "mã định mức");
         requireText(errors, "resourceCode", resourceCode, "mã tài nguyên");
       }
-      const workItem = workItemCode ? workItemByCode.get(normalizeCode(workItemCode)) : undefined;
       const resource = resourceCode ? resourceByCode.get(normalizeCode(resourceCode)) : undefined;
-      if (workItemCode && !workItem) {
-        errors.push({
-          field: "workItemCode",
-          message: `Không có công tác mã "${workItemCode}" trong thư viện hoặc trong file.`,
-        });
-      }
       if (resourceCode && !resource) {
         errors.push({
           field: "resourceCode",
           message: `Không có tài nguyên mã "${resourceCode}" trong thư viện hoặc trong file.`,
         });
       }
-      if (quantity === null && !errors.some((e) => e.field === "quantity")) {
-        errors.push({ field: "quantity", message: "Thiếu hao phí." });
-      } else if (quantity !== null && quantity <= 0) {
-        errors.push({ field: "quantity", message: "Hao phí phải lớn hơn 0." });
+      if (consumption === null && !errors.some((e) => e.field === "consumption")) {
+        errors.push({ field: "consumption", message: "Thiếu hao phí." });
+      } else if (consumption !== null && consumption <= 0) {
+        errors.push({ field: "consumption", message: "Hao phí phải lớn hơn 0." });
       }
-      if (workItem && resource) {
+      if (wastePercent !== null && (wastePercent < 0 || wastePercent > 100)) {
+        errors.push({ field: "wastePercent", message: "Hao hụt từ 0 đến 100 (%)." });
+      }
+      const target = normCode
+        ? resolveNormFor(normCode, normVersion)
+        : { norm: undefined, message: "" };
+      if (normCode && !target.norm) {
+        errors.push({ field: "normCode", message: target.message });
+      }
+      const norm = target.norm;
+      if (norm && resource) {
         firstOccurrence(
-          `${workItem.id}|${resource.id}`,
+          `${norm.id}|${resource.id}`,
           row,
           errors,
           "resourceCode",
-          "Định mức (công tác, tài nguyên)"
+          "Thành phần (định mức, tài nguyên)"
         );
       }
-      if (errors.length > 0 || !workItem || !resource || quantity === null) {
+      if (norm && wastePercent && wastePercent > 0 && norm.wasteIncluded) {
+        errors.push({
+          field: "wastePercent",
+          message: "Định mức ghi hao phí đã gồm hao hụt: để trống hao hụt để không tính trùng.",
+        });
+      }
+      if (errors.length > 0 || !norm || !resource || consumption === null) {
         report(row, errors);
         continue;
       }
-      const incoming = {
-        workItemId: workItem.id,
-        resourceId: resource.id,
-        quantity,
+      const editable = norm.status === "draft" || newNormIds.has(norm.id);
+      const existingComponent = componentByPair.get(`${norm.id}|${resource.id}`);
+      const fields = {
+        consumption,
+        wasteRate: wastePercent ? percentToRate(wastePercent) : 0,
         notes: text("notes"),
       };
-      const existing = normByPair.get(`${workItem.id}|${resource.id}`);
-      if (existing) {
+      if (existingComponent) {
         summary.duplicates++;
-        if (mode === "update") {
-          changes.norms.push({
-            ...mergeMapped(existing, { quantity, notes: incoming.notes }, mapped),
+        if (mode === "update" && editable) {
+          changes.normComponents.push({
+            ...mergeMapped(
+              existingComponent,
+              { ...fields, sortOrder: sortOrder ?? existingComponent.sortOrder },
+              mapped
+            ),
             updatedAt: now,
           });
           summary.updated++;
         }
         continue;
       }
-      const created: NormDefinition = { id: takeId(row), ...incoming, ...stamps(row) };
-      changes.norms.push(created);
-      normByPair.set(`${workItem.id}|${resource.id}`, created);
+      if (!editable) {
+        report(row, [
+          {
+            field: "normCode",
+            message: `Định mức "${norm.code}" phiên bản ${norm.version} không còn là nháp: không thêm thành phần. Sao chép thành phiên bản mới rồi nhập.`,
+          },
+        ]);
+        continue;
+      }
+      const siblingsMax = Math.max(
+        0,
+        ...[...componentByPair.values()].filter((c) => c.normId === norm.id).map((c) => c.sortOrder)
+      );
+      const snapshot = row.meta?.snapshot;
+      const created: NormComponent = {
+        id: takeId(row),
+        normId: norm.id,
+        resourceId: resource.id,
+        resourceCodeSnapshot: snapshot?.code ?? resource.code,
+        resourceNameSnapshot: snapshot?.name ?? resource.name,
+        resourceUnitSnapshot: snapshot?.unit ?? resource.unit,
+        resourceTypeSnapshot: snapshot?.type ?? resource.type,
+        ...fields,
+        sortOrder: sortOrder ?? siblingsMax + 1,
+        ...stamps(row),
+      };
+      changes.normComponents.push(created);
+      componentByPair.set(`${norm.id}|${resource.id}`, created);
       summary.added++;
     }
   }

@@ -6,7 +6,8 @@
 import {
   Category,
   LibrarySnapshot,
-  NormDefinition,
+  Norm,
+  NormComponent,
   Resource,
   ResourcePrice,
   Supplier,
@@ -25,15 +26,19 @@ export interface LibraryRepository {
   /** Trong MỘT giao dịch: bỏ liên kết ở công tác/giá, rồi xóa nhà cung cấp. */
   deleteSupplier(id: string, now: string): Promise<void>;
   putWorkItem(item: WorkItem): Promise<void>;
-  /** Xóa công tác cùng mọi định mức của nó trong một giao dịch. */
-  deleteWorkItem(id: string): Promise<void>;
+  /** Xóa công tác; định mức liên kết chỉ bị bỏ liên kết (một giao dịch). */
+  deleteWorkItem(id: string, now: string): Promise<void>;
   putResource(resource: Resource): Promise<void>;
   /** Xóa tài nguyên cùng mọi giá của nó trong một giao dịch (nghiệp vụ phải chặn trước nếu còn định mức dùng). */
   deleteResource(id: string): Promise<void>;
   putPrice(price: ResourcePrice): Promise<void>;
   deletePrice(id: string): Promise<void>;
-  putNorm(norm: NormDefinition): Promise<void>;
+  /** Ghi định mức cùng các thành phần (nếu có) trong MỘT giao dịch. */
+  putNorm(norm: Norm, components?: readonly NormComponent[]): Promise<void>;
+  /** Xóa định mức cùng mọi thành phần trong một giao dịch (nghiệp vụ chỉ cho xóa bản nháp). */
   deleteNorm(id: string): Promise<void>;
+  putNormComponent(component: NormComponent, norm: Norm): Promise<void>;
+  deleteNormComponent(id: string, norm: Norm): Promise<void>;
   /**
    * Ghi mọi bản ghi nhập trong MỘT giao dịch (ADR-0004): lỗi giữa chừng thì không lưu gì.
    * Bản ghi có id đã tồn tại được thay thế (cập nhật).

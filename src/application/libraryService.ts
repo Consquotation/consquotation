@@ -4,8 +4,10 @@
  */
 
 import {
+  checkNormStatusChange,
   normalizeCode,
   validateCategoryForm,
+  validateNormComponentForm,
   validateNormForm,
   validatePriceForm,
   validateResourceForm,
@@ -16,6 +18,9 @@ import type {
   CategoryField,
   CategoryForm,
   FieldError,
+  NormComponentField,
+  NormComponentForm,
+  NormStatusCheck,
   NormField,
   NormForm,
   PriceField,
@@ -32,7 +37,9 @@ import {
   DEFAULT_LIBRARY_NAME,
   LIBRARY_NAME_MAX,
   LibrarySnapshot,
-  NormDefinition,
+  Norm,
+  NormComponent,
+  NormStatus,
   Resource,
   ResourcePrice,
   Supplier,
@@ -72,6 +79,40 @@ export function cleanLibraryName(name: string): string {
 }
 
 export type DeleteResourceResult = { ok: true } | { ok: false; reason: "inUse"; normCount: number };
+
+/** Ảnh chụp thông tin tài nguyên lưu cùng thành phần định mức (ADR-0013). */
+export function snapshotOf(
+  resource: Resource
+): Pick<
+  NormComponent,
+  "resourceCodeSnapshot" | "resourceNameSnapshot" | "resourceUnitSnapshot" | "resourceTypeSnapshot"
+> {
+  return {
+    resourceCodeSnapshot: resource.code,
+    resourceNameSnapshot: resource.name,
+    resourceUnitSnapshot: resource.unit,
+    resourceTypeSnapshot: resource.type,
+  };
+}
+
+/** Phiên bản tiếp theo chưa dùng của cùng mã: "1" → "2"; "2024" → "2025"; "A" → "A-2". */
+export function nextNormVersion(
+  norm: Pick<Norm, "code" | "version">,
+  norms: readonly Pick<Norm, "code" | "version">[]
+): string {
+  const taken = new Set(
+    norms
+      .filter((n) => normalizeCode(n.code) === normalizeCode(norm.code))
+      .map((n) => normalizeCode(n.version))
+  );
+  const numeric = /^\d+$/.test(norm.version.trim());
+  for (let n = numeric ? Number(norm.version) + 1 : 2; ; n++) {
+    const candidate = numeric ? String(n) : `${norm.version.trim()}-${n}`;
+    if (!taken.has(normalizeCode(candidate))) {
+      return candidate;
+    }
+  }
+}
 
 /** "BT-01" → "BT-01 (2)", "BT-01 (3)"… sao cho không trùng mã nào trong thư viện. */
 export function uniqueCopyCode(code: string, existing: readonly { code: string }[]): string {
@@ -183,22 +224,15 @@ export class LibraryService {
       createdAt: now,
       updatedAt: now,
     };
+    // Định mức là bản ghi riêng có phiên bản (ADR-0013): không chép theo công tác.
     await this.repo.putWorkItem(copy);
-    for (const norm of library.norms.filter((n) => n.workItemId === id)) {
-      await this.repo.putNorm({
-        ...norm,
-        id: this.deps.newId(),
-        workItemId: copy.id,
-        createdAt: now,
-        updatedAt: now,
-      });
-    }
     await this.touch();
     return copy;
   }
 
+  /** Xóa công tác; định mức liên kết được giữ lại và chỉ bị bỏ liên kết. */
   async deleteWorkItem(id: string): Promise<void> {
-    await this.repo.deleteWorkItem(id);
+    await this.repo.deleteWorkItem(id, this.stamp());
     await this.touch();
   }
 
@@ -226,7 +260,7 @@ export class LibraryService {
 
   /** Chặn xóa tài nguyên đang được định mức sử dụng; giá của tài nguyên được xóa cùng. */
   async deleteResource(id: string, library: LibrarySnapshot): Promise<DeleteResourceResult> {
-    const normCount = library.norms.filter((n) => n.resourceId === id).length;
+    const normCount = library.normComponents.filter((c) => c.resourceId === id).length;
     if (normCount > 0) {
       return { ok: false, reason: "inUse", normCount };
     }
@@ -267,25 +301,40 @@ export class LibraryService {
     await this.touch();
   }
 
+  // ---------- Định mức (ADR-0013) ----------
+
+  private requireNorm(id: string, library: LibrarySnapshot): Norm {
+    const norm = library.norms.find((n) => n.id === id);
+    if (!norm) {
+      throw new Error("Định mức không còn tồn tại.");
+    }
+    return norm;
+  }
+
+  private requireDraft(norm: Norm): void {
+    if (norm.status !== "draft") {
+      throw new Error(
+        "Phiên bản đang dùng hoặc ngừng dùng đã khóa. Hãy sao chép thành phiên bản mới để sửa."
+      );
+    }
+  }
+
+  /** Tạo định mức mới (luôn là nháp) hoặc sửa thông tin định mức. */
   async saveNorm(
-    workItemId: string,
     form: NormForm,
     editingId: string | null,
     library: LibrarySnapshot
-  ): Promise<SaveResult<NormDefinition, NormField>> {
-    if (!library.workItems.some((w) => w.id === workItemId)) {
-      throw new Error("Công tác không còn tồn tại.");
-    }
-    const result = validateNormForm(form, workItemId, library, editingId);
+  ): Promise<SaveResult<Norm, NormField>> {
+    const result = validateNormForm(form, library, editingId);
     if (!result.ok) {
       return result;
     }
-    const existing = editingId ? library.norms.find((n) => n.id === editingId) : undefined;
+    const existing = editingId ? this.requireNorm(editingId, library) : undefined;
     const now = this.stamp();
-    const norm: NormDefinition = {
+    const norm: Norm = {
       ...result.value,
+      status: existing?.status ?? "draft",
       id: existing?.id ?? this.deps.newId(),
-      workItemId,
       createdAt: existing?.createdAt ?? now,
       updatedAt: now,
     };
@@ -294,8 +343,150 @@ export class LibraryService {
     return { ok: true, value: norm };
   }
 
-  async deleteNorm(id: string): Promise<void> {
+  async setNormStatus(
+    id: string,
+    status: NormStatus,
+    library: LibrarySnapshot
+  ): Promise<NormStatusCheck> {
+    const norm = this.requireNorm(id, library);
+    const check = checkNormStatusChange(norm, status, library);
+    if (!check.ok) {
+      return check;
+    }
+    await this.repo.putNorm({ ...norm, status, updatedAt: this.stamp() });
+    await this.touch();
+    return check;
+  }
+
+  /**
+   * Sao chép thành phiên bản mới (nháp), kèm mọi thành phần. Ảnh chụp tài nguyên được làm mới theo thư
+   * viện hiện tại (tài nguyên đã bị xóa thì giữ ảnh chụp cũ để còn cảnh báo).
+   */
+  async copyNormAsNewVersion(id: string, library: LibrarySnapshot): Promise<Norm> {
+    const source = this.requireNorm(id, library);
+    const now = this.stamp();
+    const copy: Norm = {
+      ...source,
+      id: this.deps.newId(),
+      version: nextNormVersion(source, library.norms),
+      status: "draft",
+      createdAt: now,
+      updatedAt: now,
+    };
+    const resources = new Map(library.resources.map((r) => [r.id, r]));
+    const components = library.normComponents
+      .filter((c) => c.normId === source.id)
+      .map((c): NormComponent => {
+        const resource = resources.get(c.resourceId);
+        return {
+          ...c,
+          ...(resource ? snapshotOf(resource) : {}),
+          id: this.deps.newId(),
+          normId: copy.id,
+          createdAt: now,
+          updatedAt: now,
+        };
+      });
+    await this.repo.putNorm(copy, components);
+    await this.touch();
+    return copy;
+  }
+
+  /** Chỉ xóa được bản nháp; phiên bản đã dùng thì chuyển sang ngừng dùng để giữ lịch sử. */
+  async deleteNorm(id: string, library: LibrarySnapshot): Promise<void> {
+    this.requireDraft(this.requireNorm(id, library));
     await this.repo.deleteNorm(id);
+    await this.touch();
+  }
+
+  async saveNormComponent(
+    normId: string,
+    form: NormComponentForm,
+    editingId: string | null,
+    library: LibrarySnapshot
+  ): Promise<SaveResult<NormComponent, NormComponentField>> {
+    const norm = this.requireNorm(normId, library);
+    const result = validateNormComponentForm(form, norm, library, editingId);
+    if (!result.ok) {
+      return result;
+    }
+    const resource = library.resources.find((r) => r.id === result.value.resourceId)!;
+    const siblings = library.normComponents.filter((c) => c.normId === normId);
+    const existing = editingId ? siblings.find((c) => c.id === editingId) : undefined;
+    if (editingId && !existing) {
+      throw new Error("Thành phần không còn tồn tại.");
+    }
+    const now = this.stamp();
+    const component: NormComponent = {
+      ...result.value,
+      ...snapshotOf(resource),
+      id: existing?.id ?? this.deps.newId(),
+      normId,
+      sortOrder: existing?.sortOrder ?? Math.max(0, ...siblings.map((c) => c.sortOrder)) + 1,
+      createdAt: existing?.createdAt ?? now,
+      updatedAt: now,
+    };
+    await this.repo.putNormComponent(component, { ...norm, updatedAt: now });
+    await this.touch();
+    return { ok: true, value: component };
+  }
+
+  async deleteNormComponent(id: string, library: LibrarySnapshot): Promise<void> {
+    const component = library.normComponents.find((c) => c.id === id);
+    if (!component) {
+      throw new Error("Thành phần không còn tồn tại.");
+    }
+    const norm = this.requireNorm(component.normId, library);
+    this.requireDraft(norm);
+    await this.repo.deleteNormComponent(id, { ...norm, updatedAt: this.stamp() });
+    await this.touch();
+  }
+
+  /** Đổi chỗ thành phần với thành phần liền trước/sau (sắp xếp lại thứ tự hiển thị). */
+  async moveNormComponent(id: string, direction: -1 | 1, library: LibrarySnapshot): Promise<void> {
+    const component = library.normComponents.find((c) => c.id === id);
+    if (!component) {
+      throw new Error("Thành phần không còn tồn tại.");
+    }
+    const norm = this.requireNorm(component.normId, library);
+    this.requireDraft(norm);
+    const siblings = library.normComponents
+      .filter((c) => c.normId === norm.id)
+      .sort((a, b) => a.sortOrder - b.sortOrder || a.createdAt.localeCompare(b.createdAt));
+    const index = siblings.findIndex((c) => c.id === id);
+    const other = siblings[index + direction];
+    if (!other) {
+      return;
+    }
+    const now = this.stamp();
+    // Đánh lại số thứ tự liên tục để hai thành phần trùng sortOrder cũng đổi chỗ được.
+    const reordered = siblings.map((c, i) => ({ c, order: i + 1 }));
+    reordered[index].order = index + 1 + direction;
+    reordered[index + direction].order = index + 1;
+    await this.repo.putNorm(
+      { ...norm, updatedAt: now },
+      reordered.map(({ c, order }) => ({ ...c, sortOrder: order, updatedAt: now }))
+    );
+    await this.touch();
+  }
+
+  /** Làm mới ảnh chụp mã/tên/đơn vị/loại theo tài nguyên hiện tại, sau khi người dùng đã kiểm tra. */
+  async refreshComponentLink(id: string, library: LibrarySnapshot): Promise<void> {
+    const component = library.normComponents.find((c) => c.id === id);
+    if (!component) {
+      throw new Error("Thành phần không còn tồn tại.");
+    }
+    const norm = this.requireNorm(component.normId, library);
+    this.requireDraft(norm);
+    const resource = library.resources.find((r) => r.id === component.resourceId);
+    if (!resource) {
+      throw new Error("Tài nguyên đã bị xóa: hãy chọn tài nguyên khác cho thành phần này.");
+    }
+    const now = this.stamp();
+    await this.repo.putNormComponent(
+      { ...component, ...snapshotOf(resource), updatedAt: now },
+      { ...norm, updatedAt: now }
+    );
     await this.touch();
   }
 

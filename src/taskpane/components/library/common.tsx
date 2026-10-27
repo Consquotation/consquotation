@@ -1,5 +1,13 @@
 import * as React from "react";
-import { Badge, Field, Input, InputProps, Select, Textarea } from "@fluentui/react-components";
+import {
+  Badge,
+  Field,
+  Input,
+  InputProps,
+  Select,
+  Textarea,
+  makeStyles,
+} from "@fluentui/react-components";
 import { Validity } from "../../../domain/library/dates";
 import { compareText } from "../../../domain/library/search";
 import { LIBRARY_STRINGS } from "../../../shared/strings.library.vi";
@@ -15,12 +23,24 @@ export const TextField: React.FC<{
   type?: InputProps["type"];
   multiline?: boolean;
   inputMode?: InputProps["inputMode"];
-}> = ({ label, value, onChange, error, hint, required, type, multiline, inputMode }) => (
+  disabled?: boolean;
+}> = ({ label, value, onChange, error, hint, required, type, multiline, inputMode, disabled }) => (
   <Field label={label} required={required} validationMessage={error} hint={hint}>
     {multiline ? (
-      <Textarea value={value} onChange={(_e, data) => onChange(data.value)} resize="vertical" />
+      <Textarea
+        value={value}
+        disabled={disabled}
+        onChange={(_e, data) => onChange(data.value)}
+        resize="vertical"
+      />
     ) : (
-      <Input type={type} value={value} inputMode={inputMode} onChange={(_e, data) => onChange(data.value)} />
+      <Input
+        type={type}
+        value={value}
+        inputMode={inputMode}
+        disabled={disabled}
+        onChange={(_e, data) => onChange(data.value)}
+      />
     )}
   </Field>
 );
@@ -49,12 +69,31 @@ export function formatQuantity(value: number): string {
   return value.toLocaleString("vi-VN", { maximumFractionDigits: 6 });
 }
 
-export function errorFor<F extends string>(errors: { field: F; message: string }[], field: F): string | undefined {
+export function errorFor<F extends string>(
+  errors: { field: F; message: string }[],
+  field: F
+): string | undefined {
   return errors.find((e) => e.field === field)?.message;
 }
 
+/** Màu nhãn trạng thái phiên bản định mức. */
+export const STATUS_COLOR: Record<
+  "draft" | "approved" | "inactive",
+  "informative" | "success" | "subtle"
+> = {
+  draft: "informative",
+  approved: "success",
+  inactive: "subtle",
+};
+
 /** Giá trị đặc biệt của ô chọn: tạo nhóm/nhà cung cấp mới ngay trong form. */
 export const NEW_REF = "__new__";
+
+// Tên dài trong danh sách không được làm ô chọn rộng hơn task pane.
+const useRefSelectStyles = makeStyles({
+  field: { minWidth: 0 },
+  select: { width: "100%", minWidth: 0 },
+});
 
 /**
  * Ô chọn nhóm hoặc nhà cung cấp. "" = không chọn. Có `newLabel` thì thêm lựa chọn tạo mới; khi chọn,
@@ -76,11 +115,20 @@ export const RefSelect: React.FC<{
     () => [...props.options].sort((a, b) => compareText(a.name, b.name)),
     [props.options]
   );
+  const styles = useRefSelectStyles();
   const creating = props.value === NEW_REF;
   return (
     <>
-      <Field label={props.label} validationMessage={creating ? undefined : props.error}>
-        <Select value={props.value} onChange={(_e, data) => props.onChange(data.value)}>
+      <Field
+        label={props.label}
+        validationMessage={creating ? undefined : props.error}
+        className={styles.field}
+      >
+        <Select
+          value={props.value}
+          onChange={(_e, data) => props.onChange(data.value)}
+          className={styles.select}
+        >
           <option value="">{props.noneLabel}</option>
           {sorted.map((o) => (
             <option key={o.id} value={o.id}>

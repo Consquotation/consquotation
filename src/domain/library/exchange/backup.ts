@@ -9,7 +9,9 @@ import { XlsxCell, XlsxSheet } from "../../../shared/xlsx";
 import {
   Category,
   LibrarySnapshot,
-  NormDefinition,
+  Norm,
+  NormComponent,
+  ResourceType,
   Resource,
   ResourcePrice,
   Supplier,
@@ -32,9 +34,13 @@ import {
   EXCHANGE_FORMAT,
   EXCHANGE_SCHEMA_VERSION,
   META_SHEET_NAME,
+  NORM_SOURCE_TYPE_LABELS,
+  NORM_STATUS_LABELS,
   PRICE_STATUS_LABELS,
   RESOURCE_TYPE_LABELS,
+  YES_NO_LABELS,
 } from "./schema";
+import { rateToPercent } from "../validation";
 
 export interface BackupMeta {
   exportedAt: string;
@@ -66,6 +72,7 @@ export function toBackupJson(library: LibrarySnapshot, meta: BackupMeta): string
       resources: library.resources,
       resourcePrices: library.resourcePrices,
       norms: library.norms,
+      normComponents: library.normComponents,
     },
   };
   return JSON.stringify(file, null, 2);
@@ -118,6 +125,27 @@ function checkVersion(format: unknown, version: unknown): string | null {
   return null;
 }
 
+/** Trường của từng loại có giá trị lấy thẳng từ bản ghi JSON (trường tham chiếu được đổi riêng). */
+const DATASET_FIELDS_FROM_JSON: Record<DatasetKind, string[]> = Object.fromEntries(
+  DATASET_KINDS.map((kind) => [kind, DATASETS[kind].fields.map((field) => field.key)])
+) as Record<DatasetKind, string[]>;
+
+/**
+ * Sheet của workbook xuất ứng với loại dữ liệu nào. Bản xuất schema 1–2 có sheet "Định mức" chứa dòng
+ * định mức kiểu cũ (Mã công tác, Mã tài nguyên, Hao phí) → đọc như thành phần định mức.
+ */
+export function backupSheetKinds(
+  schemaVersion: number
+): { kind: DatasetKind; sheetName: string }[] {
+  if (schemaVersion >= 3) {
+    return DATASET_KINDS.map((kind) => ({ kind, sheetName: DATASETS[kind].sheetName }));
+  }
+  return DATASET_KINDS.filter((kind) => kind !== "normComponents").map((kind) => ({
+    kind: kind === "norms" ? "normComponents" : kind,
+    sheetName: DATASETS[kind].sheetName,
+  }));
+}
+
 /** Đọc file sao lưu JSON thành các bộ dữ liệu nhập; tham chiếu id được đổi sang mã. */
 export function parseBackupJson(text: string): ParsedBackup {
   let parsed: unknown;
@@ -163,9 +191,27 @@ export function parseBackupJson(text: string): ParsedBackup {
   const supplierNameById = nameById("suppliers");
   const version = parsed.schemaVersion as number;
 
+  // v3: định mức có id; thành phần trỏ tới định mức bằng normId.
+  const normById = new Map<string, { code: unknown; version: unknown }>();
+  for (const n of version >= 3 ? list("norms") : []) {
+    if (isObject(n) && typeof n.id === "string") {
+      normById.set(n.id, { code: n.code, version: n.version });
+    }
+  }
+  /** v1/v2: "norms" là dòng định mức kiểu cũ (công tác, tài nguyên, hao phí) → thành phần. */
+  const recordsFor = (kind: DatasetKind): unknown[] => {
+    if (version >= 3) {
+      return list(kind);
+    }
+    if (kind === "norms") {
+      return [];
+    }
+    return kind === "normComponents" ? list("norms") : list(kind);
+  };
+
   const datasets = DATASET_KINDS.map((kind): ImportDataset => {
-    const fields = DATASETS[kind].fields.map((field) => field.key);
-    const rows = list(kind).map((record, i): ImportRow => {
+    const fields = DATASET_FIELDS_FROM_JSON[kind];
+    const rows = recordsFor(kind).map((record, i): ImportRow => {
       const rowLabel = `Bản ghi ${i + 1}`;
       if (!isObject(record)) {
         return { rowLabel, cells: {}, preErrors: [{ message: "Bản ghi không phải object." }] };
@@ -218,7 +264,58 @@ export function parseBackupJson(text: string): ParsedBackup {
           resolveRef("supplierId", "supplier", supplierNameById, "nhà cung cấp");
         }
       }
-      if (kind === "resourcePrices" || kind === "norms") {
+      let snapshot: NonNullable<ImportRow["meta"]>["snapshot"];
+      if (kind === "norms") {
+        resolveRef("categoryId", "category", categoryNameById, "nhóm");
+        const workItemId = str(record.workItemId) ?? "";
+        if (workItemId && !workItemCodeById.has(workItemId)) {
+          preErrors.push({
+            field: "workItemCode",
+            message: `Tham chiếu công tác id "${workItemId}" không có trong file.`,
+          });
+        }
+        cells.workItemCode = cell(workItemId ? (workItemCodeById.get(workItemId) ?? null) : null);
+      }
+      if (kind === "normComponents") {
+        if (version >= 3) {
+          const owner = normById.get(str(record.normId) ?? "");
+          if (!owner) {
+            preErrors.push({
+              field: "normCode",
+              message: `Tham chiếu định mức id "${String(record.normId)}" không có trong file.`,
+            });
+          }
+          cells.normCode = cell(owner?.code ?? null);
+          cells.version = cell(owner?.version ?? null);
+          cells.wastePercent = cell(
+            typeof record.wasteRate === "number" && Number.isFinite(record.wasteRate)
+              ? Number(rateToPercent(record.wasteRate) || 0)
+              : record.wasteRate
+          );
+          if (typeof record.resourceCodeSnapshot === "string") {
+            snapshot = {
+              code: record.resourceCodeSnapshot,
+              name: str(record.resourceNameSnapshot) ?? "",
+              unit: str(record.resourceUnitSnapshot) ?? "",
+              type: (str(record.resourceTypeSnapshot) as ResourceType | undefined) ?? "other",
+            };
+          }
+        } else {
+          // Dòng kiểu cũ: mã định mức = mã công tác; phiên bản để trống (add-in tạo phiên bản "1").
+          const workItemId = str(record.workItemId) ?? "";
+          if (!workItemCodeById.has(workItemId)) {
+            preErrors.push({
+              field: "normCode",
+              message: `Tham chiếu công tác id "${workItemId}" không có trong file.`,
+            });
+          }
+          cells.normCode = cell(workItemCodeById.get(workItemId) ?? null);
+          cells.version = cell(null);
+          cells.consumption = cell(record.quantity);
+          cells.wastePercent = cell(null);
+        }
+      }
+      if (kind === "resourcePrices" || kind === "normComponents") {
         const resourceId = str(record.resourceId) ?? "";
         if (!resourceCodeById.has(resourceId)) {
           preErrors.push({
@@ -228,20 +325,11 @@ export function parseBackupJson(text: string): ParsedBackup {
         }
         cells.resourceCode = cell(resourceCodeById.get(resourceId) ?? null);
       }
-      if (kind === "norms") {
-        const workItemId = str(record.workItemId) ?? "";
-        if (!workItemCodeById.has(workItemId)) {
-          preErrors.push({
-            field: "workItemCode",
-            message: `Tham chiếu công tác id "${workItemId}" không có trong file.`,
-          });
-        }
-        cells.workItemCode = cell(workItemCodeById.get(workItemId) ?? null);
-      }
       return {
         rowLabel,
         cells,
         meta: {
+          snapshot,
           id: str(record.id),
           createdAt: str(record.createdAt),
           updatedAt: str(record.updatedAt),
@@ -349,14 +437,46 @@ export function exportSheets(library: LibrarySnapshot, meta: BackupMeta): XlsxSh
       PRICE_STATUS_LABELS[p.status] ?? p.status,
       p.notes,
     ]);
+  const yesNo = (v: boolean) => (v ? YES_NO_LABELS.yes : YES_NO_LABELS.no);
   const norms = [...library.norms]
-    .map((n: NormDefinition) => ({
-      n,
-      w: workItemCode.get(n.workItemId) ?? "",
-      r: resourceCode.get(n.resourceId) ?? "",
+    .sort((a, b) => compareCodes(a.code, b.code) || compareCodes(a.version, b.version))
+    .map((n: Norm): XlsxCell[] => [
+      n.code,
+      n.name,
+      n.unit,
+      cat(n.categoryId),
+      n.version,
+      n.effectiveFrom,
+      NORM_SOURCE_TYPE_LABELS[n.sourceType] ?? n.sourceType,
+      n.source,
+      yesNo(n.sourceVerified),
+      NORM_STATUS_LABELS[n.status] ?? n.status,
+      yesNo(n.wasteIncluded),
+      n.workItemId ? (workItemCode.get(n.workItemId) ?? null) : null,
+      n.notes,
+    ]);
+  const normById = new Map(library.norms.map((n) => [n.id, n]));
+  const normComponents = [...library.normComponents]
+    .map((c: NormComponent) => ({
+      c,
+      n: normById.get(c.normId),
+      r: resourceCode.get(c.resourceId) ?? c.resourceCodeSnapshot,
     }))
-    .sort((a, b) => compareCodes(a.w, b.w) || compareCodes(a.r, b.r))
-    .map(({ n, w, r }): XlsxCell[] => [w, r, n.quantity, n.notes]);
+    .sort(
+      (a, b) =>
+        compareCodes(a.n?.code ?? "", b.n?.code ?? "") ||
+        compareCodes(a.n?.version ?? "", b.n?.version ?? "") ||
+        a.c.sortOrder - b.c.sortOrder
+    )
+    .map(({ c, n, r }): XlsxCell[] => [
+      n?.code ?? "",
+      n?.version ?? "",
+      r,
+      c.consumption,
+      c.wasteRate === 0 ? null : Number(rateToPercent(c.wasteRate)),
+      c.sortOrder,
+      c.notes,
+    ]);
 
   const metaSheet: XlsxSheet = {
     name: META_SHEET_NAME,
@@ -395,6 +515,7 @@ export function exportSheets(library: LibrarySnapshot, meta: BackupMeta): XlsxSh
     dataSheet("resources", resources),
     dataSheet("resourcePrices", prices),
     dataSheet("norms", norms),
+    dataSheet("normComponents", normComponents),
   ];
 }
 

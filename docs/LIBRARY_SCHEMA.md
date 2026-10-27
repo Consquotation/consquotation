@@ -1,18 +1,24 @@
-# Schema nhập/xuất thư viện, phiên bản 2
+# Schema nhập/xuất thư viện, phiên bản 3
 
 Schema công bố theo [prompts/09_LIBRARY_IMPORT_EXPORT.md](../prompts/09_LIBRARY_IMPORT_EXPORT.md) và [ADR-0004](ADR/0004-import-export-thu-vien.md). Mã nguồn: [src/domain/library/exchange/schema.ts](../src/domain/library/exchange/schema.ts).
 
 - `format`: `consquotation-library`
-- `schemaVersion`: `2` (từ bản 1.9.0, [ADR-0012](ADR/0012-danh-muc-nha-cung-cap-schema-v2.md))
+- `schemaVersion`: `3` (từ bản 1.10.0, [ADR-0013](ADR/0013-dinh-muc-phien-ban-va-bo-may-tinh.md)); `2` ở bản 1.9.0 ([ADR-0012](ADR/0012-danh-muc-nha-cung-cap-schema-v2.md))
 
 Add-in từ chối file có `schemaVersion` lớn hơn phiên bản nó hỗ trợ. Lý do: tránh nhập thiếu dữ liệu của phiên bản mới.
 
-Thay đổi so với v1:
+Thay đổi so với v2:
+- định mức tách thành hai loại: **Định mức** (mã, phiên bản, nguồn, trạng thái) và **Thành phần định mức** (tài nguyên, hao phí, hao hụt);
+- JSON có thêm `normComponents`; `norms` giờ chứa đầu định mức.
+
+Thay đổi của v2 so với v1:
 - thêm loại dữ liệu **Nhóm** và **Nhà cung cấp**;
 - thêm cột **Nhóm** cho tài nguyên, cột **Nhà cung cấp** cho công tác và giá tài nguyên;
 - JSON có thêm `library.name` (tên thư viện).
 
-File v1 (bản 1.8.0 trở về trước) vẫn nhập được. Cột "Nhóm" của công tác trong file v1 được chuyển thành nhóm.
+File v1 và v2 vẫn nhập được:
+- cột "Nhóm" của công tác trong file v1 được chuyển thành nhóm;
+- bảng định mức kiểu cũ (Mã công tác, Mã tài nguyên, Hao phí) được hiểu là thành phần định mức. Với mỗi mã công tác chưa có định mức cùng mã, add-in tạo định mức phiên bản 1 lấy mã, tên, đơn vị từ công tác (bản xem trước liệt kê các định mức sẽ tạo).
 
 ## Ba dạng file
 
@@ -90,12 +96,39 @@ Nhóm và nhà cung cấp được so khớp **theo tên**: bỏ khoảng trắn
 
 ### Định mức (sheet `Định mức`)
 
+Mỗi dòng là một phiên bản định mức. Khóa so khớp là cặp (Mã định mức, Phiên bản).
+
 | Cột | Kiểu | Ghi chú |
 |---|---|---|
-| **Mã công tác** | chữ | Phải có trong thư viện hoặc trong cùng lần nhập |
-| **Mã tài nguyên** | chữ | Như trên |
-| **Hao phí** | số > 0 | Tính cho 1 đơn vị công tác |
+| **Mã định mức** | chữ | |
+| **Tên công tác** | chữ | |
+| **Đơn vị tính** | chữ | Đơn vị của công tác (hao phí tính cho 1 đơn vị này) |
+| Nhóm | chữ | Tên nhóm |
+| Phiên bản | chữ | Để trống = `1` |
+| Ngày áp dụng | ngày | |
+| Loại nguồn | `Người dùng` / `Tài liệu` | Để trống = Người dùng. Loại Tài liệu bắt buộc có cột Nguồn |
+| Nguồn | chữ | Tên, số hiệu tài liệu |
+| Đã đối chiếu nguồn | `Có` / `Không` | Để trống = Không |
+| Trạng thái | `Nháp` / `Đang dùng` / `Ngừng dùng` | Để trống = Nháp |
+| Hao phí đã gồm hao hụt | `Có` / `Không` | Có = không cộng thêm hao hụt |
+| Mã công tác liên kết | chữ | Công tác dùng định mức này khi phân tích đơn giá |
 | Ghi chú | chữ | |
+
+Mỗi mã chỉ có một phiên bản Đang dùng, mỗi công tác chỉ liên kết với một định mức Đang dùng. Dòng vi phạm bị báo lỗi.
+
+### Thành phần định mức (sheet `Thành phần định mức`)
+
+| Cột | Kiểu | Ghi chú |
+|---|---|---|
+| **Mã định mức** | chữ | Tên khác được nhận: Mã công tác, Mã hiệu (bảng định mức kiểu cũ) |
+| Phiên bản | chữ | Để trống thì định mức phải có đúng một phiên bản |
+| **Mã tài nguyên** | chữ | Phải có trong thư viện hoặc trong cùng lần nhập |
+| **Hao phí** | số > 0 | Hao phí cơ sở, tính cho 1 đơn vị công tác, theo đơn vị của tài nguyên |
+| Hao hụt (%) | số 0–100 | `5` nghĩa là 5%. Để trống = 0 |
+| Thứ tự | số | Thứ tự hiển thị |
+| Ghi chú | chữ | |
+
+Chỉ thêm được thành phần vào định mức Nháp, hoặc định mức được tạo mới trong cùng lần nhập. Add-in không quy đổi đơn vị.
 
 ## Quy tắc đọc giá trị
 
@@ -131,7 +164,8 @@ Nhóm và nhà cung cấp được so khớp **theo tên**: bỏ khoảng trắn
   | Nhóm, nhà cung cấp | Cùng tên |
   | Công tác, tài nguyên | Cùng mã |
   | Giá | Cùng id (với JSON), hoặc giống hệt nhau: cùng tài nguyên, đơn giá, đơn vị, tiền tệ, thời gian hiệu lực và nguồn |
-  | Định mức | Cùng công tác và cùng tài nguyên |
+  | Định mức | Cùng mã và cùng phiên bản. Chế độ Cập nhật chỉ đổi các cột mô tả có trong file (tên, nhóm, ngày áp dụng, loại nguồn, nguồn, đã đối chiếu, công tác liên kết, ghi chú); không đổi mã, phiên bản, đơn vị, cờ hao hụt và trạng thái |
+  | Thành phần định mức | Cùng định mức (mã, phiên bản) và cùng tài nguyên |
 
   Cách xử lý mặc định là **Bỏ qua**. Chọn **Cập nhật** thì add-in chỉ đổi các trường có cột trong file; cột không có trong file giữ nguyên giá trị cũ. Muốn hủy thì bấm **Hủy** ở bước kiểm tra hoặc ở hộp xác nhận.
 - **Mỗi lần nhập được ghi trong một giao dịch.** Nếu lỗi giữa chừng, thư viện giữ nguyên.
@@ -146,9 +180,9 @@ Nhóm và nhà cung cấp được so khớp **theo tên**: bỏ khoảng trắn
 ```json
 {
   "format": "consquotation-library",
-  "schemaVersion": 2,
+  "schemaVersion": 3,
   "exportedAt": "2026-10-26T08:37:12.000Z",
-  "appVersion": "1.9.0",
+  "appVersion": "1.10.0",
   "library": { "name": "Thư viện của tôi" },
   "data": {
     "categories": [],
@@ -156,12 +190,13 @@ Nhóm và nhà cung cấp được so khớp **theo tên**: bỏ khoảng trắn
     "workItems": [],
     "resources": [],
     "resourcePrices": [],
-    "norms": []
+    "norms": [],
+    "normComponents": []
   }
 }
 ```
 
-Mỗi bản ghi trong file có các trường của mô hình dữ liệu ([src/domain/library/types.ts](../src/domain/library/types.ts)). Giá và định mức tham chiếu bằng `resourceId` và `workItemId`. Công tác và tài nguyên tham chiếu nhóm bằng `categoryId`; công tác và giá tham chiếu nhà cung cấp bằng `supplierId` (`null` = không có). Tham chiếu tới id không có trong file bị báo lỗi theo bản ghi.
+Mỗi bản ghi trong file có các trường của mô hình dữ liệu ([src/domain/library/types.ts](../src/domain/library/types.ts)). Giá tham chiếu tài nguyên bằng `resourceId`. Định mức tham chiếu công tác bằng `workItemId` (`null` = không liên kết); thành phần tham chiếu định mức bằng `normId` và tài nguyên bằng `resourceId`. Công tác và tài nguyên tham chiếu nhóm bằng `categoryId`; công tác và giá tham chiếu nhà cung cấp bằng `supplierId` (`null` = không có). Tham chiếu tới id không có trong file bị báo lỗi theo bản ghi.
 
 Khi khôi phục vào thư viện đã có nhóm hoặc nhà cung cấp **cùng tên**, add-in dùng lại bản ghi đang có thay vì tạo bản thứ hai.
 
@@ -177,5 +212,6 @@ Thư mục [templates/](templates/) có các file CSV UTF-8 chỉ chứa dòng t
 - [tai-nguyen.csv](templates/tai-nguyen.csv)
 - [gia-tai-nguyen.csv](templates/gia-tai-nguyen.csv)
 - [dinh-muc.csv](templates/dinh-muc.csv)
+- [thanh-phan-dinh-muc.csv](templates/thanh-phan-dinh-muc.csv)
 
 Trong add-in, nút **Mở file mẫu trống** mở một workbook có sẵn đủ các sheet và tiêu đề cột. Điền dữ liệu vào workbook đó rồi dùng **Đọc toàn bộ bản xuất** để nhập.

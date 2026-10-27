@@ -2,12 +2,12 @@ import { describe, expect, it } from "vitest";
 import { formatIsoDate, isIsoDate, periodsOverlap, todayIso, validityOn } from "../../src/domain/library/dates";
 import { nameLookup, normalizeForSearch, searchWorkItems } from "../../src/domain/library/search";
 import { draftFromWorkItem, traceNote } from "../../src/domain/library/toQuote";
-import { LibrarySnapshot, NormDefinition, Resource, ResourcePrice, WorkItem } from "../../src/domain/library/types";
+import { LibrarySnapshot, Norm, NormComponent, Resource, ResourcePrice, WorkItem } from "../../src/domain/library/types";
 import {
   WorkItemForm,
   libraryIssues,
   normalizeCode,
-  validateNormForm,
+  validateNormComponentForm,
   validatePriceForm,
   validateResourceForm,
   validateWorkItemForm,
@@ -57,8 +57,41 @@ function price(partial: Partial<ResourcePrice> & { id: string; resourceId: strin
   };
 }
 
-function norm(partial: Partial<NormDefinition> & { id: string; workItemId: string; resourceId: string }): NormDefinition {
-  return { quantity: 1, notes: "", createdAt: T, updatedAt: T, ...partial };
+function normSet(partial: Partial<Norm> & { id: string }): Norm {
+  return {
+    code: partial.id.toUpperCase(),
+    name: "Định mức thử",
+    unit: "m3",
+    categoryId: null,
+    workItemId: null,
+    version: "1",
+    effectiveFrom: null,
+    sourceType: "user",
+    source: "",
+    sourceVerified: false,
+    status: "draft",
+    wasteIncluded: false,
+    notes: "",
+    createdAt: T,
+    updatedAt: T,
+    ...partial,
+  };
+}
+
+function component(partial: Partial<NormComponent> & { id: string; normId: string; resourceId: string }): NormComponent {
+  return {
+    resourceCodeSnapshot: "XM",
+    resourceNameSnapshot: "Tài nguyên",
+    resourceUnitSnapshot: "kg",
+    resourceTypeSnapshot: "material",
+    consumption: 1,
+    wasteRate: 0,
+    sortOrder: 1,
+    notes: "",
+    createdAt: T,
+    updatedAt: T,
+    ...partial,
+  };
 }
 
 const FORM: WorkItemForm = {
@@ -193,7 +226,8 @@ describe("validateResourceForm / validatePriceForm / validateNormForm", () => {
     workItems: [workItem({ id: "w1", code: "BT-01" })],
     resources: [resource({ id: "r1", code: "XM" }), resource({ id: "r2", code: "CAT" })],
     resourcePrices: [],
-    norms: [norm({ id: "n1", workItemId: "w1", resourceId: "r1" })],
+    norms: [normSet({ id: "n1", workItemId: "w1" })],
+    normComponents: [component({ id: "c1", normId: "n1", resourceId: "r1" })],
   };
 
   it("tài nguyên: bắt buộc và chặn mã trùng", () => {
@@ -208,12 +242,14 @@ describe("validateResourceForm / validatePriceForm / validateNormForm", () => {
     expect(validatePriceForm({ ...base, price: "1850,5" }, []).ok).toBe(true);
   });
 
-  it("định mức: tài nguyên phải tồn tại, không trùng trong cùng công tác, hao phí > 0", () => {
-    expect(validateNormForm({ resourceId: "r1", quantity: "1", notes: "" }, "w1", lib, null).ok).toBe(false);
-    expect(validateNormForm({ resourceId: "r1", quantity: "1", notes: "" }, "w1", lib, "n1").ok).toBe(true);
-    expect(validateNormForm({ resourceId: "rx", quantity: "1", notes: "" }, "w1", lib, null).ok).toBe(false);
-    expect(validateNormForm({ resourceId: "r2", quantity: "0", notes: "" }, "w1", lib, null).ok).toBe(false);
-    expect(validateNormForm({ resourceId: "r2", quantity: "0,35", notes: "" }, "w1", lib, null).ok).toBe(true);
+  it("thành phần định mức: tài nguyên phải tồn tại, không trùng trong cùng định mức, hao phí > 0", () => {
+    const n1 = lib.norms[0];
+    const form = (resourceId: string, consumption: string) => ({ resourceId, consumption, wastePercent: "", notes: "" });
+    expect(validateNormComponentForm(form("r1", "1"), n1, lib, null).ok).toBe(false);
+    expect(validateNormComponentForm(form("r1", "1"), n1, lib, "c1").ok).toBe(true);
+    expect(validateNormComponentForm(form("rx", "1"), n1, lib, null).ok).toBe(false);
+    expect(validateNormComponentForm(form("r2", "0"), n1, lib, null).ok).toBe(false);
+    expect(validateNormComponentForm(form("r2", "0,35"), n1, lib, null).ok).toBe(true);
   });
 });
 
@@ -221,7 +257,7 @@ describe("libraryIssues", () => {
   const today = "2026-10-20";
 
   it("thư viện sạch → không có vấn đề", () => {
-    expect(libraryIssues({ categories: [], suppliers: [], workItems: [workItem({ id: "1", code: "A" })], resources: [], resourcePrices: [], norms: [] }, today)).toEqual([]);
+    expect(libraryIssues({ categories: [], suppliers: [], workItems: [workItem({ id: "1", code: "A" })], resources: [], resourcePrices: [], norms: [], normComponents: [] }, today)).toEqual([]);
   });
 
   it("phát hiện mã trùng, thiếu giá, giá hết hạn/chưa hiệu lực", () => {
@@ -238,6 +274,7 @@ describe("libraryIssues", () => {
         resources: [],
         resourcePrices: [],
         norms: [],
+        normComponents: [],
       },
       today
     );
@@ -258,7 +295,11 @@ describe("libraryIssues", () => {
           price({ id: "p2", resourceId: "r1", effectiveFrom: "2026-06-01", unit: "tấn" }),
           price({ id: "p3", resourceId: "rX" }),
         ],
-        norms: [norm({ id: "n1", workItemId: "w1", resourceId: "rGone" }), norm({ id: "n2", workItemId: "wGone", resourceId: "r1" })],
+        norms: [normSet({ id: "n1", workItemId: "w1" }), normSet({ id: "n2", workItemId: "wGone" })],
+        normComponents: [
+          component({ id: "c1", normId: "n1", resourceId: "rGone" }),
+          component({ id: "c2", normId: "n2", resourceId: "r1" }),
+        ],
       },
       today
     );
@@ -278,6 +319,7 @@ describe("libraryIssues", () => {
         resources: [resource({ id: "r1", code: "XM" })],
         resourcePrices: [price({ id: "p1", resourceId: "r1" }), price({ id: "p2", resourceId: "r1", status: "inactive" })],
         norms: [],
+        normComponents: [],
       },
       today
     );
@@ -334,6 +376,7 @@ describe("kiểm tra thư viện — giá bằng 0 (prompts/13)", () => {
         resources: [{ id: "r", code: "R", name: "R", type: "material", categoryId: null, unit: "kg", notes: "", ...stamp }],
         resourcePrices: [{ id: "p", resourceId: "r", price: 0, unit: "kg", currency: "VND", effectiveFrom: null, effectiveTo: null, supplierId: null, source: "", status: "active", notes: "", ...stamp }],
         norms: [],
+        normComponents: [],
       },
       "2026-10-21"
     );

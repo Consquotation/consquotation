@@ -17,10 +17,21 @@ import {
 import ImportReview, { AnalysisDetails, ImportReport } from "./ImportReview";
 import { LibraryService } from "../../../application/libraryService";
 import { WorkbookGateway, SheetSummary, TableSummary } from "../../../application/workbookGateway";
-import { checkBackupMeta, datasetFromBackupSheet, parseBackupJson } from "../../../domain/library/exchange/backup";
+import {
+  backupSheetKinds,
+  checkBackupMeta,
+  datasetFromBackupSheet,
+  parseBackupJson,
+} from "../../../domain/library/exchange/backup";
 import { RawCell, parseTextCell } from "../../../domain/library/exchange/cells";
 import { decodeTextFile, parseCsv } from "../../../domain/library/exchange/csv";
-import { DATASETS, DATASET_KINDS, DatasetKind, META_SHEET_NAME } from "../../../domain/library/exchange/schema";
+import {
+  DATASETS,
+  DATASET_KINDS,
+  DatasetKind,
+  EXCHANGE_SCHEMA_VERSION,
+  META_SHEET_NAME,
+} from "../../../domain/library/exchange/schema";
 import {
   ColumnMapping,
   ImportDataset,
@@ -98,7 +109,11 @@ const ImportSection: React.FC<{
   const [sheetName, setSheetName] = React.useState("");
   const [tables, setTables] = React.useState<TableSummary[]>([]);
   const [tableName, setTableName] = React.useState("");
-  const [backupInfo, setBackupInfo] = React.useState<{ exportedAt: string; libraryName: string } | null>(null);
+  const [backupInfo, setBackupInfo] = React.useState<{
+    exportedAt: string;
+    libraryName: string;
+    schemaVersion: number;
+  } | null>(null);
   const fileInput = React.useRef<HTMLInputElement>(null);
   const exclusive = useExclusive();
 
@@ -117,7 +132,11 @@ const ImportSection: React.FC<{
         const meta = await gateway.readSheet(META_SHEET_NAME, 20);
         const check = checkBackupMeta(meta.table.rows);
         if (check.kind === "backup") {
-          setBackupInfo({ exportedAt: check.exportedAt, libraryName: check.libraryName });
+          setBackupInfo({
+            exportedAt: check.exportedAt,
+            libraryName: check.libraryName,
+            schemaVersion: check.schemaVersion,
+          });
         }
       }
     } catch (e) {
@@ -233,8 +252,10 @@ const ImportSection: React.FC<{
   const readBackupWorkbook = () =>
     read(async () => {
       const datasets: ImportDataset[] = [];
-      for (const kind of DATASET_KINDS) {
-        const name = DATASETS[kind].sheetName;
+      // Bản xuất schema 1–2: sheet "Định mức" là dòng định mức kiểu cũ (ADR-0013).
+      for (const { kind, sheetName: name } of backupSheetKinds(
+        backupInfo?.schemaVersion ?? EXCHANGE_SCHEMA_VERSION
+      )) {
         if (!sheets?.some((x) => x.name === name)) {
           continue;
         }

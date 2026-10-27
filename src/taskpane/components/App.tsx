@@ -29,6 +29,7 @@ import WorkflowPanel from "./WorkflowPanel";
 import PrintView from "./print/PrintView";
 import { LayoutGateway } from "../../application/layoutGateway";
 import { ExcelLayoutGateway } from "../../office/excelLayoutGateway";
+import { ExcelNormExportGateway } from "../../office/excelNormExportGateway";
 import { compositionLines } from "../../domain/pricing/composition";
 import { ExcelPricingGateway } from "../../office/excelPricingGateway";
 import { PricingGateway } from "../../application/pricingGateway";
@@ -138,6 +139,7 @@ const App: React.FC<{
     [injectedPricing]
   );
   const layout = React.useMemo(() => injectedLayout ?? new ExcelLayoutGateway(), [injectedLayout]);
+  const normExporter = React.useMemo(() => new ExcelNormExportGateway(), []);
   const libraryService = React.useMemo(
     () => injectedLibrary ?? createLibraryService(),
     [injectedLibrary]
@@ -317,6 +319,7 @@ const App: React.FC<{
               <LibraryView
                 service={libraryService}
                 gateway={gateway}
+                normExporter={normExporter}
                 onInsert={(item) => void insertFromLibrary(item)}
               />
             </div>

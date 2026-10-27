@@ -4,13 +4,17 @@
  *   đang dùng, còn hiệu lực và cùng đơn vị (không tự chọn "giá mới nhất là giá đúng" — prompts/08).
  * - Giá khác đơn vị tài nguyên không chọn được (hao phí tính theo đơn vị tài nguyên).
  * - Không chọn giá → dòng phân tích để trống đơn giá nguồn; đơn giá công tác để trống (không phải 0).
+ * - Định mức dùng: phiên bản ĐANG DÙNG liên kết với công tác (ADR-0013). Hao phí ghi lên sheet là
+ *   hao phí tính toán (đã cộng hao hụt nếu có), tính bằng số học thập phân như bộ máy tính.
  */
 
 import { formatIsoDate, validityOn, Validity } from "../library/dates";
 import { normalizeCode } from "../library/validation";
+import * as D from "./decimal";
 import {
   LibrarySnapshot,
-  NormDefinition,
+  Norm,
+  NormComponent,
   Resource,
   ResourcePrice,
   ResourceType,
@@ -41,11 +45,34 @@ export interface PriceOption {
 }
 
 export interface CompositionLine {
-  norm: NormDefinition;
+  norm: Norm;
+  component: NormComponent;
+  /** Hao phí tính toán = hao phí cơ sở × (1 + hao hụt), trừ khi định mức đã gồm hao hụt. */
+  consumption: number;
   resource: Resource | null;
   options: PriceOption[];
   /** Chọn sẵn khi chỉ có đúng một giá dùng được; null = người dùng phải chọn. */
   defaultPriceId: string | null;
+}
+
+/** Phiên bản định mức đang dùng của công tác (mỗi công tác tối đa một phiên bản đang dùng). */
+export function approvedNormFor(
+  item: WorkItem,
+  library: Pick<LibrarySnapshot, "norms">
+): Norm | null {
+  return library.norms.find((n) => n.workItemId === item.id && n.status === "approved") ?? null;
+}
+
+export function effectiveConsumption(norm: Norm, component: NormComponent): number {
+  if (norm.wasteIncluded || !(component.wasteRate > 0)) {
+    return component.consumption;
+  }
+  return D.toNumber(
+    D.multiply(
+      D.fromNumber(component.consumption),
+      D.add(D.parse("1"), D.fromNumber(component.wasteRate))
+    )
+  );
 }
 
 export function compositionLines(
@@ -53,13 +80,18 @@ export function compositionLines(
   library: LibrarySnapshot,
   today: string
 ): CompositionLine[] {
+  const norm = approvedNormFor(item, library);
+  if (!norm) {
+    return [];
+  }
   const resources = new Map(library.resources.map((r) => [r.id, r]));
-  return library.norms
-    .filter((n) => n.workItemId === item.id)
-    .map((norm) => {
-      const resource = resources.get(norm.resourceId) ?? null;
+  return library.normComponents
+    .filter((c) => c.normId === norm.id)
+    .sort((a, b) => a.sortOrder - b.sortOrder || a.createdAt.localeCompare(b.createdAt))
+    .map((component) => {
+      const resource = resources.get(component.resourceId) ?? null;
       const options = library.resourcePrices
-        .filter((p) => p.resourceId === norm.resourceId)
+        .filter((p) => p.resourceId === component.resourceId)
         .map((price): PriceOption => {
           const validity = validityOn(price.effectiveFrom, price.effectiveTo, today);
           const unitMatches =
@@ -82,6 +114,8 @@ export function compositionLines(
       const usable = options.filter((o) => o.usable);
       return {
         norm,
+        component,
+        consumption: effectiveConsumption(norm, component),
         resource,
         options,
         defaultPriceId: usable.length === 1 ? usable[0].price.id : null,
@@ -89,11 +123,11 @@ export function compositionLines(
     });
 }
 
-/** normId → priceId đã chọn ("" = để trống, nhập sau trên sheet). */
+/** componentId → priceId đã chọn ("" = để trống, nhập sau trên sheet). */
 export type PriceSelection = Record<string, string>;
 
 export function defaultSelection(lines: readonly CompositionLine[]): PriceSelection {
-  return Object.fromEntries(lines.map((l) => [l.norm.id, l.defaultPriceId ?? ""]));
+  return Object.fromEntries(lines.map((l) => [l.component.id, l.defaultPriceId ?? ""]));
 }
 
 export interface CompositionResult {
@@ -137,7 +171,7 @@ export function buildComposition(
     errors.push(`Công tác "${item.code}" chưa có định mức trong thư viện.`);
   }
   const chosen = lines.map((line) => {
-    const id = selection[line.norm.id] ?? "";
+    const id = selection[line.component.id] ?? "";
     const option = line.options.find((o) => o.price.id === id) ?? null;
     return { line, option };
   });
@@ -175,9 +209,12 @@ export function buildComposition(
 
   let preview: number | null = null;
   if (missingCount === 0 && lines.length > 0) {
-    const sum = chosen.reduce(
-      (total, c) => total + c.line.norm.quantity * c.option!.price.price,
-      0
+    const sum = D.toNumber(
+      D.sum(
+        chosen.map((c) =>
+          D.multiply(D.fromNumber(c.line.consumption), D.fromNumber(c.option!.price.price))
+        )
+      )
     );
     preview = roundLikeExcel(sum, unitPriceRule);
   }
@@ -202,15 +239,21 @@ export function buildComposition(
         case "resourceUnit":
           return text(line.resource?.unit ?? "");
         case "quantity":
-          return line.norm.quantity;
+          return line.consumption;
         case "price":
           return option ? option.price.price : "";
         case "lineAmount":
           return lineAmount;
         case "unitPrice":
           return unitPrice;
-        case "source":
-          return text(option ? sourceText(option.price) : "Chưa chọn giá — nhập Đơn giá nguồn");
+        case "source": {
+          const base = option ? sourceText(option.price) : "Chưa chọn giá: nhập Đơn giá nguồn";
+          const waste =
+            line.consumption !== line.component.consumption
+              ? `; hao phí gồm hao hụt ${D.toString(D.multiply(D.fromNumber(line.component.wasteRate), D.parse("100")))}% (cơ sở ${line.component.consumption})`
+              : "";
+          return text(`${base}${waste}; định mức ${line.norm.code} v${line.norm.version}`);
+        }
       }
     })
   );

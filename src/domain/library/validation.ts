@@ -5,11 +5,14 @@
 
 import { parseDecimalInput } from "../workItemDraft";
 import { formatIsoDate, isIsoDate, periodsOverlap, validityOn } from "./dates";
+import { fromNumber, multiply, toNumber } from "../pricing/decimal";
 import { normalizeForSearch } from "./search";
 import {
   Category,
   LibrarySnapshot,
-  NormDefinition,
+  Norm,
+  NormSourceType,
+  NormStatus,
   PriceStatus,
   Resource,
   ResourcePrice,
@@ -393,51 +396,307 @@ export function validateSupplierForm(
   return { ok: true, value: { name, contactInfo, notes: form.notes.trim() } };
 }
 
-// ---------- Định mức ----------
+// ---------- Định mức (ADR-0013) ----------
 
 export interface NormForm {
-  resourceId: string;
-  quantity: string;
+  code: string;
+  name: string;
+  unit: string;
+  categoryId: string;
+  workItemId: string;
+  version: string;
+  effectiveFrom: string;
+  sourceType: NormSourceType;
+  source: string;
+  sourceVerified: boolean;
+  wasteIncluded: boolean;
   notes: string;
 }
 
 export type NormField = keyof NormForm;
-export type NormData = Omit<NormDefinition, "id" | "workItemId" | "createdAt" | "updatedAt">;
+export type NormData = Omit<Norm, "id" | "status" | "createdAt" | "updatedAt">;
+
+/** Trường ảnh hưởng kết quả tính hoặc định danh phiên bản: khóa khi phiên bản không còn là nháp. */
+const LOCKED_NORM_FIELDS = ["code", "version", "unit", "wasteIncluded"] as const;
+
+export function normToForm(norm: Norm): NormForm {
+  return {
+    code: norm.code,
+    name: norm.name,
+    unit: norm.unit,
+    categoryId: norm.categoryId ?? "",
+    workItemId: norm.workItemId ?? "",
+    version: norm.version,
+    effectiveFrom: norm.effectiveFrom ?? "",
+    sourceType: norm.sourceType,
+    source: norm.source,
+    sourceVerified: norm.sourceVerified,
+    wasteIncluded: norm.wasteIncluded,
+    notes: norm.notes,
+  };
+}
+
+/** Cùng mã định mức và cùng phiên bản (không phân biệt hoa thường, khoảng trắng hai đầu). */
+export function sameNormVersion(
+  a: { code: string; version: string },
+  b: { code: string; version: string }
+): boolean {
+  return (
+    normalizeCode(a.code) === normalizeCode(b.code) &&
+    normalizeCode(a.version) === normalizeCode(b.version)
+  );
+}
 
 export function validateNormForm(
   form: NormForm,
-  workItemId: string,
-  library: LibrarySnapshot,
+  library: Pick<LibrarySnapshot, "norms" | "categories" | "workItems">,
   editingId: string | null
 ): FormResult<NormData, NormField> {
   const errors: FieldError<NormField>[] = [];
-  if (!library.resources.some((r) => r.id === form.resourceId)) {
-    errors.push({ field: "resourceId", message: "Chọn tài nguyên." });
-  } else if (
-    library.norms.some(
-      (n) => n.workItemId === workItemId && n.resourceId === form.resourceId && n.id !== editingId
-    )
+  const code = required(form.code, "code", "mã định mức", errors);
+  const name = required(form.name, "name", "tên công tác", errors);
+  const unit = required(form.unit, "unit", "đơn vị tính của công tác", errors);
+  const version = required(form.version, "version", "phiên bản", errors);
+  if (
+    code &&
+    version &&
+    library.norms.some((n) => n.id !== editingId && sameNormVersion(n, { code, version }))
   ) {
-    errors.push({
-      field: "resourceId",
-      message: "Tài nguyên này đã có trong định mức của công tác.",
-    });
+    errors.push({ field: "version", message: `Định mức "${code}" đã có phiên bản "${version}".` });
   }
-  const parsed = parseDecimalInput(form.quantity);
-  let quantity = 0;
-  if (!parsed.ok) {
-    errors.push({ field: "quantity", message: parsed.message });
-  } else if (parsed.value === null) {
-    errors.push({ field: "quantity", message: "Nhập hao phí." });
-  } else if (parsed.value <= 0) {
-    errors.push({ field: "quantity", message: "Hao phí phải lớn hơn 0." });
-  } else {
-    quantity = parsed.value;
+  const effectiveFrom = form.effectiveFrom.trim() === "" ? null : form.effectiveFrom.trim();
+  if (effectiveFrom && !isIsoDate(effectiveFrom)) {
+    errors.push({ field: "effectiveFrom", message: "Ngày không hợp lệ." });
+  }
+  const categoryId = checkRef(form.categoryId, library.categories, "categoryId", "Nhóm", errors);
+  const workItemId = checkRef(form.workItemId, library.workItems, "workItemId", "Công tác", errors);
+  if (form.sourceType === "document" && form.source.trim() === "") {
+    errors.push({ field: "source", message: "Nhập mã hoặc tên tài liệu nguồn." });
+  }
+  const existing = editingId ? library.norms.find((n) => n.id === editingId) : undefined;
+  if (existing && existing.status !== "draft") {
+    const changed = LOCKED_NORM_FIELDS.filter((key) => {
+      const before = existing[key];
+      const after = key === "wasteIncluded" ? form.wasteIncluded : form[key].trim();
+      return typeof before === "string"
+        ? normalizeCode(before) !== normalizeCode(String(after))
+        : before !== after;
+    });
+    for (const key of changed) {
+      errors.push({
+        field: key,
+        message:
+          "Phiên bản đang dùng hoặc ngừng dùng đã khóa trường này. Hãy sao chép thành phiên bản mới để sửa.",
+      });
+    }
+    if (existing.status === "approved" && workItemId && workItemId !== existing.workItemId) {
+      const other = approvedForWorkItem(library.norms, workItemId, existing.id);
+      if (other) {
+        errors.push({
+          field: "workItemId",
+          message: `Công tác này đã dùng định mức "${other.code}" phiên bản ${other.version}.`,
+        });
+      }
+    }
   }
   if (errors.length > 0) {
     return { ok: false, errors };
   }
-  return { ok: true, value: { resourceId: form.resourceId, quantity, notes: form.notes.trim() } };
+  return {
+    ok: true,
+    value: {
+      code,
+      name,
+      unit,
+      categoryId,
+      workItemId,
+      version,
+      effectiveFrom,
+      sourceType: form.sourceType,
+      source: form.source.trim(),
+      sourceVerified: form.sourceVerified,
+      wasteIncluded: form.wasteIncluded,
+      notes: form.notes.trim(),
+    },
+  };
+}
+
+function approvedForWorkItem(
+  norms: readonly Norm[],
+  workItemId: string,
+  exceptId: string
+): Norm | undefined {
+  return norms.find(
+    (n) => n.id !== exceptId && n.status === "approved" && n.workItemId === workItemId
+  );
+}
+
+export type NormStatusCheck = { ok: true } | { ok: false; message: string };
+
+/**
+ * Chuyển trạng thái phiên bản:
+ * - nháp → đang dùng; ngừng dùng → đang dùng: định mức phải có thành phần, mọi thành phần trỏ tới tài
+ *   nguyên còn tồn tại, cùng đơn vị lúc liên kết, không trùng tài nguyên; mỗi mã và mỗi công tác liên
+ *   kết chỉ có MỘT phiên bản đang dùng;
+ * - đang dùng → ngừng dùng: luôn được;
+ * - không quay lại nháp (phiên bản đã dùng không được sửa âm thầm).
+ */
+export function checkNormStatusChange(
+  norm: Norm,
+  next: NormStatus,
+  library: Pick<LibrarySnapshot, "norms" | "normComponents" | "resources">
+): NormStatusCheck {
+  if (next === norm.status) {
+    return { ok: true };
+  }
+  if (next === "draft") {
+    return {
+      ok: false,
+      message: "Phiên bản đã dùng không quay lại nháp được. Hãy sao chép thành phiên bản mới.",
+    };
+  }
+  if (next === "inactive") {
+    return norm.status === "approved"
+      ? { ok: true }
+      : {
+          ok: false,
+          message: "Chỉ phiên bản đang dùng mới chuyển sang ngừng dùng; bản nháp có thể xóa.",
+        };
+  }
+  const components = library.normComponents.filter((c) => c.normId === norm.id);
+  if (components.length === 0) {
+    return { ok: false, message: "Định mức chưa có thành phần nào." };
+  }
+  const resources = new Map(library.resources.map((r) => [r.id, r]));
+  const seen = new Set<string>();
+  for (const c of components) {
+    const resource = resources.get(c.resourceId);
+    if (!resource) {
+      return {
+        ok: false,
+        message: `Thành phần "${c.resourceCodeSnapshot}" trỏ tới tài nguyên không còn tồn tại.`,
+      };
+    }
+    if (normalizeCode(resource.unit) !== normalizeCode(c.resourceUnitSnapshot)) {
+      return {
+        ok: false,
+        message: `Đơn vị của "${resource.code}" đã đổi so với lúc liên kết. Kiểm tra hao phí và cập nhật liên kết trước.`,
+      };
+    }
+    if (seen.has(c.resourceId)) {
+      return { ok: false, message: `Tài nguyên "${resource.code}" xuất hiện nhiều lần.` };
+    }
+    seen.add(c.resourceId);
+    if (!Number.isFinite(c.consumption) || c.consumption <= 0) {
+      return { ok: false, message: `Hao phí của "${resource.code}" phải lớn hơn 0.` };
+    }
+  }
+  const sameCode = library.norms.find(
+    (n) =>
+      n.id !== norm.id &&
+      n.status === "approved" &&
+      normalizeCode(n.code) === normalizeCode(norm.code)
+  );
+  if (sameCode) {
+    return {
+      ok: false,
+      message: `Mã "${norm.code}" đang dùng phiên bản ${sameCode.version}. Chuyển phiên bản đó sang ngừng dùng trước.`,
+    };
+  }
+  if (norm.workItemId) {
+    const other = approvedForWorkItem(library.norms, norm.workItemId, norm.id);
+    if (other) {
+      return {
+        ok: false,
+        message: `Công tác liên kết đang dùng định mức "${other.code}" phiên bản ${other.version}. Chuyển định mức đó sang ngừng dùng trước.`,
+      };
+    }
+  }
+  return { ok: true };
+}
+
+export interface NormComponentForm {
+  resourceId: string;
+  consumption: string;
+  /** Hao hụt theo phần trăm, ví dụ "5" = 5%; trống = 0. */
+  wastePercent: string;
+  notes: string;
+}
+
+export type NormComponentField = keyof NormComponentForm;
+export interface NormComponentData {
+  resourceId: string;
+  consumption: number;
+  wasteRate: number;
+  notes: string;
+}
+
+/** Đổi % sang tỷ lệ bằng số học thập phân: "5" → 0,05; "3,3" → 0,033 (không sai số dấu phẩy động). */
+export function percentToRate(percent: number): number {
+  return toNumber(multiply(fromNumber(percent), fromNumber(0.01)));
+}
+
+export function rateToPercent(rate: number): string {
+  return rate === 0 ? "" : String(toNumber(multiply(fromNumber(rate), fromNumber(100))));
+}
+
+export function validateNormComponentForm(
+  form: NormComponentForm,
+  norm: Norm,
+  library: Pick<LibrarySnapshot, "normComponents" | "resources">,
+  editingId: string | null
+): FormResult<NormComponentData, NormComponentField> {
+  const errors: FieldError<NormComponentField>[] = [];
+  if (norm.status !== "draft") {
+    errors.push({
+      field: "resourceId",
+      message:
+        "Phiên bản đang dùng hoặc ngừng dùng đã khóa thành phần. Hãy sao chép thành phiên bản mới để sửa.",
+    });
+  }
+  if (!library.resources.some((r) => r.id === form.resourceId)) {
+    errors.push({ field: "resourceId", message: "Chọn tài nguyên trong thư viện." });
+  } else if (
+    library.normComponents.some(
+      (c) => c.normId === norm.id && c.resourceId === form.resourceId && c.id !== editingId
+    )
+  ) {
+    errors.push({ field: "resourceId", message: "Tài nguyên này đã có trong định mức." });
+  }
+  const parsed = parseDecimalInput(form.consumption);
+  let consumption = 0;
+  if (!parsed.ok) {
+    errors.push({ field: "consumption", message: parsed.message });
+  } else if (parsed.value === null) {
+    errors.push({ field: "consumption", message: "Nhập hao phí." });
+  } else if (parsed.value <= 0) {
+    errors.push({ field: "consumption", message: "Hao phí phải lớn hơn 0." });
+  } else {
+    consumption = parsed.value;
+  }
+  const waste = parseDecimalInput(form.wastePercent);
+  let wasteRate = 0;
+  if (!waste.ok) {
+    errors.push({ field: "wastePercent", message: waste.message });
+  } else if (waste.value !== null) {
+    if (waste.value < 0 || waste.value > 100) {
+      errors.push({ field: "wastePercent", message: "Hao hụt từ 0 đến 100 (%)." });
+    } else if (waste.value > 0 && norm.wasteIncluded) {
+      errors.push({
+        field: "wastePercent",
+        message: "Định mức ghi hao phí đã gồm hao hụt: để trống hao hụt để không tính trùng.",
+      });
+    } else {
+      wasteRate = percentToRate(waste.value);
+    }
+  }
+  if (errors.length > 0) {
+    return { ok: false, errors };
+  }
+  return {
+    ok: true,
+    value: { resourceId: form.resourceId, consumption, wasteRate, notes: form.notes.trim() },
+  };
 }
 
 // ---------- Báo cáo kiểm tra toàn thư viện ----------
@@ -454,6 +713,11 @@ export type IssueKind =
   | "notYetEffectivePrice"
   | "brokenNormWorkItem"
   | "brokenNormResource"
+  | "emptyNorm"
+  | "duplicateNormVersion"
+  | "multipleApprovedNorms"
+  | "normResourceChanged"
+  | "unverifiedNormSource"
   | "brokenPriceResource"
   | "overlappingPrices"
   | "priceUnitMismatch"
@@ -591,26 +855,95 @@ export function libraryIssues(library: LibrarySnapshot, today: string): LibraryI
     }
   }
 
+  // Định mức (ADR-0013).
+  const normLabel = (n: Norm) => `${n.code} v${n.version}`;
+  const normsById = new Map(library.norms.map((n) => [n.id, n]));
   for (const n of library.norms) {
-    if (!workItemsById.has(n.workItemId)) {
+    if (n.workItemId && !workItemsById.has(n.workItemId)) {
       issues.push({
         kind: "brokenNormWorkItem",
+        severity: "warning",
+        entity: "norm",
+        entityId: n.id,
+        label: normLabel(n),
+        detail: "Định mức liên kết với công tác không còn tồn tại.",
+      });
+    }
+    if (!library.normComponents.some((c) => c.normId === n.id)) {
+      issues.push({
+        kind: "emptyNorm",
+        severity: "warning",
+        entity: "norm",
+        entityId: n.id,
+        label: normLabel(n),
+        detail: "Định mức chưa có thành phần nào.",
+      });
+    }
+    if (library.norms.some((o) => o.id !== n.id && sameNormVersion(o, n))) {
+      issues.push({
+        kind: "duplicateNormVersion",
         severity: "error",
         entity: "norm",
         entityId: n.id,
-        label: n.id,
-        detail: "Định mức trỏ tới công tác không còn tồn tại.",
+        label: normLabel(n),
+        detail: "Trùng mã định mức và phiên bản với định mức khác.",
       });
     }
-    if (!resourcesById.has(n.resourceId)) {
-      const owner = workItemsById.get(n.workItemId);
+    if (
+      n.status === "approved" &&
+      library.norms.some(
+        (o) =>
+          o.id !== n.id &&
+          o.status === "approved" &&
+          (normalizeCode(o.code) === normalizeCode(n.code) ||
+            (n.workItemId !== null && o.workItemId === n.workItemId))
+      )
+    ) {
+      issues.push({
+        kind: "multipleApprovedNorms",
+        severity: "error",
+        entity: "norm",
+        entityId: n.id,
+        label: normLabel(n),
+        detail: "Có nhiều phiên bản đang dùng cho cùng mã định mức hoặc cùng công tác.",
+      });
+    }
+    if (n.sourceType === "document" && !n.sourceVerified && n.status === "approved") {
+      issues.push({
+        kind: "unverifiedNormSource",
+        severity: "warning",
+        entity: "norm",
+        entityId: n.id,
+        label: normLabel(n),
+        detail: "Định mức lấy từ tài liệu nhưng chưa đánh dấu đã đối chiếu với tài liệu gốc.",
+      });
+    }
+  }
+  for (const c of library.normComponents) {
+    const owner = normsById.get(c.normId);
+    const label = owner ? normLabel(owner) : c.normId;
+    const resource = resourcesById.get(c.resourceId);
+    if (!resource) {
       issues.push({
         kind: "brokenNormResource",
         severity: "error",
         entity: "norm",
-        entityId: n.id,
-        label: owner?.code ?? n.id,
-        detail: "Định mức trỏ tới tài nguyên không còn tồn tại.",
+        entityId: c.normId,
+        label,
+        detail: `Thành phần "${c.resourceCodeSnapshot}" trỏ tới tài nguyên không còn tồn tại.`,
+      });
+    } else if (
+      normalizeCode(resource.unit) !== normalizeCode(c.resourceUnitSnapshot) ||
+      resource.code !== c.resourceCodeSnapshot ||
+      resource.name !== c.resourceNameSnapshot
+    ) {
+      issues.push({
+        kind: "normResourceChanged",
+        severity: "warning",
+        entity: "norm",
+        entityId: c.normId,
+        label,
+        detail: `Tài nguyên "${resource.code}" đã đổi mã, tên hoặc đơn vị so với lúc liên kết.`,
       });
     }
   }

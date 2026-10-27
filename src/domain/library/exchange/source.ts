@@ -6,6 +6,7 @@
 import { columnToLetters } from "../../../shared/a1";
 import { RawCell, isBlankCell, parseTextCell } from "./cells";
 import { DATASETS, DATASET_KINDS, DatasetKind, fieldMatchesHeader } from "./schema";
+import type { ResourceType } from "../types";
 
 /** Số dòng tối đa của một bộ dữ liệu nhập (prompts/17: giữ task pane phản hồi được). */
 export const MAX_IMPORT_ROWS = 50_000;
@@ -29,7 +30,13 @@ export interface ImportRow {
   rowLabel: string;
   cells: Record<string, RawCell | undefined>;
   /** Có ở file sao lưu JSON: giữ id và thời điểm tạo/sửa gốc khi khôi phục. */
-  meta?: { id?: string; createdAt?: string; updatedAt?: string };
+  meta?: {
+    id?: string;
+    createdAt?: string;
+    updatedAt?: string;
+    /** JSON v3: ảnh chụp tài nguyên của thành phần định mức (giữ lịch sử liên kết khi khôi phục). */
+    snapshot?: { code: string; name: string; unit: string; type: ResourceType };
+  };
   /** Lỗi phát hiện khi đọc nguồn (ví dụ JSON tham chiếu id không có trong file). */
   preErrors?: { field?: string; message: string }[];
 }

@@ -9,7 +9,7 @@ Theo [prompts/08_USER_OWNED_LIBRARY.md](../prompts/08_USER_OWNED_LIBRARY.md) và
 | Công tác (đơn giá tổng hợp) | Mã, tên, nhóm, đơn vị, mô tả, đơn giá (có thể để trống), tiền tệ, nhà cung cấp, nguồn giá, ngày hiệu lực, ghi chú |
 | Tài nguyên | Vật liệu, nhân công, máy thi công hoặc loại khác: mã, tên, nhóm, đơn vị |
 | Giá tài nguyên | Đơn giá, đơn vị, tiền tệ, ngày hiệu lực, nhà cung cấp, nguồn, trạng thái (đang dùng/ngưng dùng). Một tài nguyên có thể có nhiều giá |
-| Định mức | Hao phí tài nguyên cho 1 đơn vị công tác (tùy chọn) |
+| Định mức | Mã, tên, đơn vị công tác, phiên bản, ngày áp dụng, nguồn, trạng thái (nháp/đang dùng/ngừng dùng), công tác liên kết. Mỗi định mức có các thành phần: tài nguyên, hao phí cơ sở, hao hụt (%) |
 | Nhóm | Danh mục do bạn tự đặt, dùng chung cho công tác và tài nguyên |
 | Nhà cung cấp | Tên, thông tin liên hệ, ghi chú |
 
@@ -39,6 +39,7 @@ Mỗi bản ghi có id riêng, không đổi khi sửa mã hay tên. Đơn giá 
   - sắp xếp theo mã, tên hoặc đơn giá; chưa có giá luôn ở cuối;
   - mỗi lần hiện 50 mục, bấm Xem thêm để hiện tiếp.
 - **Giá hiện hành của tài nguyên:** chỉ hiện khi có đúng một giá đang dùng và còn hiệu lực hôm nay. Có nhiều giá như vậy thì danh sách ghi số giá, không tự chọn giá nào.
+- **Định mức:** xem mục [Định mức](#định-mức) bên dưới.
 - **Danh mục:** quản lý nhóm và nhà cung cấp.
   - Mỗi mục hiện số công tác, tài nguyên, giá đang dùng nó.
   - Xóa nhóm đang có bản ghi: chọn chuyển sang nhóm khác hoặc bỏ phân nhóm. Công tác và tài nguyên **không bao giờ** bị xóa theo nhóm.
@@ -113,6 +114,22 @@ Khi bấm **Chèn vào báo giá**, add-in **chép giá trị** của công tác
 - Chèn công tác có giá hết hạn, chưa hiệu lực hoặc chưa có giá thì có cảnh báo trước khi thêm. Add-in **không tự đổi** sang giá khác.
 - Khi một tài nguyên có nhiều giá đang dùng chồng thời gian, add-in **không tự chọn giá mới nhất là giá đúng**; bạn tự quyết định giá áp dụng.
 
+## Định mức
+
+Định mức do bạn tự nhập hoặc lấy từ tài liệu bên ngoài. ConsQuotation không kèm định mức nào và không xác nhận tính pháp lý của định mức. Chi tiết quyết định: [ADR-0013](ADR/0013-dinh-muc-phien-ban-va-bo-may-tinh.md).
+
+- **Danh sách:** tìm theo mã, tên (không cần gõ dấu); lọc theo nhóm và trạng thái.
+- **Trạng thái:**
+  - Nháp: sửa được mọi thứ, thêm, sửa, đổi thứ tự, xóa thành phần.
+  - Đang dùng: thành phần, mã, phiên bản, đơn vị, cờ "đã gồm hao hụt" bị khóa. Mỗi mã chỉ có một phiên bản Đang dùng; muốn duyệt phiên bản mới thì chuyển phiên bản cũ sang Ngừng dùng trước.
+  - Ngừng dùng: giữ lại để truy vết, không xóa được.
+  - Chỉ xóa được bản nháp. Muốn sửa định mức đã duyệt, bấm **Sao chép thành phiên bản mới**.
+- **Hao hụt:** `Hao phí tính toán = Hao phí cơ sở × (1 + Tỷ lệ hao hụt)`. Nhập 5 nghĩa là 5%. Nếu nguồn định mức đã gồm hao hụt, đánh dấu **Hao phí trong nguồn đã gồm hao hụt** để không cộng hai lần.
+- **Đơn vị:** hao phí khai theo đơn vị của tài nguyên. Add-in không quy đổi đơn vị. Giá có đơn vị khác tài nguyên thì không được dùng. Nếu đơn vị tài nguyên bị đổi sau khi khai hao phí, thành phần báo lỗi cho đến khi bạn kiểm tra hao phí và bấm **Cập nhật liên kết** (chỉ ở bản nháp).
+- **Kết quả tính:** từng thành phần (hao phí, giá, thành tiền), tổng vật liệu, nhân công, máy thi công, khác, và đơn giá tổng hợp. Thiếu giá, giá sai đơn vị hoặc tài nguyên có nhiều giá dùng được thì kết quả là "Chưa tính được", không ra 0. Tài nguyên có nhiều giá thì chọn giá ở ô **Giá áp dụng** (chỉ cho lần xem đó).
+- **Xuất bảng diễn giải ra Excel:** ghi vào sheet mới "Diễn giải MÃ vN", không ghi vào sheet có sẵn. Hao phí tính toán, thành tiền và tổng là công thức Excel, có cột kết quả của add-in bên cạnh để đối chiếu.
+- **Dùng trong báo giá:** liên kết định mức với một công tác. Khi chèn công tác đó vào báo giá và chọn **Phân tích từ định mức**, add-in dùng phiên bản Đang dùng; sheet "Phân tích đơn giá" ghi hao phí tính toán và mã, phiên bản định mức.
+
 ## Kiểm tra thư viện
 
 Tab Thư viện › **Kiểm tra** liệt kê, nhưng không tự sửa, các vấn đề sau:
@@ -121,8 +138,21 @@ Tab Thư viện › **Kiểm tra** liệt kê, nhưng không tự sửa, các v�
 - công tác chưa có giá;
 - giá hết hạn hoặc chưa hiệu lực;
 - định mức hoặc giá trỏ tới bản ghi đã bị xóa;
+- định mức không có thành phần, trùng mã và phiên bản, nhiều phiên bản Đang dùng;
+- tài nguyên trong định mức đã đổi mã, tên, đơn vị hoặc loại;
+- định mức nguồn tài liệu chưa đối chiếu với tài liệu gốc;
 - đơn vị của giá khác đơn vị tài nguyên;
 - nhiều giá đang dùng chồng thời gian.
+
+## Nâng cấp từ bản 1.9.0
+
+Lần đầu mở tab Thư viện ở bản 1.10.0, thư viện được nâng từ schema 2 lên 3:
+- các dòng định mức cũ của mỗi công tác được gom thành một định mức phiên bản 1, mã và tên lấy theo công tác, trạng thái Đang dùng;
+- dòng định mức của công tác đã bị xóa được gom thành định mức Nháp, tên ghi "(công tác đã bị xóa)";
+- hao hụt của thành phần cũ là 0;
+- nếu nâng cấp lỗi, thư viện giữ nguyên như cũ.
+
+Nên tải một bản sao lưu ở bản 1.9.0 trước khi cập nhật. Sau khi nâng cấp, bản 1.9.0 không mở được thư viện này nữa.
 
 ## Nâng cấp từ bản 1.8.0
 

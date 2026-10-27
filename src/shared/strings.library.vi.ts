@@ -13,6 +13,7 @@ export const LIBRARY_STRINGS = {
     label: "Các phần của thư viện",
     workItems: "Công tác",
     resources: "Tài nguyên",
+    norms: "Định mức",
     catalog: "Danh mục",
     check: "Kiểm tra",
   },
@@ -89,17 +90,13 @@ export const LIBRARY_STRINGS = {
   },
 
   norms: {
-    title: "Định mức (hao phí cho 1 đơn vị công tác)",
-    empty: "Chưa có định mức. Định mức là tùy chọn — chỉ thêm nếu bạn có dữ liệu.",
-    needResources: "Cần thêm tài nguyên ở phần Tài nguyên trước khi khai báo định mức.",
-    resource: "Tài nguyên",
-    chooseResource: "Chọn tài nguyên…",
-    quantity: "Hao phí",
-    add: "Thêm định mức",
-    saveFirst: "Lưu công tác trước, sau đó mở lại để khai báo định mức.",
-    missingResource: "(tài nguyên không còn tồn tại)",
-    deleteTitle: "Xóa định mức?",
-    deleteBody: "Xóa dòng định mức này khỏi công tác. Thao tác không hoàn tác được.",
+    title: "Định mức liên kết",
+    noneLinked: "Chưa có định mức nào liên kết với công tác này.",
+    linkedLine: (code: string, version: string, status: string) =>
+      `${code} phiên bản ${version}: ${status}`,
+    manageInTab:
+      'Tạo, sửa định mức ở tab "Định mức" và chọn công tác liên kết. Khi chèn vào báo giá, add-in dùng phiên bản Đang dùng.',
+    linkedCount: (n: number) => `${n} phiên bản định mức`,
   },
 
   resources: {
