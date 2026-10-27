@@ -189,6 +189,7 @@ function migrateV2toV3(tx: IDBTransaction, now: string): void {
               resourceTypeSnapshot: resource?.type ?? "other",
               consumption: Number(line.quantity),
               wasteRate: 0,
+              priceId: null,
               sortOrder: index + 1,
               notes: typeof line.notes === "string" ? line.notes : "",
               createdAt: String(line.createdAt ?? now),
@@ -345,7 +346,11 @@ export class IndexedDbLibraryRepository implements LibraryRepository {
           resources: resources.map((r) => ({ ...r, categoryId: r.categoryId ?? null })),
           resourcePrices: resourcePrices.map((p) => ({ ...p, supplierId: p.supplierId ?? null })),
           norms,
-          normComponents: normComponents.map((c) => ({ ...c, wasteRate: c.wasteRate ?? 0 })),
+          normComponents: normComponents.map((c) => ({
+            ...c,
+            wasteRate: c.wasteRate ?? 0,
+            priceId: c.priceId ?? null,
+          })),
         };
       }
     );

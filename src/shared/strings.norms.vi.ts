@@ -120,6 +120,7 @@ export const NORM_UI = {
     priced: (price: string, unit: string, amount: string) => `× ${price}/${unit} = ${amount}`,
     unpriced: "chưa tính được thành tiền",
     choosePrice: "Giá áp dụng",
+    choosePriceHint: "Lưu cùng định mức và làm giá mặc định khi phân tích đơn giá trong báo giá.",
     autoPrice: "— Tự chọn (khi chỉ có một giá dùng được) —",
     priceOption: (price: string, unit: string, status: string, source: string) =>
       `${price}/${unit} · ${status}${source ? ` · ${source}` : ""}`,

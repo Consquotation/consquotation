@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import * as D from "../../src/domain/pricing/decimal";
-import { calculateNorm, calculateNormById } from "../../src/domain/pricing/normCalc";
+import { calculateNorm, calculateNormById, recheckNorm } from "../../src/domain/pricing/normCalc";
 import { Norm, NormComponent, Resource, ResourcePrice, ResourceType } from "../../src/domain/library/types";
 
 const T = "2026-10-27T00:00:00.000Z";
@@ -63,6 +63,7 @@ const comp = (id: string, resource: Resource, consumption: number, extra: Partia
   resourceTypeSnapshot: resource.type,
   consumption,
   wasteRate: 0,
+  priceId: null,
   sortOrder: Number(id.replace(/\D/g, "")) || 0,
   notes: "",
   createdAt: T,
@@ -240,6 +241,29 @@ describe("bộ máy tính đơn giá từ định mức", () => {
     expect(before.inputFingerprint).not.toBe(after.inputFingerprint);
     expect(after.unitPrice).toBe(22000);
     expect(calculateNorm(NORM, [comp("c1", A, 2)], LIB, OPTS).inputFingerprint).toBe(before.inputFingerprint);
+  });
+
+  it("kiểm tra lại trước khi xuất: chỉ trả kết quả khi định mức, thành phần, tài nguyên, giá không đổi", () => {
+    const later = "2026-10-28T00:00:00.000Z";
+    const parts = [comp("c1", A, 2), comp("c2", B, 0.5)];
+    const lib = { norms: [NORM], normComponents: parts, ...LIB };
+    const shown = calculateNorm(NORM, parts, LIB, OPTS);
+    const same = recheckNorm(shown, lib, OPTS);
+    expect(same?.result.unitPrice).toBe(40000);
+    expect(same?.norm).toBe(NORM);
+    // Giá đổi ở task pane khác.
+    expect(recheckNorm(shown, { ...lib, resourcePrices: [{ ...PRICES[0], price: 11000, updatedAt: later }, ...PRICES.slice(1)] }, OPTS)).toBeNull();
+    // Thêm giá thứ hai cho A: add-in không còn tự chọn được giá.
+    expect(recheckNorm(shown, { ...lib, resourcePrices: [...PRICES, price("pa2", "a", 12000, "kg")] }, OPTS)).toBeNull();
+    // Tài nguyên đổi tên, định mức đổi, thành phần bị xóa hoặc đổi giá áp dụng.
+    expect(recheckNorm(shown, { ...lib, resources: [{ ...A, name: "Tên mới", updatedAt: later }, B, C] }, OPTS)).toBeNull();
+    expect(recheckNorm(shown, { ...lib, norms: [{ ...NORM, updatedAt: later }] }, OPTS)).toBeNull();
+    expect(recheckNorm(shown, { ...lib, normComponents: [parts[0]] }, OPTS)).toBeNull();
+    expect(recheckNorm(shown, { ...lib, normComponents: [{ ...parts[0], priceId: "pa", updatedAt: later }, parts[1]] }, OPTS)).toBeNull();
+    // Định mức bị xóa.
+    expect(recheckNorm(shown, { ...lib, norms: [] }, OPTS)).toBeNull();
+    // Giá của tài nguyên khác (không dùng trong định mức) đổi thì vẫn xuất được.
+    expect(recheckNorm(shown, { ...lib, resourcePrices: [...PRICES.slice(0, 2), { ...PRICES[2], price: 1, updatedAt: later }] }, OPTS)).not.toBeNull();
   });
 
   it("thứ tự thành phần theo sortOrder; 200 thành phần tính nhanh", () => {

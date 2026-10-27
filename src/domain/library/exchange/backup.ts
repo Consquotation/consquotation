@@ -330,6 +330,7 @@ export function parseBackupJson(text: string): ParsedBackup {
         cells,
         meta: {
           snapshot,
+          priceId: kind === "normComponents" ? str(record.priceId) : undefined,
           id: str(record.id),
           createdAt: str(record.createdAt),
           updatedAt: str(record.updatedAt),

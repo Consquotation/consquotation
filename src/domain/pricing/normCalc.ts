@@ -197,6 +197,29 @@ export function calculateNormById(
   );
 }
 
+/**
+ * Kiểm tra lại ngay trước khi ghi kết quả ra Excel: tính lại với thư viện vừa đọc. Trả về định mức và
+ * kết quả mới khi dữ liệu đầu vào trùng vân tay với lần hiển thị; null khi định mức đã bị xóa hoặc
+ * định mức, thành phần, tài nguyên, giá đã đổi (ví dụ sửa ở task pane khác).
+ */
+export function recheckNorm(
+  shown: NormCalcResult,
+  fresh: Pick<LibrarySnapshot, "norms" | "normComponents" | "resources" | "resourcePrices">,
+  options: CalcOptions
+): { norm: Norm; result: NormCalcResult } | null {
+  const norm = fresh.norms.find((n) => n.id === shown.normId);
+  if (!norm) {
+    return null;
+  }
+  const result = calculateNorm(
+    norm,
+    fresh.normComponents.filter((c) => c.normId === norm.id),
+    fresh,
+    options
+  );
+  return result.inputFingerprint === shown.inputFingerprint ? { norm, result } : null;
+}
+
 export function calculateNorm(
   norm: Norm,
   components: readonly NormComponent[],
@@ -316,7 +339,7 @@ export function calculateNorm(
     // Đơn giá tài nguyên.
     let price: ResourcePrice | undefined;
     if (resource) {
-      const selectedId = options.priceSelection?.[id];
+      const selectedId = options.priceSelection?.[id] ?? component.priceId;
       if (selectedId) {
         price = library.resourcePrices.find(
           (p) => p.id === selectedId && p.resourceId === resource.id

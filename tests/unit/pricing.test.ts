@@ -152,7 +152,7 @@ function normComponent(id: string, resourceId: string, consumption: number, sort
   const [code, name, unit, type] = snapshots[resourceId];
   return {
     id, normId: "nset", resourceId, resourceCodeSnapshot: code, resourceNameSnapshot: name, resourceUnitSnapshot: unit,
-    resourceTypeSnapshot: type, consumption, wasteRate: 0, sortOrder, notes: "", createdAt: "", updatedAt: "",
+    resourceTypeSnapshot: type, consumption, wasteRate: 0, priceId: null, sortOrder, notes: "", createdAt: "", updatedAt: "",
   };
 }
 

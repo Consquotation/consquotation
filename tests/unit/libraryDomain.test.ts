@@ -86,6 +86,7 @@ function component(partial: Partial<NormComponent> & { id: string; normId: strin
     resourceTypeSnapshot: "material",
     consumption: 1,
     wasteRate: 0,
+    priceId: null,
     sortOrder: 1,
     notes: "",
     createdAt: T,

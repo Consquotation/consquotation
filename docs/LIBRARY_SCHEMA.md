@@ -196,7 +196,7 @@ Chỉ thêm được thành phần vào định mức Nháp, hoặc định mứ
 }
 ```
 
-Mỗi bản ghi trong file có các trường của mô hình dữ liệu ([src/domain/library/types.ts](../src/domain/library/types.ts)). Giá tham chiếu tài nguyên bằng `resourceId`. Định mức tham chiếu công tác bằng `workItemId` (`null` = không liên kết); thành phần tham chiếu định mức bằng `normId` và tài nguyên bằng `resourceId`. Công tác và tài nguyên tham chiếu nhóm bằng `categoryId`; công tác và giá tham chiếu nhà cung cấp bằng `supplierId` (`null` = không có). Tham chiếu tới id không có trong file bị báo lỗi theo bản ghi.
+Mỗi bản ghi trong file có các trường của mô hình dữ liệu ([src/domain/library/types.ts](../src/domain/library/types.ts)). Giá tham chiếu tài nguyên bằng `resourceId`. Định mức tham chiếu công tác bằng `workItemId` (`null` = không liên kết); thành phần tham chiếu định mức bằng `normId`, tài nguyên bằng `resourceId` và giá áp dụng đã chọn bằng `priceId` (`null` = chưa chọn; giá không có trong file hoặc thư viện, hoặc thuộc tài nguyên khác, thì bỏ chọn). Sheet và CSV không có cột giá áp dụng. Công tác và tài nguyên tham chiếu nhóm bằng `categoryId`; công tác và giá tham chiếu nhà cung cấp bằng `supplierId` (`null` = không có). Tham chiếu tới id không có trong file bị báo lỗi theo bản ghi.
 
 Khi khôi phục vào thư viện đã có nhóm hoặc nhà cung cấp **cùng tên**, add-in dùng lại bản ghi đang có thay vì tạo bản thứ hai.
 

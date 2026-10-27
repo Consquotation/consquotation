@@ -201,6 +201,7 @@ function sampleLibrary(): LibrarySnapshot {
         resourceTypeSnapshot: "material",
         consumption: 0.000123,
         wasteRate: 0.05,
+        priceId: "p1",
         sortOrder: 1,
         notes: "",
         ...stamp,
@@ -215,6 +216,7 @@ function sampleLibrary(): LibrarySnapshot {
         resourceTypeSnapshot: "labor",
         consumption: 1.25,
         wasteRate: 0,
+        priceId: null,
         sortOrder: 2,
         notes: "x",
         ...stamp,
@@ -653,6 +655,8 @@ describe("sao lưu JSON", () => {
     expect(sort(a.changes.resources)).toEqual(sort(lib.resources));
     expect(sort(a.changes.resourcePrices)).toEqual(sort(lib.resourcePrices));
     expect(sort(a.changes.norms)).toEqual(sort(lib.norms));
+    // Thành phần giữ cả giá áp dụng đã chọn (priceId).
+    expect(sort(a.changes.normComponents)).toEqual(sort(lib.normComponents));
   });
 
   it("nhập lại chính bản sao lưu vào thư viện đang có: toàn bộ là trùng, không thêm gì", () => {
@@ -817,6 +821,8 @@ describe("xuất workbook", () => {
       [0.000123, 0.05, 1],
       [1.25, 0, 2],
     ]);
+    // Sheet/CSV không có cột giá áp dụng: chỉ bản sao lưu JSON giữ lựa chọn này.
+    expect(a.changes.normComponents.map((c) => c.priceId)).toEqual([null, null]);
   });
 
   it("thư viện trống → file mẫu chỉ có tiêu đề", () => {

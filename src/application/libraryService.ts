@@ -420,6 +420,8 @@ export class LibraryService {
     const component: NormComponent = {
       ...result.value,
       ...snapshotOf(resource),
+      // Giá đã chọn chỉ còn ý nghĩa khi vẫn là cùng tài nguyên.
+      priceId: existing && existing.resourceId === resource.id ? existing.priceId : null,
       id: existing?.id ?? this.deps.newId(),
       normId,
       sortOrder: existing?.sortOrder ?? Math.max(0, ...siblings.map((c) => c.sortOrder)) + 1,
@@ -483,8 +485,51 @@ export class LibraryService {
       throw new Error("Tài nguyên đã bị xóa: hãy chọn tài nguyên khác cho thành phần này.");
     }
     const now = this.stamp();
+    // Đổi đơn vị thì giá đã chọn (theo đơn vị cũ) không còn dùng được: bỏ chọn để người dùng chọn lại.
+    const unitChanged =
+      normalizeCode(resource.unit) !== normalizeCode(component.resourceUnitSnapshot);
     await this.repo.putNormComponent(
-      { ...component, ...snapshotOf(resource), updatedAt: now },
+      {
+        ...component,
+        ...snapshotOf(resource),
+        priceId: unitChanged ? null : component.priceId,
+        updatedAt: now,
+      },
+      { ...norm, updatedAt: now }
+    );
+    await this.touch();
+  }
+
+  /**
+   * Chọn giá áp dụng cho thành phần (null = để add-in tự lấy khi chỉ có một giá dùng được). Được đổi ở
+   * bản nháp và phiên bản đang dùng, vì giá thay đổi theo thời gian còn hao phí thì không; phiên bản
+   * ngừng dùng giữ nguyên để truy vết.
+   */
+  async setComponentPrice(
+    id: string,
+    priceId: string | null,
+    library: LibrarySnapshot
+  ): Promise<void> {
+    const component = library.normComponents.find((c) => c.id === id);
+    if (!component) {
+      throw new Error("Thành phần không còn tồn tại.");
+    }
+    const norm = this.requireNorm(component.normId, library);
+    if (norm.status === "inactive") {
+      throw new Error("Phiên bản ngừng dùng đã khóa, không đổi giá áp dụng.");
+    }
+    if (
+      priceId !== null &&
+      !library.resourcePrices.some((p) => p.id === priceId && p.resourceId === component.resourceId)
+    ) {
+      throw new Error("Giá đã chọn không còn trong thư viện. Hãy tải lại và chọn lại.");
+    }
+    if (priceId === component.priceId) {
+      return;
+    }
+    const now = this.stamp();
+    await this.repo.putNormComponent(
+      { ...component, priceId, updatedAt: now },
       { ...norm, updatedAt: now }
     );
     await this.touch();

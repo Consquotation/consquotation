@@ -45,7 +45,7 @@ import {
   rateToPercent,
 } from "../../../domain/library/validation";
 import { RESOURCE_TYPE_TEXT } from "../../../domain/pricing/composition";
-import { ComponentResult, calculateNorm } from "../../../domain/pricing/normCalc";
+import { ComponentResult, calculateNorm, recheckNorm } from "../../../domain/pricing/normCalc";
 import { buildExplanationSheet } from "../../../domain/pricing/normExplanation";
 import { describeOfficeError } from "../../../office/officeErrors";
 import { LIBRARY_STRINGS } from "../../../shared/strings.library.vi";
@@ -390,7 +390,6 @@ const ComponentsAndResult: React.FC<{
   const c = s.components;
   const editable = norm.status === "draft";
   const today = todayIso();
-  const [selection, setSelection] = React.useState<Record<string, string>>({});
   const [form, setForm] = React.useState<NormComponentForm>(EMPTY_COMPONENT);
   const [editingId, setEditingId] = React.useState<string | null>(null);
   const [errors, setErrors] = React.useState<FieldError<NormComponentField>[]>([]);
@@ -407,18 +406,13 @@ const ComponentsAndResult: React.FC<{
     () => library.normComponents.filter((x) => x.normId === norm.id),
     [library.normComponents, norm.id]
   );
-  const priceSelection = React.useMemo(
-    () => Object.fromEntries(Object.entries(selection).filter(([, v]) => v !== "")),
-    [selection]
-  );
   const result = React.useMemo(
     () =>
       calculateNorm(norm, components, library, {
         today,
         now: new Date().toISOString(),
-        priceSelection,
       }),
-    [norm, components, library, today, priceSelection]
+    [norm, components, library, today]
   );
   const byId = new Map(components.map((x) => [x.id, x]));
   const resources = React.useMemo(
@@ -469,26 +463,18 @@ const ComponentsAndResult: React.FC<{
       setExportState({ busy: true, message: null, intent: "success" });
       try {
         // Tính lại với thư viện mới đọc: dữ liệu đổi giữa lúc xem và lúc ghi thì không ghi.
-        const fresh = await service.load();
-        const freshNorm = fresh.norms.find((n) => n.id === norm.id);
-        const check = freshNorm
-          ? calculateNorm(
-              freshNorm,
-              fresh.normComponents.filter((x) => x.normId === norm.id),
-              fresh,
-              {
-                today,
-                now: new Date().toISOString(),
-                priceSelection,
-              }
-            )
-          : null;
-        if (!check || check.inputFingerprint !== result.inputFingerprint) {
+        const check = recheckNorm(result, await service.load(), {
+          today,
+          now: new Date().toISOString(),
+        });
+        if (!check) {
           await reload();
           setExportState({ busy: false, message: s.changedMeanwhile, intent: "warning" });
           return;
         }
-        const written = await exporter.writeExplanation(buildExplanationSheet(norm, check, today));
+        const written = await exporter.writeExplanation(
+          buildExplanationSheet(check.norm, check.result, today)
+        );
         setExportState({ busy: false, message: s.exported(written.sheetName), intent: "success" });
         notify(s.exported(written.sheetName));
       } catch (error) {
@@ -550,12 +536,18 @@ const ComponentsAndResult: React.FC<{
           </Caption1>
         ))}
         {prices.length > 0 && (
-          <Field label={c.choosePrice}>
+          <Field label={c.choosePrice} hint={c.choosePriceHint}>
             <Select
               className={styles.select}
-              value={selection[r.componentId] ?? ""}
+              value={component?.priceId ?? ""}
+              disabled={!component || norm.status === "inactive"}
               onChange={(_e, data) =>
-                setSelection((cur) => ({ ...cur, [r.componentId]: data.value }))
+                component &&
+                void run(() =>
+                  service
+                    .setComponentPrice(component.id, data.value === "" ? null : data.value, library)
+                    .then(reload)
+                )
               }
             >
               <option value="">{c.autoPrice}</option>

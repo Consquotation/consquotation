@@ -115,6 +115,7 @@ describe("nâng cấp thư viện v2 → v3", () => {
     expect(orphan.status).toBe("draft");
     expect(lib.normComponents.filter((c) => c.normId === orphan.id)).toHaveLength(1);
     expect(lib.normComponents.every((c) => !("quantity" in c) && !("workItemId" in c))).toBe(true);
+    expect(lib.normComponents.every((c) => c.priceId === null)).toBe(true);
     // Mở lại không nhân đôi.
     const again = await setup(factory, "v2").repo.loadAll();
     expect(again.norms).toHaveLength(2);
@@ -245,6 +246,76 @@ describe("thư viện định mức", () => {
     expect(result.preview).toBe(21000);
     expect(result.rows[0][7]).toBe(2.1);
     expect(String(result.rows[0][11])).toContain("hao hụt 5% (cơ sở 2); định mức THU-DM v1");
+  });
+
+  it("giá áp dụng: lưu cùng thành phần, dùng khi tính và làm mặc định cho báo giá; ngừng dùng thì khóa", async () => {
+    const { service } = setup();
+    const [a, b] = await seed(service);
+    let lib = await service.load();
+    // Giá thứ hai cho A (giả định) → hai giá dùng được, add-in không tự chọn.
+    await service.savePrice(
+      a,
+      { price: "12000", unit: "kg", currency: "VND", effectiveFrom: "", effectiveTo: "", supplierId: "", source: "NCC 2", status: "active", notes: "" },
+      null,
+      lib
+    );
+    const w = await service.saveWorkItem(
+      { code: "W-2", name: "Thử", categoryId: "", unit: "m3", description: "", unitPrice: "", currency: "VND", supplierId: "", source: "", effectiveFrom: "", effectiveTo: "", notes: "" },
+      null,
+      await service.load()
+    );
+    if (!w.ok) throw new Error();
+    const norm = await createNorm(service, { workItemId: w.value.id });
+    const comp = await addComponent(service, norm.id, a, "2");
+    expect(comp.priceId).toBeNull();
+    lib = await service.load();
+    const opts = { today: "2026-10-27", now: T };
+    const before = calculateNorm(norm, lib.normComponents, lib, opts);
+    expect(before.issues.map((i) => i.code)).toContain("ambiguousPrice");
+    expect(before.unitPrice).toBeNull();
+
+    const second = lib.resourcePrices.find((p) => p.source === "NCC 2")!;
+    await service.setComponentPrice(comp.id, second.id, lib);
+    lib = await service.load();
+    expect(lib.normComponents[0].priceId).toBe(second.id);
+    expect(calculateNorm(norm, lib.normComponents, lib, opts).unitPrice).toBe(24000);
+    // Giá của tài nguyên khác bị từ chối.
+    const priceOfB = lib.resourcePrices.find((p) => p.resourceId === b)!;
+    await expect(service.setComponentPrice(comp.id, priceOfB.id, lib)).rejects.toThrow();
+    // Sửa hao phí, cùng tài nguyên: giữ giá đã chọn.
+    await service.saveNormComponent(norm.id, { resourceId: a, consumption: "3", wastePercent: "", notes: "" }, comp.id, lib);
+    lib = await service.load();
+    expect(lib.normComponents[0].priceId).toBe(second.id);
+
+    // Đang dùng: vẫn đổi giá được; báo giá lấy giá đã chọn làm mặc định.
+    expect(await service.setNormStatus(norm.id, "approved", lib)).toEqual({ ok: true });
+    lib = await service.load();
+    expect(compositionLines(w.value, lib, "2026-10-27")[0].defaultPriceId).toBe(second.id);
+    await service.setComponentPrice(comp.id, null, lib);
+    lib = await service.load();
+    expect(compositionLines(w.value, lib, "2026-10-27")[0].defaultPriceId).toBeNull();
+
+    // Ngừng dùng: giữ nguyên để truy vết.
+    await service.setNormStatus(norm.id, "inactive", lib);
+    lib = await service.load();
+    await expect(service.setComponentPrice(comp.id, second.id, lib)).rejects.toThrow(/ngừng dùng/);
+  });
+
+  it("giá áp dụng bị bỏ chọn khi cập nhật liên kết sau khi tài nguyên đổi đơn vị", async () => {
+    const { service } = setup();
+    const [a] = await seed(service);
+    const norm = await createNorm(service);
+    const comp = await addComponent(service, norm.id, a, "2");
+    let lib = await service.load();
+    const price = lib.resourcePrices.find((p) => p.resourceId === a)!;
+    await service.setComponentPrice(comp.id, price.id, lib);
+    lib = await service.load();
+    const saved = await service.saveResource({ code: "A", name: "Thử A", type: "material", categoryId: "", unit: "tấn", notes: "" }, a, lib);
+    expect(saved.ok).toBe(true);
+    lib = await service.load();
+    await service.refreshComponentLink(comp.id, lib);
+    lib = await service.load();
+    expect(lib.normComponents[0]).toMatchObject({ resourceUnitSnapshot: "tấn", priceId: null });
   });
 
   it("bảng diễn giải: công thức Excel cho từng dòng và tổng hợp, kèm kết quả add-in để đối chiếu", async () => {

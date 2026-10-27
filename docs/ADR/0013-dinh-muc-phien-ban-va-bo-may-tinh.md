@@ -57,9 +57,14 @@ Giai đoạn 16 yêu cầu bổ sung các điểm trên, kèm bảng diễn gi�
 ## Hệ quả
 
 - Bản 1.10.0 nâng thư viện lên schema 3 ở lần mở đầu tiên. Bản 1.9.0 và cũ hơn không mở được thư viện này (báo "được tạo bởi phiên bản mới hơn", không ghi đè). File sao lưu schema 3 không nhập được vào bản cũ.
-- Giá chọn trong màn hình định mức chỉ dùng cho lần xem đó, không lưu vào định mức. Khi chèn vào báo giá, người dùng chọn giá ở bước phân tích như trước.
+- Giá áp dụng của thành phần được lưu (`NormComponent.priceId`, null = tự lấy khi chỉ có một giá dùng được).
+  - Đổi được ở bản nháp và phiên bản Đang dùng, vì giá thay đổi theo thời gian còn hao phí thì không. Phiên bản Ngừng dùng khóa.
+  - Khi chèn vào báo giá, giá đã lưu là lựa chọn mặc định ở bước phân tích nếu vẫn dùng được.
+  - Bị bỏ khi đổi tài nguyên của thành phần hoặc khi Cập nhật liên kết sau đổi đơn vị.
+  - Bản sao lưu JSON giữ lựa chọn này; sheet và CSV không có cột tương ứng.
+- Kiểm tra lại trước khi xuất nằm ở hàm thuần `recheckNorm` (tính lại với thư viện vừa đọc, so vân tay), có unit test riêng.
 - Không có loại tài nguyên "nhiên liệu" riêng; dùng loại "Khác".
-- Bundle production `taskpane.js` tăng khoảng 62 KB (625.527 → 688.072 byte).
+- Bundle production `taskpane.js` tăng khoảng 62 KB (625.527 → 689.967 byte).
 
 ## Kết quả xác minh (2026-10-27)
 
@@ -69,3 +74,5 @@ Trên Excel Microsoft 365 Windows (16.0.20430), bản dev, workbook tạm do `np
 - Bảng diễn giải xuất ra sheet mới: công thức Excel cho ra 2,1; 21.000; tổng vật liệu 21.000; đơn giá 61.000, khớp cột kết quả add-in. Xuất lần hai tạo sheet " (2)", sheet cũ giữ nguyên.
 - Chèn công tác liên kết định mức v2 vào báo giá: sheet phân tích ghi hao phí 2,1 với ghi chú hao hụt; đơn giá 62.720,25 = 21.000 + 20.000 + 20.000 + 1.720,25.
 - Đổi đơn vị tài nguyên ca → giờ: thành phần báo lỗi, đơn giá "Chưa tính được"; "Cập nhật liên kết" ở bản nháp nhận đơn vị mới và lỗi chuyển sang thiếu giá cùng đơn vị.
+- Giá áp dụng: chọn giá NCC B cho XM ở v2 (Đang dùng) thì đơn giá 62.720,25; tải lại task pane vẫn giữ lựa chọn; chèn vào báo giá thì ô giá của XM mặc định là NCC B; v1 (Ngừng dùng) khóa ô chọn.
+- Sửa giá THU16-A trực tiếp trong IndexedDB (giả lập task pane khác) rồi bấm xuất: không tạo sheet, báo dữ liệu vừa đổi, kết quả tính lại 63.770,25. Xuất lần hai ghi 2,1 × 10.500 = 22.050.

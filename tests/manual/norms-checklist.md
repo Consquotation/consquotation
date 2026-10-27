@@ -24,7 +24,7 @@ Phạm vi: định mức có phiên bản, thành phần tài nguyên, hao hụt
 | N6 | Hao phí -1; hao hụt 150 | "Hao phí phải lớn hơn 0."; "Hao hụt từ 0 đến 100 (%)." | Đạt |
 | N7 | Chuyển sang đang dùng | Nhãn Đang dùng; ô Mã, Đơn vị bị khóa; thành phần không còn nút Sửa/Lên/Xuống/Xóa; ẩn form thêm thành phần | Đạt (ô Tên vẫn sửa được theo thiết kế) |
 | N8 | Sao chép thành phiên bản mới | "Định mức THU-DM-16 phiên bản 2", Nháp, đủ 3 thành phần | Đạt |
-| N9 | Thêm XM (3 giá đang dùng) vào v2 | Lỗi "có 2 giá dùng được; add-in không tự chọn", đơn giá Chưa tính được; ô Giá áp dụng liệt kê các giá | Đạt: chọn giá NCC B thì đơn giá 62.650,5 VND, trạng thái "Tính được, có cảnh báo" |
+| N9 | Thêm XM (3 giá đang dùng) vào v2 | Lỗi "có 2 giá dùng được; add-in không tự chọn", đơn giá Chưa tính được; ô Giá áp dụng liệt kê các giá | Đạt: chọn giá 1.650,5 VND/kg (Thông báo giá Q1) thì đơn giá 62.650,5 VND, trạng thái "Tính được, có cảnh báo" |
 | N10 | Duyệt v2 khi v1 đang dùng | "Mã "THU-DM-16" đang dùng phiên bản 1. Chuyển phiên bản đó sang ngừng dùng trước." | Đạt |
 | N11 | Ngừng dùng v1, rồi duyệt v2 | v1 Ngừng dùng, v2 Đang dùng; v1 không có nút Xóa | Đạt |
 | N12 | Xóa bản nháp v3 | Hộp xác nhận "Xóa định mức THU-DM-16 phiên bản 3 cùng 4 thành phần…"; xóa xong v3 biến mất | Đạt |
@@ -32,13 +32,22 @@ Phạm vi: định mức có phiên bản, thành phần tài nguyên, hao hụt
 | N14 | Bản nháp v3: Cập nhật liên kết | Hết lỗi đổi đơn vị; báo thiếu giá cùng đơn vị (giá cũ tính theo ca) | Đạt; đổi đơn vị về ca thì v2 tính lại 20.000 cho THU16-C |
 | N15 | Bề rộng 320px ở tab Định mức (danh sách, phiên bản Đang dùng, bản nháp, đang sửa thành phần) | Không tràn ngang | Đạt sau khi sửa ô chọn Công tác liên kết (trước đó tràn 16px) |
 
+## Giá áp dụng (lần chạy 2, 2026-10-27)
+
+| # | Bước | Kết quả mong đợi | Kết quả |
+|---|---|---|---|
+| P1 | v2 (Đang dùng): chọn giá NCC B cho XM | Lưu ngay; đơn giá tính được | Đạt: Hợp lệ, 62.720,25 VND; ô chọn có ghi chú "Lưu cùng định mức…" |
+| P2 | Tải lại task pane, mở lại v2 | Ô Giá áp dụng vẫn là NCC B | Đạt |
+| P3 | Chèn THU16-CT vào báo giá, Phân tích từ định mức | Ô giá của XM mặc định NCC B | Đạt: tạm tính 62.720,25 VND |
+| P4 | Mở v1 (Ngừng dùng) | Ô Giá áp dụng bị khóa | Đạt |
+
 ## Xuất bảng diễn giải
 
 | # | Bước | Kết quả mong đợi | Kết quả |
 |---|---|---|---|
 | E1 | v1 (61.000): Xuất bảng diễn giải ra Excel | Sheet mới "Diễn giải THU-DM-16 v1"; H7 `=F7*(1+G7)` = 2,1; J7 `=H7*I7` = 21.000; tổng theo SUMIF/SUM khớp cột Kết quả add-in | Đạt: vật liệu 21.000, nhân công 20.000, máy 20.000, khác 0, đơn giá 61.000 ở cả hai cột |
 | E2 | Ghi thêm N2 vào sheet diễn giải, xuất lại v1 | Sheet mới "Diễn giải THU-DM-16 v1 (2)"; sheet cũ không đổi | Đạt (so toàn bộ công thức trước/sau) |
-| E3 | Thư viện đổi giữa lúc xem và lúc xuất | Dừng, yêu cầu xem lại | Chưa chạy trên Excel (có kiểm tra vân tay trong mã; chưa có test giao diện) |
+| E3 | Đang xem v2, sửa giá THU16-A 10.000 → 10.500 trực tiếp trong IndexedDB (giả lập task pane khác), bấm xuất | Không ghi sheet; báo dữ liệu vừa đổi; kết quả tính lại | Đạt (lần chạy 2): không có sheet mới; đơn giá tính lại 63.770,25; xuất lần hai ghi sheet "Diễn giải THU-DM-16 v2" với 2,1 × 10.500 = 22.050. Unit test `recheckNorm` cho giá, tài nguyên, định mức, thành phần, giá áp dụng đổi |
 
 ## Báo giá
 
@@ -58,4 +67,5 @@ Phạm vi: định mức có phiên bản, thành phần tài nguyên, hao hụt
 | # | Bước | Kết quả | 
 |---|---|---|
 | R1 | `node tests/integration/run-in-taskpane.mjs tests/integration/excel-core.scenarios.js` | Đạt 26/26 |
-| R2 | Bề rộng 320px các tab khác | Không đạt (lỗi có từ trước): Báo giá 331px, Tính giá và In ấn 403px, Nhập/Xuất 358px do ô chọn bảng báo giá, kiểu làm tròn, co giãn, sheet có tên dài |
+| R2 | Bề rộng 320px các tab khác | Lần 1 không đạt (lỗi có từ trước): Báo giá 331px, Tính giá và In ấn 403px, Nhập/Xuất 358px. Lần 2 đạt: với bảng báo giá và sheet tên dài 30 ký tự, mọi tab và mục thư viện rộng 305px; ô chọn bảng ở Tính giá rộng 201px (không bị co mất); màn hình chọn giá khi chèn vào báo giá không tràn |
+| R3 | Hồi quy lớp core sau lần sửa 2 | Đạt 26/26 |

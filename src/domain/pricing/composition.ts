@@ -112,13 +112,15 @@ export function compositionLines(
             (b.price.effectiveFrom ?? "").localeCompare(a.price.effectiveFrom ?? "")
         );
       const usable = options.filter((o) => o.usable);
+      // Giá đã chọn trong định mức được dùng làm mặc định nếu vẫn dùng được.
+      const saved = usable.find((o) => o.price.id === component.priceId);
       return {
         norm,
         component,
         consumption: effectiveConsumption(norm, component),
         resource,
         options,
-        defaultPriceId: usable.length === 1 ? usable[0].price.id : null,
+        defaultPriceId: saved ? saved.price.id : usable.length === 1 ? usable[0].price.id : null,
       };
     });
 }

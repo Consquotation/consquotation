@@ -156,6 +156,11 @@ export interface NormComponent {
   resourceTypeSnapshot: ResourceType;
   consumption: number;
   wasteRate: number;
+  /**
+   * Giá tài nguyên áp dụng do người dùng chọn (khi tài nguyên có nhiều giá). null = add-in chỉ tự lấy
+   * giá khi có đúng một giá dùng được.
+   */
+  priceId: string | null;
   sortOrder: number;
   notes: string;
   createdAt: string;

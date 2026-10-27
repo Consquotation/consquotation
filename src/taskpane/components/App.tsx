@@ -9,6 +9,7 @@ import {
   Tab,
   TabList,
   Title3,
+  makeStaticStyles,
   makeStyles,
   tokens,
 } from "@fluentui/react-components";
@@ -67,6 +68,17 @@ function createLibraryService(): LibraryService {
   const repo = new IndexedDbLibraryRepository(indexedDB, libraryDatabaseName(readPartitionKey()));
   return new LibraryService(repo, { now: () => new Date(), newId: randomId });
 }
+
+/**
+ * Ô chọn của Fluent rộng theo lựa chọn dài nhất (tên sheet, tên bảng, mô tả kiểu làm tròn…). Trong
+ * task pane hẹp (320px) điều đó làm cả trang tràn ngang. Cho trường và ô chọn co lại theo khung;
+ * lựa chọn dài bị cắt bớt khi hiển thị nhưng vẫn đọc đủ trong danh sách thả xuống.
+ */
+const useNarrowPaneStyles = makeStaticStyles({
+  ".fui-Field": { minWidth: 0 },
+  ".fui-Select": { minWidth: 0, maxWidth: "100%" },
+  ".fui-Select__select": { minWidth: 0, textOverflow: "ellipsis" },
+});
 
 const useStyles = makeStyles({
   root: {
@@ -131,6 +143,7 @@ const App: React.FC<{
   layout: injectedLayout,
   libraryService: injectedLibrary,
 }) => {
+  useNarrowPaneStyles();
   const styles = useStyles();
   const hostPlatform = React.useMemo(() => readHostInfo().platform, []);
   const gateway = React.useMemo(() => injected ?? new ExcelWorkbookGateway(), [injected]);

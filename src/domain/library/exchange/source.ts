@@ -36,6 +36,8 @@ export interface ImportRow {
     updatedAt?: string;
     /** JSON v3: ảnh chụp tài nguyên của thành phần định mức (giữ lịch sử liên kết khi khôi phục). */
     snapshot?: { code: string; name: string; unit: string; type: ResourceType };
+    /** JSON v3: giá áp dụng đã chọn của thành phần định mức (id giá). */
+    priceId?: string;
   };
   /** Lỗi phát hiện khi đọc nguồn (ví dụ JSON tham chiếu id không có trong file). */
   preErrors?: { field?: string; message: string }[];

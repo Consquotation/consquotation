@@ -881,6 +881,11 @@ export function analyzeImport(
         ...[...componentByPair.values()].filter((c) => c.normId === norm.id).map((c) => c.sortOrder)
       );
       const snapshot = row.meta?.snapshot;
+      // Giá đã chọn (JSON) chỉ giữ khi giá đó có trong thư viện hoặc trong file và thuộc đúng tài nguyên.
+      const savedPriceId = row.meta?.priceId;
+      const savedPrice = savedPriceId
+        ? (priceById.get(savedPriceId) ?? changes.resourcePrices.find((p) => p.id === savedPriceId))
+        : undefined;
       const created: NormComponent = {
         id: takeId(row),
         normId: norm.id,
@@ -890,6 +895,7 @@ export function analyzeImport(
         resourceUnitSnapshot: snapshot?.unit ?? resource.unit,
         resourceTypeSnapshot: snapshot?.type ?? resource.type,
         ...fields,
+        priceId: savedPrice && savedPrice.resourceId === resource.id ? savedPrice.id : null,
         sortOrder: sortOrder ?? siblingsMax + 1,
         ...stamps(row),
       };
