@@ -17,6 +17,7 @@ Mỗi ADR ghi một quyết định kiến trúc quan trọng: bối cảnh, quy
 | [0011](0011-lop-thao-tac-excel-dung-chung.md) | Lớp thao tác Excel dùng chung | Đề xuất | 2026-10-26 |
 | [0012](0012-danh-muc-nha-cung-cap-schema-v2.md) | Danh mục, nhà cung cấp và schema thư viện v2 | Chấp nhận | 2026-10-26 |
 | [0013](0013-dinh-muc-phien-ban-va-bo-may-tinh.md) | Định mức có phiên bản, thành phần tài nguyên và bộ máy tính đơn giá | Chấp nhận | 2026-10-27 |
+| [0014](0014-ho-so-bao-gia-trong-workbook.md) | Hồ sơ báo giá trong workbook, định danh dòng và trạng thái tính toán | Chấp nhận | 2026-10-27 |
 
 Trạng thái có thể là: Đề xuất · Chấp nhận · Thay thế bởi ADR-xxxx · Hủy bỏ.
 

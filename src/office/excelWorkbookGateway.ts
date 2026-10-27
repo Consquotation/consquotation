@@ -30,13 +30,15 @@ import {
   INFO_VALUE_COLUMN_OFFSET,
   QUOTE_COLUMNS,
   QUOTE_TITLE,
+  QuoteColumnKey,
+  TEMPLATE_COLUMNS,
   alignRowToHeaders,
   blankRowFlags,
   blankRowToFill,
   buildQuoteLayout,
   hasQuoteHeaders,
   quoteColumnFormulas,
-  totalRowFormulas,
+  templateTotalRow,
 } from "../domain/quoteTemplate";
 import { cellAddress, fitsInSheet, rangeAddress, stripSheetName } from "../shared/a1";
 import {
@@ -617,7 +619,9 @@ export class ExcelWorkbookGateway implements WorkbookGateway {
         at(info.row, 0).values = [[info.label]];
       }
 
-      at(layout.headerRow, 0, 1, layout.columnCount).values = [QUOTE_COLUMNS.map((c) => c.header)];
+      at(layout.headerRow, 0, 1, layout.columnCount).values = [
+        TEMPLATE_COLUMNS.map((c) => c.header),
+      ];
       const table = sheet.tables.add(
         at(layout.headerRow, 0, 1 + layout.dataRowCount, layout.columnCount),
         true
@@ -626,9 +630,9 @@ export class ExcelWorkbookGateway implements WorkbookGateway {
 
       // Thành tiền theo quy tắc làm tròn của workbook (prompts/10).
       const formulas = quoteColumnFormulas(tableName, (await readRounding(context)).amount);
-      QUOTE_COLUMNS.forEach((column) => {
+      TEMPLATE_COLUMNS.forEach((column) => {
         const body = table.columns.getItem(column.header).getDataBodyRange();
-        const formula = formulas[column.key];
+        const formula = formulas[column.key as QuoteColumnKey];
         if (formula) {
           body.formulas = Array.from({ length: layout.dataRowCount }, () => [formula]);
         }
@@ -660,15 +664,21 @@ export class ExcelWorkbookGateway implements WorkbookGateway {
       pushedDown.delete(Excel.DeleteShiftDirection.up);
 
       const totalRow = table.getTotalRowRange();
-      totalRow.formulas = [totalRowFormulas(tableName)];
-      totalRow.numberFormat = [QUOTE_COLUMNS.map((c) => c.numberFormat ?? "General")];
+      totalRow.formulas = [templateTotalRow(tableName)];
+      totalRow.numberFormat = [TEMPLATE_COLUMNS.map((c) => c.numberFormat ?? "General")];
 
-      // Độ rộng cột ảnh hưởng cả cột của sheet: chỉ đặt khi tạo trên sheet mới.
-      if (isNewSheet) {
-        QUOTE_COLUMNS.forEach((column, index) => {
+      // Độ rộng cột và ẩn cột ảnh hưởng cả cột của sheet: chỉ đặt khi tạo trên sheet mới.
+      // Tạo tại ô chọn trên sheet có sẵn thì cột Mã dòng để hiện (chữ xám), người dùng tự ẩn nếu muốn.
+      TEMPLATE_COLUMNS.forEach((column, index) => {
+        if (isNewSheet) {
           at(0, index).format.columnWidth = column.width;
-        });
-      }
+          if (column.hidden) {
+            at(0, index).columnHidden = true;
+          }
+        } else if (column.hidden) {
+          table.columns.getItem(column.header).getRange().format.font.color = "#808080";
+        }
+      });
       // Lệnh ghi phải được Excel xác nhận trước; các bước sau là phụ.
       await context.sync();
 
@@ -870,7 +880,8 @@ export class ExcelWorkbookGateway implements WorkbookGateway {
     rows: (string | number)[][],
     expectedFingerprint: string,
     insertIndex: number | null,
-    fillIndex: number | null
+    fillIndex: number | null,
+    extras: Record<string, string | number>[] = []
   ): Promise<AppendedRows> {
     return Excel.run(async (context) => {
       // Kiểm tra lại bảng (không phụ thuộc vùng chọn hiện tại); vị trí chèn dùng insertIndex đã cố định.
@@ -907,7 +918,7 @@ export class ExcelWorkbookGateway implements WorkbookGateway {
       );
       // Ghi theo tên cột: bảng có thể có thêm cột của người dùng hoặc đã đổi thứ tự cột.
       const headers = (header.values[0] ?? []).map((v) => String(v));
-      const aligned = withAmount.map((row) => alignRowToHeaders(headers, row));
+      const aligned = withAmount.map((row, i) => alignRowToHeaders(headers, row, extras[i]));
       if (aligned.some((row) => row === null)) {
         throw new TargetChangedError();
       }
@@ -919,6 +930,8 @@ export class ExcelWorkbookGateway implements WorkbookGateway {
           const template = QUOTE_COLUMNS.findIndex((c) => c.header === header);
           if (template >= 0) {
             before.getCell(fillIndex, column).values = [[withAmount[0][template]]];
+          } else if (extras[0] && Object.prototype.hasOwnProperty.call(extras[0], header)) {
+            before.getCell(fillIndex, column).values = [[extras[0][header]]];
           }
         });
       } else {

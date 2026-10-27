@@ -180,7 +180,9 @@ export interface WorkbookGateway {
     rows: (string | number)[][],
     expectedFingerprint: string,
     insertIndex: number | null,
-    fillIndex: number | null
+    fillIndex: number | null,
+    /** Giá trị cột mở rộng của từng dòng, theo tên cột (ví dụ Mã dòng); cột không có trong bảng bị bỏ qua. */
+    extras?: Record<string, string | number>[]
   ): Promise<AppendedRows>;
 }
 

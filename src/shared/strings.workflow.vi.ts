@@ -7,6 +7,8 @@ export const WORKFLOW_STRINGS = {
     table: "Bảng báo giá",
     dateHint: "dd/mm/yyyy — ghi thành ngày của Excel",
     notFound: "Không tìm thấy nhãn này phía trên bảng (có thể đã bị xóa hoặc sửa).",
+    addedLater: (label: string) =>
+      `Mục mới từ bản 1.11.0; sheet này chưa có. Muốn dùng, gõ nhãn "${label}" vào cột đầu của khối thông tin rồi tải lại.`,
     save: "Lưu thông tin",
     reload: "Tải lại từ sheet",
     saved: (n: number) => `Đã ghi ${n} mục thông tin.`,

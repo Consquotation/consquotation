@@ -28,6 +28,9 @@ import PricingView from "./pricing/PricingView";
 import QuoteInfoPanel from "./QuoteInfoPanel";
 import WorkflowPanel from "./WorkflowPanel";
 import PrintView from "./print/PrintView";
+import QuotationItemsView from "./quotation/QuotationItemsView";
+import { QuotationService } from "../../application/quotationService";
+import { ExcelQuotationGateway } from "../../office/excelQuotationGateway";
 import { LayoutGateway } from "../../application/layoutGateway";
 import { ExcelLayoutGateway } from "../../office/excelLayoutGateway";
 import { ExcelNormExportGateway } from "../../office/excelNormExportGateway";
@@ -119,6 +122,7 @@ const useStyles = makeStyles({
 const FOCUS_TARGET: Record<View, string> = {
   overview: "cq-context-title",
   quote: "cq-create-title",
+  items: "cq-items-title",
   pricing: "cq-check-title",
   print: "cq-terms-title",
   library: "cq-library-title",
@@ -158,6 +162,16 @@ const App: React.FC<{
     [injectedLibrary]
   );
   const loadLibrary = React.useCallback(() => libraryService.load(), [libraryService]);
+  // Hồ sơ báo giá trong workbook (ADR-0014); thư viện dùng để phát hiện giá đã đổi so với snapshot.
+  const quotation = React.useMemo(
+    () =>
+      new QuotationService(pricing, new ExcelQuotationGateway(), {
+        now: () => new Date(),
+        newId: randomId,
+        loadLibrary,
+      }),
+    [pricing, loadLibrary]
+  );
   // Công tác vừa chọn "Chèn vào báo giá" ở thư viện; form Thêm công tác dùng một lần rồi xóa.
   const [prefill, setPrefill] = React.useState<LibraryPrefill | null>(null);
   // Màn hình ban đầu do nút Ribbon chọn (taskpane.html?view=…); mở thường thì không chuyển focus.
@@ -224,7 +238,7 @@ const App: React.FC<{
     const lines = library ? compositionLines(item, library, today) : [];
     const composition: LibraryPrefill["composition"] =
       lines.length > 0 ? { item, lines } : undefined;
-    setPrefill({ nonce: Date.now(), code: item.code, draft, warnings, composition });
+    setPrefill({ nonce: Date.now(), code: item.code, item, draft, warnings, composition });
     go("quote", "cq-append-title");
   };
 
@@ -256,6 +270,7 @@ const App: React.FC<{
           >
             <Tab value="overview">{s.tabs.overview}</Tab>
             <Tab value="quote">{s.tabs.quote}</Tab>
+            <Tab value="items">{s.tabs.items}</Tab>
             <Tab value="pricing">{s.tabs.pricing}</Tab>
             <Tab value="print">{s.tabs.print}</Tab>
             <Tab value="library">{s.tabs.library}</Tab>
@@ -304,8 +319,20 @@ const App: React.FC<{
                 pricing={pricing}
                 tablesVersion={tablesVersion}
                 onAppended={bumpTables}
+                quotation={quotation}
                 prefill={prefill}
                 onPrefillConsumed={() => setPrefill(null)}
+              />
+            </div>
+          )}
+
+          {nav.view === "items" && (
+            <div className={styles.panel} role="tabpanel" aria-label={s.tabs.items}>
+              <QuotationItemsView
+                gateway={gateway}
+                pricing={pricing}
+                service={quotation}
+                tablesVersion={tablesVersion}
               />
             </div>
           )}

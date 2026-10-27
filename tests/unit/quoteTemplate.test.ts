@@ -30,15 +30,16 @@ describe("cột báo giá mặc định", () => {
 });
 
 describe("buildQuoteLayout", () => {
-  it("bố cục: tiêu đề, 7 dòng thông tin, 1 dòng trống, header, N dòng, dòng tổng", () => {
+  it("bố cục: tiêu đề, 10 dòng thông tin, 1 dòng trống, header, N dòng, dòng tổng", () => {
     const layout = buildQuoteLayout(5);
-    expect(layout.headerRow).toBe(9);
-    expect(layout.firstDataRow).toBe(10);
+    expect(layout.headerRow).toBe(12);
+    expect(layout.firstDataRow).toBe(13);
     expect(layout.dataRowCount).toBe(5);
-    expect(layout.totalRow).toBe(15);
-    expect(layout.rowCount).toBe(16);
-    expect(layout.columnCount).toBe(9);
-    expect(layout.infoRows.map((r) => r.row)).toEqual([1, 2, 3, 4, 5, 6, 7]);
+    expect(layout.totalRow).toBe(18);
+    expect(layout.rowCount).toBe(19);
+    // 9 cột mẫu + 4 cột đơn giá thành phần + Mã dòng (giai đoạn 17).
+    expect(layout.columnCount).toBe(14);
+    expect(layout.infoRows.map((r) => r.row)).toEqual([1, 2, 3, 4, 5, 6, 7, 8, 9, 10]);
   });
 
   it("vùng chiếm dụng bao trọn dòng tổng (để kiểm tra ghi đè đủ vùng)", () => {

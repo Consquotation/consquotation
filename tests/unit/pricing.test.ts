@@ -329,6 +329,8 @@ describe("kiểm tra báo giá", () => {
     const line = (code: string, unitPrice: unknown, priceBlank = false) => ({
       code, rowIndex: 4, sheetName: "Phân tích đơn giá", quantityBlank: false, priceBlank,
       unitPrice, unitPriceType: unitPrice === "" ? "Empty" : typeof unitPrice === "number" ? "Double" : "Error", priceAddress: "I5",
+      resourceCode: "XM", resourceName: "Xi măng", resourceType: "Vật liệu", resourceUnit: "kg",
+      quantity: 1, quantityType: "Double", price: priceBlank ? "" : 1, priceType: priceBlank ? "Empty" : "Double", source: "",
     });
     const q = quote([
       row([1, "007", "", "BT", "m3", 1, 700000, 700000, note]),

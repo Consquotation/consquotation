@@ -40,13 +40,84 @@ export const QUOTE_COLUMNS: readonly QuoteColumn[] = [
   { key: "notes", header: "Ghi chú", width: 120, wrap: true },
 ];
 
+/**
+ * Cột mở rộng (giai đoạn 17, ADR-0014): không bắt buộc. Bảng tạo từ bản 1.10.0 trở về trước không có;
+ * add-in nhận theo tên cột và chỉ dùng khi có. Đơn giá thành phần do add-in ghi dạng giá trị cho dòng
+ * phân tích định mức; "Mã dòng" là định danh ổn định của dòng (không phụ thuộc số hàng Excel).
+ */
+export type ExtensionColumnKey =
+  "materialPrice" | "laborPrice" | "machinePrice" | "otherPrice" | "lineId";
+
+export interface TemplateColumn {
+  key: QuoteColumnKey | ExtensionColumnKey;
+  header: string;
+  numberFormat?: string;
+  width: number;
+  wrap?: boolean;
+  /** Ẩn cột khi tạo bảng trên sheet mới (cột kỹ thuật, không in). */
+  hidden?: boolean;
+}
+
+export const LINE_ID_HEADER = "Mã dòng";
+
+export const EXTENSION_COLUMNS: readonly TemplateColumn[] = [
+  { key: "materialPrice", header: "Đơn giá vật liệu", numberFormat: "#,##0", width: 80 },
+  { key: "laborPrice", header: "Đơn giá nhân công", numberFormat: "#,##0", width: 80 },
+  { key: "machinePrice", header: "Đơn giá máy", numberFormat: "#,##0", width: 80 },
+  { key: "otherPrice", header: "Đơn giá khác", numberFormat: "#,##0", width: 80 },
+  { key: "lineId", header: LINE_ID_HEADER, width: 60, hidden: true },
+];
+
+/** Cột đơn giá thành phần theo loại tài nguyên. */
+export const BREAKDOWN_COLUMNS = {
+  material: "materialPrice",
+  labor: "laborPrice",
+  machine: "machinePrice",
+  other: "otherPrice",
+} as const;
+
+const column = (key: QuoteColumnKey | ExtensionColumnKey): TemplateColumn =>
+  [...QUOTE_COLUMNS, ...EXTENSION_COLUMNS].find((c) => c.key === key)!;
+
+/** Thứ tự cột của bảng tạo mới: 9 cột mẫu cũ cộng các cột mở rộng. */
+export const TEMPLATE_COLUMNS: readonly TemplateColumn[] = (
+  [
+    "stt",
+    "code",
+    "group",
+    "description",
+    "unit",
+    "quantity",
+    "materialPrice",
+    "laborPrice",
+    "machinePrice",
+    "otherPrice",
+    "unitPrice",
+    "amount",
+    "notes",
+    "lineId",
+  ] as const
+).map(column);
+
+export function extensionHeader(key: ExtensionColumnKey): string {
+  return column(key).header;
+}
+
+/** Cột mở rộng chưa có trong bảng (bảng cũ), theo thứ tự cần thêm. */
+export function missingExtensionColumns(headers: readonly string[]): TemplateColumn[] {
+  return EXTENSION_COLUMNS.filter((c) => !headers.includes(c.header));
+}
+
 export const QUOTE_TITLE = "BẢNG BÁO GIÁ";
 
 /** Thông tin báo giá tùy chọn; người dùng tự điền giá trị. */
 export const QUOTE_INFO_LABELS: readonly string[] = [
   "Đơn vị lập:",
+  "Người lập:",
   "Khách hàng:",
   "Dự án:",
+  "Địa điểm:",
+  "Hạng mục/gói thầu:",
   "Mã báo giá:",
   "Ngày lập:",
   "Phiên bản:",
@@ -92,6 +163,15 @@ export function quoteColumnFormulas(
   };
 }
 
+/** Dòng tổng của bảng tạo mới, theo thứ tự TEMPLATE_COLUMNS. */
+export function templateTotalRow(tableName: string): string[] {
+  const core = totalRowFormulas(tableName);
+  return TEMPLATE_COLUMNS.map((c) => {
+    const index = QUOTE_COLUMNS.findIndex((q) => q.key === c.key);
+    return index >= 0 ? core[index] : "";
+  });
+}
+
 export function totalRowFormulas(tableName: string): string[] {
   return QUOTE_COLUMNS.map((column) => {
     if (column.key === "description") {
@@ -129,7 +209,7 @@ export function buildQuoteLayout(initialRows: number): QuoteLayout {
   const firstDataRow = HEADER_ROW_OFFSET + 1;
   return {
     rowCount: HEADER_ROW_OFFSET + 1 + dataRowCount + 1,
-    columnCount: QUOTE_COLUMNS.length,
+    columnCount: TEMPLATE_COLUMNS.length,
     titleCell: { row: 0, column: 0 },
     infoRows: QUOTE_INFO_LABELS.map((label, index) => ({
       row: 1 + index,
@@ -156,19 +236,24 @@ export function hasQuoteHeaders(headers: readonly string[]): boolean {
 
 /**
  * Sắp một dòng giá trị theo thứ tự QUOTE_COLUMNS sang đúng thứ tự cột thực tế của bảng
- * (khớp theo tên cột). Cột người dùng tự thêm nhận null = không ghi, để Excel tự điền công thức
- * nếu đó là cột tính toán (ghi "" sẽ xóa công thức ở dòng mới). Trả về null nếu thiếu cột mẫu.
+ * (khớp theo tên cột). `extras` cho cột mở rộng (theo tên cột, ví dụ Mã dòng); cột khác nhận null =
+ * không ghi, để Excel tự điền công thức nếu đó là cột tính toán (ghi "" sẽ xóa công thức ở dòng mới).
+ * Trả về null nếu thiếu cột mẫu.
  */
 export function alignRowToHeaders(
   headers: readonly string[],
-  templateRow: readonly (string | number)[]
+  templateRow: readonly (string | number)[],
+  extras: Readonly<Record<string, string | number>> = {}
 ): (string | number | null)[] | null {
   if (!hasQuoteHeaders(headers) || templateRow.length !== QUOTE_COLUMNS.length) {
     return null;
   }
   return headers.map((header) => {
     const index = QUOTE_COLUMNS.findIndex((column) => column.header === header);
-    return index >= 0 ? templateRow[index] : null;
+    if (index >= 0) {
+      return templateRow[index];
+    }
+    return Object.prototype.hasOwnProperty.call(extras, header) ? extras[header] : null;
   });
 }
 

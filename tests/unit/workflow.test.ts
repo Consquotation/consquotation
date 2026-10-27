@@ -78,12 +78,15 @@ describe("thông tin báo giá", () => {
 
   it("tóm tắt: số mục đã điền, nhãn mất, báo giá hết hiệu lực", () => {
     const cells = INFO_FIELDS.map((f) => cell(f.key, ""));
-    cells[1] = cell("customer", "Cty A");
-    cells[6] = cell("validUntil", isoToExcelSerial("2026-10-01"), { numberFormat: "dd/mm/yyyy" });
-    cells[3] = { ...cell("quoteNo", ""), found: false };
+    const at = (key: InfoKey) => INFO_FIELDS.findIndex((f) => f.key === key);
+    cells[at("customer")] = cell("customer", "Cty A");
+    cells[at("validUntil")] = cell("validUntil", isoToExcelSerial("2026-10-01"), { numberFormat: "dd/mm/yyyy" });
+    cells[at("quoteNo")] = { ...cell("quoteNo", ""), found: false };
+    // Sheet tạo trước bản 1.10.0 không có nhãn Địa điểm: không bị coi là nhãn mất.
+    cells[at("location")] = { ...cell("location", ""), found: false };
     expect(summarizeInfo(cells, "2026-10-21")).toEqual({
       filled: 2,
-      total: 7,
+      total: 10,
       missingLabels: ["quoteNo"],
       expired: "01/10/2026",
     });

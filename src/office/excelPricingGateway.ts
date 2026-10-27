@@ -697,6 +697,15 @@ export class ExcelPricingGateway implements PricingGateway {
             unitPrice: row.values[i("unitPrice")],
             unitPriceType: row.types[i("unitPrice")],
             priceAddress: cellAddress(a.firstRowIndex + r, a.firstColumnIndex + i("price")),
+            resourceCode: String(row.values[i("resourceCode")] ?? "").trim(),
+            resourceName: String(row.values[i("resourceName")] ?? "").trim(),
+            resourceType: String(row.values[i("resourceType")] ?? "").trim(),
+            resourceUnit: String(row.values[i("resourceUnit")] ?? "").trim(),
+            quantity: row.values[i("quantity")],
+            quantityType: row.types[i("quantity")],
+            price: row.values[i("price")],
+            priceType: row.types[i("price")],
+            source: String(row.values[i("source")] ?? ""),
           }));
         }
       }

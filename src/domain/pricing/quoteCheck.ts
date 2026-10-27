@@ -49,6 +49,17 @@ export interface AnalysisLine {
   unitPrice: unknown;
   unitPriceType: string;
   priceAddress: string;
+  /** Chi tiết tài nguyên của dòng phân tích (giai đoạn 17: tách đơn giá theo loại). */
+  resourceCode: string;
+  resourceName: string;
+  /** Nhãn loại trên sheet ("Vật liệu", "Nhân công"…). */
+  resourceType: string;
+  resourceUnit: string;
+  quantity: unknown;
+  quantityType: string;
+  price: unknown;
+  priceType: string;
+  source: string;
 }
 
 export interface QuoteSnapshot {
@@ -72,7 +83,27 @@ export interface QuoteIssue {
   hint?: string;
   /** Đề xuất sửa có thể áp dụng sau khi người dùng xác nhận. */
   fix?: { kind: "setUnitPrice"; value: number; previous: unknown };
+  /** Chỉ số dòng dữ liệu của bảng báo giá (từ 0) nếu vấn đề thuộc một dòng công tác. */
+  row?: number;
+  /** Mã ổn định của loại vấn đề (dùng khi gom trạng thái theo dòng ở hồ sơ báo giá). */
+  code?: QuoteIssueCode;
+  /** Cột mẫu chứa vấn đề (nếu có). */
+  column?: QuoteColumnKey;
 }
+
+export type QuoteIssueCode =
+  | "cellError"
+  | "blank"
+  | "notNumber"
+  | "negative"
+  | "zero"
+  | "abnormal"
+  | "libraryMissing"
+  | "libraryDiffers"
+  | "analysisMissing"
+  | "analysisError"
+  | "analysisIncomplete"
+  | "analysisDiffers";
 
 /** Ngưỡng cảnh báo "giá trị bất thường" (không chặn): thường do thừa chữ số hoặc nhầm đơn vị. */
 export const ABNORMAL_UNIT_PRICE = 1e11;
@@ -86,6 +117,8 @@ export interface CheckOptions {
 export type PriceMethod = "direct" | "library" | "composition" | "formula" | "missing";
 
 export interface RowMethod {
+  /** Chỉ số dòng dữ liệu của bảng báo giá (từ 0). */
+  row: number;
   location: string;
   address: string;
   code: string;
@@ -166,13 +199,19 @@ export function checkQuote(snapshot: QuoteSnapshot, options: CheckOptions = {}):
       sheetName: table.sheetName,
       address: cellAddress(row, table.firstColumnIndex + c),
       location: `Dòng ${row + 1}`,
+      row: table === quote && !totals ? r : undefined,
     };
   };
   const push = (
     severity: IssueSeverity,
-    place: ReturnType<typeof at>,
+    place: { sheetName: string; address: string; location: string; row?: number },
     message: string,
-    extra: { hint?: string; fix?: QuoteIssue["fix"] } = {}
+    extra: {
+      hint?: string;
+      fix?: QuoteIssue["fix"];
+      code?: QuoteIssueCode;
+      column?: QuoteColumnKey;
+    } = {}
   ) => issues.push({ severity, ...place, message, ...extra });
   const libraryByCode = new Map(
     (options.library?.workItems ?? []).map((w) => [normalizeCode(w.code), w])
@@ -239,7 +278,7 @@ export function checkQuote(snapshot: QuoteSnapshot, options: CheckOptions = {}):
           "error",
           at(quote, r, col),
           `${quote.headers[col]}: lỗi ${explainError(row.values[col])}.`,
-          { hint: errorHint(row.values[col]) }
+          { hint: errorHint(row.values[col]), code: "cellError" }
         );
       }
     });
@@ -270,7 +309,11 @@ export function checkQuote(snapshot: QuoteSnapshot, options: CheckOptions = {}):
           "warning",
           at(quote, r, col),
           `Thiếu ${label}: Thành tiền để trống và không được cộng vào tổng.`,
-          { hint: "Nhập số vào ô này; khi chưa có số liệu thì tổng báo giá chưa đầy đủ." }
+          {
+            hint: "Nhập số vào ô này; khi chưa có số liệu thì tổng báo giá chưa đầy đủ.",
+            code: "blank",
+            column: key,
+          }
         );
       } else if (typeof v !== "number") {
         push(
@@ -279,18 +322,22 @@ export function checkQuote(snapshot: QuoteSnapshot, options: CheckOptions = {}):
           `${label[0].toUpperCase()}${label.slice(1)} "${String(v)}" không phải số (có thể bị gõ dạng chữ, ví dụ 1.500.000).`,
           {
             hint: "Gõ lại dạng số: chỉ chữ số và tối đa một dấu thập phân, không dùng dấu phân cách hàng nghìn.",
+            code: "notNumber",
+            column: key,
           }
         );
       } else if (v < 0) {
         push("error", at(quote, r, col), `${label[0].toUpperCase()}${label.slice(1)} âm.`, {
           hint: "Nhập giá trị không âm; khoản giảm trừ hãy đưa vào phần Tổng hợp (tab Tính giá).",
+          code: "negative",
+          column: key,
         });
       } else if (v === 0) {
         push(
           "warning",
           at(quote, r, col),
           `${label[0].toUpperCase()}${label.slice(1)} bằng 0 (khác với để trống) — kiểm tra lại.`,
-          { hint: "Nếu chưa có số liệu, hãy để trống thay vì nhập 0." }
+          { hint: "Nếu chưa có số liệu, hãy để trống thay vì nhập 0.", code: "zero", column: key }
         );
       } else if (v >= (key === "unitPrice" ? ABNORMAL_UNIT_PRICE : ABNORMAL_QUANTITY)) {
         push(
@@ -299,6 +346,8 @@ export function checkQuote(snapshot: QuoteSnapshot, options: CheckOptions = {}):
           `${label[0].toUpperCase()}${label.slice(1)} ${showNumber(v)} lớn bất thường.`,
           {
             hint: "Kiểm tra lại số chữ số và đơn vị tính (ví dụ nhập nhầm đồng thành nghìn đồng).",
+            code: "abnormal",
+            column: key,
           }
         );
       }
@@ -346,6 +395,7 @@ export function checkQuote(snapshot: QuoteSnapshot, options: CheckOptions = {}):
     }
     const place = at(quote, r, c.unitPrice);
     methods.push({
+      row: r,
       location: place.location,
       address: place.address,
       code,
@@ -359,6 +409,7 @@ export function checkQuote(snapshot: QuoteSnapshot, options: CheckOptions = {}):
       if (!item) {
         push("warning", place, `Không còn công tác mã "${libCode}" trong thư viện trên máy này.`, {
           hint: "Báo giá không bị ảnh hưởng (đơn giá là bản sao). Nếu cần truy vết, kiểm tra lại thư viện hoặc khôi phục từ bản sao lưu.",
+          code: "libraryMissing",
         });
       } else if (
         item.unitPrice !== null &&
@@ -371,6 +422,7 @@ export function checkQuote(snapshot: QuoteSnapshot, options: CheckOptions = {}):
           `Đơn giá ${showNumber(value(c.unitPrice))} khác đơn giá hiện tại trong thư viện ${showNumber(item.unitPrice)}.`,
           {
             hint: "Báo giá giữ đơn giá tại lúc chèn. Nếu muốn dùng giá mới, sửa ô Đơn giá hoặc chèn lại công tác từ thư viện.",
+            code: "libraryDiffers",
           }
         );
       }
@@ -386,6 +438,7 @@ export function checkQuote(snapshot: QuoteSnapshot, options: CheckOptions = {}):
           `Không tìm thấy phân tích cho mã "${code}" trên sheet phân tích (có thể đã bị xóa hoặc đổi mã).`,
           {
             hint: "Chèn lại công tác từ thư viện với phương pháp Phân tích, hoặc nhập đơn giá trực tiếp.",
+            code: "analysisMissing",
           }
         );
       } else if (line.unitPriceType === "Error") {
@@ -395,10 +448,12 @@ export function checkQuote(snapshot: QuoteSnapshot, options: CheckOptions = {}):
             sheetName: line.sheetName,
             address: line.priceAddress,
             location: `Dòng ${line.rowIndex + 1}`,
+            row: r,
           },
           `Phân tích mã "${code}": Đơn giá công tác lỗi ${explainError(line.unitPrice)}.`,
           {
             hint: "Sửa ô lỗi trên sheet Phân tích đơn giá (một ô lỗi ở bất kỳ dòng nào làm mọi đơn giá phân tích báo lỗi).",
+            code: "analysisError",
           }
         );
       } else if (isBlank(line.unitPrice)) {
@@ -408,6 +463,7 @@ export function checkQuote(snapshot: QuoteSnapshot, options: CheckOptions = {}):
           `Phân tích mã "${code}" còn thiếu hao phí hoặc đơn giá nguồn — chưa có đơn giá.`,
           {
             hint: "Nhập hao phí/đơn giá nguồn còn trống trên sheet Phân tích đơn giá, rồi kiểm tra lại để cập nhật.",
+            code: "analysisIncomplete",
           }
         );
       } else if (typeof line.unitPrice === "number" && value(c.unitPrice) !== line.unitPrice) {
@@ -418,6 +474,7 @@ export function checkQuote(snapshot: QuoteSnapshot, options: CheckOptions = {}):
           {
             hint: "Bấm Cập nhật đơn giá theo sheet phân tích (cần xác nhận), hoặc sửa tay.",
             fix: { kind: "setUnitPrice", value: line.unitPrice, previous: value(c.unitPrice) },
+            code: "analysisDiffers",
           }
         );
       }

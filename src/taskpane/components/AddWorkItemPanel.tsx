@@ -19,11 +19,7 @@ import ConfirmDialog from "./ConfirmDialog";
 import { describeBlocker } from "../../application/blockerMessages";
 import { AppendPlan, executeAppend, planAppend } from "../../application/quoteService";
 import { defaultInsertPosition, preferredTable } from "../../application/quoteTableSelection";
-import {
-  InsertPosition,
-  QuoteTableInfo,
-  WorkbookGateway,
-} from "../../application/workbookGateway";
+import { InsertPosition, QuoteTableInfo, WorkbookGateway } from "../../application/workbookGateway";
 import {
   DraftError,
   DraftField,
@@ -52,6 +48,18 @@ import { WorkItem } from "../../domain/library/types";
 import { QUOTE_COLUMNS } from "../../domain/quoteTemplate";
 import { PRICING_STRINGS } from "../../shared/strings.pricing.vi";
 import { useSelectionChanged } from "../useSelectionChanged";
+import { QuotationService } from "../../application/quotationService";
+import { COST_TYPES } from "../../domain/quotation/lines";
+import {
+  compositionBreakdown,
+  libraryItem,
+  manualItem,
+  normItem,
+} from "../../domain/quotation/fromInsert";
+import { CostType, QuotationItemRecord } from "../../domain/quotation/model";
+import { BREAKDOWN_COLUMNS, LINE_ID_HEADER, extensionHeader } from "../../domain/quoteTemplate";
+import { QUOTATION_UI } from "../../shared/strings.quotation.vi";
+import { randomId } from "../../shared/uuid";
 
 type Phase =
   | { kind: "idle" }
@@ -87,6 +95,8 @@ const FIELDS: { field: DraftField; label: string; wide?: boolean; numeric?: bool
 export interface LibraryPrefill {
   nonce: number;
   code: string;
+  /** Công tác trong thư viện (để chụp nguồn và giá vào hồ sơ báo giá). */
+  item: WorkItem;
   draft: WorkItemDraftInput;
   warnings: InsertWarning[];
   /** Có khi công tác có định mức trong thư viện: cho phép phân tích đơn giá (prompts/10). */
@@ -114,9 +124,11 @@ const AddWorkItemPanel: React.FC<{
   pricing?: PricingGateway;
   tablesVersion: number;
   onAppended: () => void;
+  /** Ghi nhận dòng mới vào hồ sơ báo giá (giai đoạn 17); không có thì chỉ ghi sheet như trước. */
+  quotation?: QuotationService;
   prefill?: LibraryPrefill | null;
   onPrefillConsumed?: () => void;
-}> = ({ gateway, pricing, tablesVersion, onAppended, prefill, onPrefillConsumed }) => {
+}> = ({ gateway, pricing, tablesVersion, onAppended, quotation, prefill, onPrefillConsumed }) => {
   const styles = useStyles();
   const s = STRINGS.append;
   const [tables, setTables] = React.useState<QuoteTableInfo[] | null>(null);
@@ -144,7 +156,10 @@ const AddWorkItemPanel: React.FC<{
     [composition, selection, rounding]
   );
 
-  function choosePriceMethod(method: PriceMethodChoice, source: LibraryPrefill | null = fromLibrary) {
+  function choosePriceMethod(
+    method: PriceMethodChoice,
+    source: LibraryPrefill | null = fromLibrary
+  ) {
     setPriceMethod(method);
     if (!source?.composition) {
       return;
@@ -173,7 +188,9 @@ const AddWorkItemPanel: React.FC<{
         choosePriceMethod(item.unitPrice === null ? "composition" : "library", prefill);
         if (pricing) {
           pricing.readRounding().then(setRounding, () => undefined);
-          pricing.findAnalysis(item.code).then(setExistingAnalysis, () => setExistingAnalysis(null));
+          pricing
+            .findAnalysis(item.code)
+            .then(setExistingAnalysis, () => setExistingAnalysis(null));
         }
       } else {
         setPriceMethod("library");
@@ -203,38 +220,100 @@ const AddWorkItemPanel: React.FC<{
   // Bảng có thể bị đổi tên/xóa khi pane mở; vùng chọn đổi thì chọn sẵn lại bảng chứa nó.
   useSelectionChanged(() => void loadTables());
 
-  const execute = async (plan: AppendPlan, baseRow: (string | number)[], withComposition: boolean) => {
+  const execute = async (
+    plan: AppendPlan,
+    baseRow: (string | number)[],
+    withComposition: boolean
+  ) => {
     setPhase({ kind: "working" });
     try {
       let row = baseRow;
       let note = "";
       let incomplete = false;
+      // Mã dòng ổn định (không phụ thuộc số hàng Excel) và mục hồ sơ chụp nguồn gốc của dòng.
+      const lineId = randomId();
+      const extras: Record<string, string | number> = { [LINE_ID_HEADER]: lineId };
+      const identity = {
+        id: lineId,
+        code: draft.code.trim(),
+        name: draft.description.trim(),
+        unit: draft.unit.trim(),
+        now: new Date().toISOString(),
+      };
+      let item: QuotationItemRecord =
+        fromLibrary && !withComposition
+          ? libraryItem(identity, fromLibrary.item)
+          : manualItem(identity);
+      let breakdown: Record<CostType, number> | null = null;
       if (withComposition && composition && compositionResult && pricing) {
         // Ghi phân tích (hoặc dùng phân tích có sẵn) rồi lấy đơn giá do chính Excel tính.
         const written = await pricing.writeAnalysis(composition.item.code, compositionResult.rows);
         const price = written.price;
+        item = normItem(
+          identity,
+          composition.item,
+          composition.lines,
+          selection,
+          compositionResult.rows
+        );
+        // Đơn giá theo loại chỉ ghi khi khối phân tích vừa được ghi từ chính các thành phần này và đủ giá.
+        breakdown =
+          written.status === "written" && price.kind === "value"
+            ? compositionBreakdown(composition.lines, selection)
+            : null;
+        if (breakdown) {
+          for (const t of COST_TYPES) {
+            extras[extensionHeader(BREAKDOWN_COLUMNS[t])] = breakdown[t];
+          }
+        }
         row = [...baseRow];
         row[UNIT_PRICE_INDEX] = price.kind === "value" ? price.value : "";
         row[NOTES_INDEX] =
-          "'" + compositionNote(composition.item, composition.lines.length, compositionResult.currency);
+          "'" +
+          compositionNote(composition.item, composition.lines.length, compositionResult.currency);
         incomplete = price.kind !== "value";
         note = [
           p.analysisSheet(written.sheetName),
-          written.status === "exists" && existingAnalysis === null ? p.existsUsed(composition.item.code) : "",
-          price.kind === "missing" ? p.addedMissing : price.kind === "error" ? p.addedError(price.error) : "",
+          written.status === "exists" && existingAnalysis === null
+            ? p.existsUsed(composition.item.code)
+            : "",
+          price.kind === "missing"
+            ? p.addedMissing
+            : price.kind === "error"
+              ? p.addedError(price.error)
+              : "",
         ]
           .filter(Boolean)
           .join(" ");
       }
-      const result = await executeAppend(gateway, plan, [row], {
-        shift: plan.status === "needsShiftConfirmation",
-      });
+      const result = await executeAppend(
+        gateway,
+        plan,
+        [row],
+        { shift: plan.status === "needsShiftConfirmation" },
+        [extras]
+      );
       if (result.status === "changed") {
-        setPhase({ kind: "warning", message: withComposition ? p.analysisWrittenButChanged : s.changed });
+        setPhase({
+          kind: "warning",
+          message: withComposition ? p.analysisWrittenButChanged : s.changed,
+        });
         return;
       }
       const added = s.added(qualifiedAddress(result.rows.sheetName, result.rows.address));
-      setPhase({ kind: incomplete ? "warning" : "success", message: note ? added + " " + note : added });
+      let registerNote = "";
+      if (quotation) {
+        const registered = await quotation.registerInsertedLine(result.rows.tableName, {
+          ...item,
+          writtenBreakdown: breakdown,
+        });
+        // Bảng cũ chưa có cột Mã dòng: không có hồ sơ theo dòng, không cần báo.
+        if (!registered.saved && registered.reason !== "notOnSheet") {
+          registerNote = QUOTATION_UI.registerFailed(registered.reason);
+        }
+      }
+      const message = [added, note, registerNote].filter(Boolean).join(" ");
+      setPhase({ kind: incomplete || registerNote ? "warning" : "success", message });
       // Giữ Nhóm công tác và Đơn vị tính — thường lặp lại ở dòng kế tiếp.
       setDraft((d) => ({ ...EMPTY_DRAFT, group: d.group, unit: d.unit }));
       if (fromLibrary) {
@@ -249,11 +328,19 @@ const AddWorkItemPanel: React.FC<{
   };
 
   const submit = async () => {
-    if (usingComposition && existingAnalysis === null && compositionResult && !compositionResult.ok) {
+    if (
+      usingComposition &&
+      existingAnalysis === null &&
+      compositionResult &&
+      !compositionResult.ok
+    ) {
       setPhase({ kind: "error", message: compositionResult.errors.join(" ") });
       return;
     }
-    const validation = validateWorkItemDraft(usingComposition ? { ...draft, unitPrice: "" } : draft, tableName);
+    const validation = validateWorkItemDraft(
+      usingComposition ? { ...draft, unitPrice: "" } : draft,
+      tableName
+    );
     if (!validation.ok) {
       setErrors(validation.errors);
       return;
@@ -293,7 +380,11 @@ const AddWorkItemPanel: React.FC<{
       <Body1>{s.description}</Body1>
 
       {fromLibrary && (
-        <MessageBar intent={fromLibrary.warnings.length > 0 ? "warning" : "info"} layout="multiline" politeness="polite">
+        <MessageBar
+          intent={fromLibrary.warnings.length > 0 ? "warning" : "info"}
+          layout="multiline"
+          politeness="polite"
+        >
           <MessageBarBody>
             {LIBRARY_STRINGS.insert.prefilled(fromLibrary.code)}
             {fromLibrary.warnings.map((w) => (
@@ -311,7 +402,8 @@ const AddWorkItemPanel: React.FC<{
 
       {tables !== null && tables.length > 0 && (
         // <form> để Enter trong ô nhập gửi biểu mẫu (dùng được bằng bàn phím).
-        <form noValidate
+        <form
+          noValidate
           className={styles.root}
           onSubmit={(event) => {
             event.preventDefault();
@@ -364,7 +456,10 @@ const AddWorkItemPanel: React.FC<{
                       : PRICING_STRINGS.method.library
                   }
                 />
-                <Radio value="composition" label={PRICING_STRINGS.method.composition(composition.lines.length)} />
+                <Radio
+                  value="composition"
+                  label={PRICING_STRINGS.method.composition(composition.lines.length)}
+                />
               </RadioGroup>
             </Field>
           )}
@@ -406,7 +501,11 @@ const AddWorkItemPanel: React.FC<{
           </div>
 
           <div className={styles.actions}>
-            <Button type="submit" appearance="primary" disabled={phase.kind === "working" || !tableName}>
+            <Button
+              type="submit"
+              appearance="primary"
+              disabled={phase.kind === "working" || !tableName}
+            >
               {phase.kind === "working" ? s.working : s.submit}
             </Button>
             {phase.kind === "working" && <Spinner size="tiny" aria-label={s.working} />}

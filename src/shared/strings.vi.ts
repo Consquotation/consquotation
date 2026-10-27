@@ -81,6 +81,7 @@ export const STRINGS = {
     label: "Các phần của ConsQuotation",
     overview: "Tổng quan",
     quote: "Báo giá",
+    items: "Công tác",
     pricing: "Tính giá",
     print: "In ấn",
     library: "Thư viện",

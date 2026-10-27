@@ -114,7 +114,8 @@ export async function executeAppend(
   gateway: WorkbookGateway,
   plan: AppendPlan,
   rows: (string | number)[][],
-  confirmation: { shift: boolean }
+  confirmation: { shift: boolean },
+  extras: Record<string, string | number>[] = []
 ): Promise<AppendResult> {
   if (plan.status === "blocked") {
     throw new Error("Không thể thêm dòng vào bảng đang bị chặn.");
@@ -130,7 +131,8 @@ export async function executeAppend(
       rows,
       plan.inspection.fingerprint,
       plan.inspection.insertIndex,
-      fillIndex
+      fillIndex,
+      extras
     );
     return { status: "appended", rows: appended };
   } catch (error) {

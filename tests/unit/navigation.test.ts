@@ -21,7 +21,7 @@ describe("parseInitialView", () => {
   });
 
   it("chỉ có các tab đã triển khai (prompts/05)", () => {
-    expect(TAB_VIEWS).toEqual(["overview", "quote", "pricing", "print", "library", "settings"]);
+    expect(TAB_VIEWS).toEqual(["overview", "quote", "items", "pricing", "print", "library", "settings"]);
   });
 });
 

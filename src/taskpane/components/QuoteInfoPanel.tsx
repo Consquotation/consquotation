@@ -13,7 +13,12 @@ import {
   tokens,
 } from "@fluentui/react-components";
 import { preferredTable } from "../../application/quoteTableSelection";
-import { QuoteInfoRead, QuoteTableInfo, TargetChangedError, WorkbookGateway } from "../../application/workbookGateway";
+import {
+  QuoteInfoRead,
+  QuoteTableInfo,
+  TargetChangedError,
+  WorkbookGateway,
+} from "../../application/workbookGateway";
 import { todayIso } from "../../domain/library/dates";
 import {
   INFO_FIELDS,
@@ -132,7 +137,10 @@ const QuoteInfoPanel: React.FC<{ gateway: WorkbookGateway; tablesVersion: number
       } catch (error) {
         if (error instanceof TargetChangedError) {
           const edited = Object.fromEntries(
-            INFO_FIELDS.filter((f) => input[f.key] !== current[f.key]).map((f) => [f.key, input[f.key]])
+            INFO_FIELDS.filter((f) => input[f.key] !== current[f.key]).map((f) => [
+              f.key,
+              input[f.key],
+            ])
           ) as Partial<Values>;
           await loadInfo(edited);
           setMessage({ intent: "warning", text: s.changed });
@@ -191,20 +199,34 @@ const QuoteInfoPanel: React.FC<{ gateway: WorkbookGateway; tablesVersion: number
             <div className={styles.grid}>
               {INFO_FIELDS.map((field) => {
                 const found = read.cells.find((c) => c.key === field.key)?.found ?? false;
+                // Mục thêm ở bản 1.11.0 không có trên sheet tạo trước đó: chỉ gợi ý, không cảnh báo.
+                const optionalMissing = !found && field.addedLater;
                 return (
                   <Field
                     key={field.key}
                     label={field.label.replace(/:$/, "")}
-                    validationMessage={errorOf(field.key) ?? (found ? undefined : s.notFound)}
-                    validationState={errorOf(field.key) ? "error" : found ? "none" : "warning"}
-                    hint={field.type === "date" && found ? s.dateHint : undefined}
+                    validationMessage={
+                      errorOf(field.key) ?? (found || optionalMissing ? undefined : s.notFound)
+                    }
+                    validationState={
+                      errorOf(field.key) ? "error" : found || optionalMissing ? "none" : "warning"
+                    }
+                    hint={
+                      optionalMissing
+                        ? s.addedLater(field.label)
+                        : field.type === "date" && found
+                          ? s.dateHint
+                          : undefined
+                    }
                   >
                     <Input
                       value={input[field.key]}
                       disabled={!found || read.sheetProtected}
                       inputMode={field.type === "date" ? "numeric" : undefined}
                       placeholder={field.type === "date" ? "dd/mm/yyyy" : undefined}
-                      onChange={(_e, d) => setInput((v) => (v ? { ...v, [field.key]: d.value } : v))}
+                      onChange={(_e, d) =>
+                        setInput((v) => (v ? { ...v, [field.key]: d.value } : v))
+                      }
                     />
                   </Field>
                 );
@@ -214,7 +236,11 @@ const QuoteInfoPanel: React.FC<{ gateway: WorkbookGateway; tablesVersion: number
             <Spinner size="tiny" />
           )}
           <div className={styles.row}>
-            <Button type="submit" appearance="primary" disabled={busy || !read || read.sheetProtected}>
+            <Button
+              type="submit"
+              appearance="primary"
+              disabled={busy || !read || read.sheetProtected}
+            >
               {s.save}
             </Button>
             <Button
@@ -233,7 +259,11 @@ const QuoteInfoPanel: React.FC<{ gateway: WorkbookGateway; tablesVersion: number
         </form>
       )}
       {message && (
-        <MessageBar intent={message.intent} layout="multiline" politeness={message.intent === "error" ? "assertive" : "polite"}>
+        <MessageBar
+          intent={message.intent}
+          layout="multiline"
+          politeness={message.intent === "error" ? "assertive" : "polite"}
+        >
           <MessageBarBody>{message.text}</MessageBarBody>
         </MessageBar>
       )}

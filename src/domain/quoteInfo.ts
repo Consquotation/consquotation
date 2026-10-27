@@ -10,28 +10,48 @@ import { formatIsoDate } from "./library/dates";
 import { QUOTE_INFO_LABELS } from "./quoteTemplate";
 
 export type InfoKey =
-  "issuer" | "customer" | "project" | "quoteNo" | "date" | "version" | "validUntil";
+  | "issuer"
+  | "preparedBy"
+  | "customer"
+  | "project"
+  | "location"
+  | "package"
+  | "quoteNo"
+  | "date"
+  | "version"
+  | "validUntil";
 
 export interface InfoField {
   key: InfoKey;
   label: string;
   type: "text" | "date";
+  /**
+   * Mục thêm ở bản 1.11.0 (giai đoạn 17): sheet tạo trước đó không có nhãn này. Thiếu nhãn của mục
+   * tùy chọn không bị coi là khối thông tin hỏng.
+   */
+  addedLater: boolean;
 }
 
 const KEYS: InfoKey[] = [
   "issuer",
+  "preparedBy",
   "customer",
   "project",
+  "location",
+  "package",
   "quoteNo",
   "date",
   "version",
   "validUntil",
 ];
 
+const ADDED_LATER: ReadonlySet<InfoKey> = new Set(["preparedBy", "location", "package"]);
+
 export const INFO_FIELDS: readonly InfoField[] = QUOTE_INFO_LABELS.map((label, i) => ({
   key: KEYS[i],
   label,
   type: KEYS[i] === "date" || KEYS[i] === "validUntil" ? "date" : "text",
+  addedLater: ADDED_LATER.has(KEYS[i]),
 }));
 
 /**
@@ -157,7 +177,7 @@ export function summarizeInfo(cells: readonly InfoCell[], today: string): InfoSu
   return {
     filled: cells.filter((c) => c.found && display(c) !== "").length,
     total: INFO_FIELDS.length,
-    missingLabels: cells.filter((c) => !c.found).map((c) => c.key),
+    missingLabels: cells.filter((c) => !c.found && !field(c.key).addedLater).map((c) => c.key),
     expired,
   };
 }

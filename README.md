@@ -46,6 +46,13 @@ Microsoft Excel Add-in hỗ trợ lập báo giá thi công xây dựng **ngay t
   - Bộ máy tính độc lập với giao diện, số học thập phân chính xác: chi phí vật liệu, nhân công, máy, khác và đơn giá tổng hợp. Thiếu giá hoặc sai đơn vị thì báo lỗi theo mã, không trả về 0.
   - Xuất bảng diễn giải ra sheet mới bằng công thức Excel để đối chiếu. Báo giá dùng phiên bản Đang dùng khi phân tích từ định mức.
   - Add-in không kèm định mức nào và không xác nhận tính pháp lý của định mức.
+- **Quy trình lập báo giá theo dòng** (tab Công tác; xem [docs/QUOTATION.md](docs/QUOTATION.md) và [ADR-0014](docs/ADR/0014-ho-so-bao-gia-trong-workbook.md)):
+  - Bảng báo giá mới có 4 cột đơn giá vật liệu, nhân công, máy, khác và cột Mã dòng (ẩn) làm định danh ổn định của dòng. Khối thông tin thêm Người lập, Địa điểm, Hạng mục/gói thầu.
+  - Hồ sơ báo giá lưu ngay trong workbook (Custom XML Part): nguồn gốc từng dòng (thư viện, định mức và phiên bản, id giá), snapshot giá lúc chèn, kết quả tính, trạng thái nháp/hoàn tất. Lưu workbook là lưu hồ sơ.
+  - Trạng thái từng dòng: hợp lệ, có cảnh báo, lỗi; lỗi chỉ đúng tài nguyên hoặc ô; dòng lỗi không bị coi là 0. Tổng theo nhóm công tác.
+  - Thư viện đổi thì báo giá giữ giá cũ và hiện cảnh báo; chỉ cập nhật khi người dùng bấm Cập nhật theo thư viện.
+  - Đồng bộ khi người dùng thêm, sao chép, xóa, sửa dòng ngay trong Excel. Hoàn tất bị chặn khi còn dòng lỗi.
+  - Bảng tạo trước bản 1.11.0 vẫn dùng được; muốn quản lý theo dòng thì bổ sung cột (có xác nhận).
 - **Tính giá** (tab mới; xem [ADR-0008](docs/ADR/0008-tinh-don-gia-va-thanh-tien.md)):
   - Đơn giá có thể nhập trực tiếp, lấy từ thư viện, hoặc **phân tích từ định mức**. Phần phân tích nằm ở sheet "Phân tích đơn giá" bằng công thức Excel, nên truy vết được từng tài nguyên.
   - Chiết khấu, phụ phí, thuế do người dùng cấu hình và áp dụng theo thứ tự. Không có tỷ lệ mặc định.
@@ -55,7 +62,7 @@ Microsoft Excel Add-in hỗ trợ lập báo giá thi công xây dựng **ngay t
 
 Chưa làm: đặc tả 12 (lưu trữ và quyền riêng tư), 18, 19 và 21.
 
-Tài liệu thêm: [lớp tích hợp Excel](docs/EXCEL_INTEGRATION.md) · [tương thích](docs/COMPATIBILITY.md) · [bảo mật](docs/SECURITY.md) · [hiệu năng](docs/PERFORMANCE.md) · [regression](tests/manual/regression-checklist.md) · [nghiệm thu](tests/manual/acceptance-checklist.md).
+Tài liệu thêm: [quy trình lập báo giá](docs/QUOTATION.md) · [giai đoạn 17: đánh giá](docs/PHASE_17_ASSESSMENT.md), [triển khai](docs/PHASE_17_IMPLEMENTATION.md) · [lớp tích hợp Excel](docs/EXCEL_INTEGRATION.md) · [tương thích](docs/COMPATIBILITY.md) · [bảo mật](docs/SECURITY.md) · [hiệu năng](docs/PERFORMANCE.md) · [regression](tests/manual/regression-checklist.md) · [nghiệm thu](tests/manual/acceptance-checklist.md).
 
 ### Hạn chế đã biết
 
@@ -148,6 +155,8 @@ npm run check          # chạy lần lượt typecheck, lint, test, validate, b
 
 Kiểm thử lớp tích hợp Excel trên Excel thật (cần `npm start` và task pane đang mở): `node tests/integration/run-in-taskpane.mjs tests/integration/excel-core.scenarios.js`. Chi tiết: [docs/EXCEL_INTEGRATION.md](docs/EXCEL_INTEGRATION.md#kiểm-thử).
 
+Kiểm tra quy trình lập báo giá trong Excel: làm theo [tests/manual/quotation-checklist.md](tests/manual/quotation-checklist.md) (tạo báo giá, chèn công tác, tab Công tác, đổi giá thư viện, sửa/chép/xóa dòng trong Excel, lưu và mở lại file). Unit test của phần này: `npx vitest run tests/unit/quotation.test.ts`.
+
 Excel trên web: `npm run start:web -- --document "<link workbook OneDrive>"` (chưa kiểm thử). Hướng dẫn đầy đủ: [docs/SIDELOAD.md](docs/SIDELOAD.md); triển khai bản production: [docs/DEPLOY.md](docs/DEPLOY.md).
 
 ### Lỗi thường gặp
@@ -167,6 +176,7 @@ Bộ công cụ Office Add-in của Microsoft có thể hỏi về việc gửi 
 ## Dữ liệu và quyền riêng tư
 
 - Add-in không gửi workbook hay thư viện lên máy chủ nào và không có backend.
+- Hồ sơ báo giá (nguồn gốc, snapshot giá, trạng thái) nằm trong chính workbook, đi cùng file khi lưu hoặc gửi; không lưu ở nơi khác.
 - Thư viện cá nhân lưu cục bộ trong IndexedDB của add-in. Dữ liệu này **bị xóa khi xóa cache add-in của Office** và không đồng bộ giữa các máy hoặc giữa Excel desktop và Excel trên web — người dùng phải sao lưu bằng chức năng export. Xem [ADR-0003](docs/ADR/0003-luu-tru-thu-vien-ca-nhan.md) và [ADR-0004](docs/ADR/0004-import-export-thu-vien.md).
 
 ## Triển khai
