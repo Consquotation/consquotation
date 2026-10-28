@@ -37,6 +37,8 @@ const useStyles = makeStyles({
     backgroundColor: tokens.colorNeutralBackground2,
     borderRadius: tokens.borderRadiusMedium,
   },
+  // Nhãn trạng thái giữ nguyên một dòng; phần chữ bên cạnh co lại thay vì bóp nhãn.
+  badge: { flexShrink: 0, whiteSpace: "nowrap" },
   text: { flexGrow: 1, display: "flex", flexDirection: "column", minWidth: 0 },
   row: { display: "flex", flexWrap: "wrap", alignItems: "flex-end", gap: tokens.spacingHorizontalS },
 });
@@ -210,7 +212,7 @@ const WorkflowPanel: React.FC<{
               const act = action(step.key);
               return (
                 <li key={step.key} className={styles.item}>
-                  <Badge appearance="tint" color={BADGE[step.state]}>
+                  <Badge appearance="tint" color={BADGE[step.state]} className={styles.badge}>
                     {s.states[step.state]}
                   </Badge>
                   <div className={styles.text}>
