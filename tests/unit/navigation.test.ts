@@ -1,6 +1,12 @@
-import { readFileSync } from "node:fs";
+import { readFileSync, readdirSync } from "node:fs";
+import { join } from "node:path";
 import { describe, expect, it } from "vitest";
-import { TAB_VIEWS, parseInitialView } from "../../src/taskpane/navigation";
+import {
+  TAB_VIEWS,
+  parseInitialFocus,
+  parseInitialView,
+  parseLibrarySection,
+} from "../../src/taskpane/navigation";
 import { defaultInsertPosition, preferredTable } from "../../src/application/quoteTableSelection";
 import { QuoteTableInfo } from "../../src/application/workbookGateway";
 
@@ -25,12 +31,54 @@ describe("parseInitialView", () => {
   });
 });
 
+describe("parseInitialFocus / parseLibrarySection", () => {
+  it.each([
+    ["?view=quote&focus=cq-info-title", "cq-info-title"],
+    ["?view=settings&focus=cq-license-title", "cq-license-title"],
+    ["?view=quote", null],
+    ["?focus=main", null],
+    ["?focus=cq-info-title%22%3E", null],
+    ["?focus=CQ-INFO-TITLE", null],
+  ])("focus '%s' → %s", (search, focus) => {
+    expect(parseInitialFocus(search)).toBe(focus);
+  });
+
+  it.each([
+    ["?view=library&section=norms", "norms"],
+    ["?view=library&section=exchange", "exchange"],
+    ["?view=library", null],
+    ["?view=library&section=prices", null],
+  ])("section '%s' → %s", (search, section) => {
+    expect(parseLibrarySection(search)).toBe(section);
+  });
+});
+
 describe("manifest dev: lệnh Ribbon", () => {
   const manifest = readFileSync("manifest/manifest.dev.xml", "utf8");
 
   it("chỉ có các lệnh đã triển khai", () => {
-    const controls = [...manifest.matchAll(/<Control xsi:type="Button" id="([^"]+)"/g)].map((m) => m[1]);
-    expect(controls).toEqual(["CQ.OpenTaskpane", "CQ.CreateQuote", "CQ.OpenLibrary", "CQ.OpenHelp"]);
+    const controls = [...manifest.matchAll(/<(?:Control xsi:type="(?:Button|Menu)"|Item) id="([^"]+)"/g)].map(
+      (m) => m[1]
+    );
+    expect(controls).toEqual([
+      "CQ.OpenTaskpane",
+      "CQ.CreateQuote",
+      "CQ.QuoteInfo",
+      "CQ.AddItem",
+      "CQ.OpenItems",
+      "CQ.OpenPricing",
+      "CQ.OpenPrint",
+      "CQ.OpenLibrary",
+      "CQ.OpenResources",
+      "CQ.OpenNorms",
+      "CQ.LibraryMenu",
+      "CQ.OpenCatalog",
+      "CQ.OpenLibraryCheck",
+      "CQ.OpenExchange",
+      "CQ.OpenSettings",
+      "CQ.OpenLicense",
+      "CQ.OpenHelp",
+    ]);
   });
 
   it("mọi nút mở cùng một task pane và trỏ tới màn hình mà task pane hiểu được", () => {
@@ -41,6 +89,30 @@ describe("manifest dev: lệnh Ribbon", () => {
     for (const view of views) {
       expect(parseInitialView(`?view=${view}`)).toBe(view);
     }
+  });
+
+  it("mọi focus/section của nút trỏ tới phần có thật trong task pane", () => {
+    const queries = [...manifest.matchAll(/taskpane\.html(\?[^"]+)"/g)].map((m) => m[1].replace(/&amp;/g, "&"));
+    const tsx = (dir: string): string[] =>
+      readdirSync(dir, { withFileTypes: true }).flatMap((e) =>
+        e.isDirectory() ? tsx(join(dir, e.name)) : e.name.endsWith(".tsx") ? [join(dir, e.name)] : []
+      );
+    const source = tsx("src/taskpane/components")
+      .map((f) => readFileSync(f, "utf8"))
+      .join("\n");
+    for (const query of queries) {
+      const params = new URLSearchParams(query);
+      const focus = params.get("focus");
+      if (focus) {
+        expect(parseInitialFocus(query), query).toBe(focus);
+        expect(source.includes(`id="${focus}"`), focus).toBe(true);
+      }
+      if (params.has("section")) {
+        expect(parseLibrarySection(query), query).toBe(params.get("section"));
+      }
+    }
+    expect(queries.some((q) => q.includes("focus="))).toBe(true);
+    expect(queries.some((q) => q.includes("section="))).toBe(true);
   });
 
   it("mọi resid được tham chiếu đều có định nghĩa trong Resources", () => {

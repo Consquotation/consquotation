@@ -4,7 +4,26 @@ Các file `icon-16.png`, `icon-32.png`, `icon-64.png`, `icon-80.png`, `icon-128.
 
 Chỉnh sửa: tô màu `#0F6CBD`, thêm nền trắng dưới màn hình và phím, xuất PNG bằng `@resvg/resvg-js`. `icon-16.png` dựng từ bản 16 px; các kích thước khác dựng từ `icon-source.svg` (bản 24 px).
 
-Icon lệnh Ribbon `table-add-*.png` (**Table Add**: `table_add_16_regular`, `table_add_24_regular`) và `help-*.png` (**Question Circle**: `question_circle_16_regular`, `question_circle_24_regular`) cũng lấy từ Fluent UI System Icons 1.1.344, tô màu `#0F6CBD`, nền trong suốt, xuất PNG 16/32/80 px bằng `@resvg/resvg-js`.
+Icon lệnh Ribbon (từ bản 1.13.0) lấy từ bộ icon nhiều màu (`*_color.svg`) của Fluent UI System Icons 1.1.344, giữ màu gốc, nền trong suốt, xuất PNG 16/32/80 px bằng `@resvg/resvg-js` (mỗi kích thước dựng từ bản thiết kế nhỏ nhất không nhỏ hơn kích thước đích):
+
+| File | Icon Fluent |
+|---|---|
+| `create-quote-*.png` | Document Add (`document_add`) |
+| `quote-info-*.png` | Building (`building`) |
+| `add-item-*.png` | Add Circle (`add_circle`) |
+| `items-*.png` | Text Bullet List Square (`text_bullet_list_square`) |
+| `pricing-*.png` | Coin Multiple (`coin_multiple`) |
+| `print-*.png` | Document Text (`document_text`) |
+| `library-*.png` | Library (`library`) |
+| `resources-*.png` | Toolbox (`toolbox`) |
+| `norms-*.png` | Clipboard Text Edit (`clipboard_text_edit`) |
+| `library-manage-*.png` | Database (`database`) |
+| `catalog-*.png` | Apps List (`apps_list`) |
+| `library-check-*.png` | Checkmark Circle (`checkmark_circle`) |
+| `exchange-*.png` | Arrow Sync (`arrow_sync`) |
+| `settings-*.png` | Settings (`settings`) |
+| `license-*.png` | Certificate (`certificate`) |
+| `help-*.png` | Question Circle (`question_circle`) |
 
 ---
 
@@ -29,5 +48,3 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
-
-Icon lệnh `library-*.png` (**Library**: `library_16_regular`, `library_24_regular`) lấy từ Fluent UI System Icons 1.1.344, xử lý như các icon lệnh ở trên.

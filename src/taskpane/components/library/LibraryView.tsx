@@ -37,10 +37,11 @@ import { requestPersistence } from "../../../storage/storageProbe";
 import { EXCHANGE_STRINGS } from "../../../shared/strings.exchange.vi";
 import { LIBRARY_STRINGS } from "../../../shared/strings.library.vi";
 import { useExclusive } from "../../useExclusive";
+import { LibrarySection } from "../../navigation";
 
 /* global navigator */
 
-type Section = "workItems" | "resources" | "norms" | "catalog" | "check" | "exchange";
+type Section = LibrarySection;
 
 const useStyles = makeStyles({
   root: { display: "flex", flexDirection: "column", rowGap: tokens.spacingVerticalM },
@@ -63,11 +64,13 @@ const LibraryView: React.FC<{
   gateway: WorkbookGateway;
   normExporter: NormExportGateway;
   onInsert: (item: WorkItem) => void;
-}> = ({ service, gateway, normExporter, onInsert }) => {
+  /** Phần mở sẵn khi task pane mở từ nút Ribbon (?section=…). */
+  initialSection?: Section | null;
+}> = ({ service, gateway, normExporter, onInsert, initialSection }) => {
   const styles = useStyles();
   const s = LIBRARY_STRINGS;
   const { state, reload } = useLibrary(service);
-  const [section, setSection] = React.useState<Section>("workItems");
+  const [section, setSection] = React.useState<Section>(initialSection ?? "workItems");
   const [notice, setNotice] = React.useState<string | null>(null);
   const [usedInWorkbook, setUsedInWorkbook] = React.useState(false);
   const persistenceRequested = React.useRef(false);

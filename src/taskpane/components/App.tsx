@@ -58,7 +58,7 @@ import {
 } from "../../storage/indexedDbLibraryRepository";
 import { STRINGS } from "../../shared/strings.vi";
 import { randomId } from "../../shared/uuid";
-import { View, parseInitialView } from "../navigation";
+import { View, parseInitialFocus, parseInitialView, parseLibrarySection } from "../navigation";
 
 /* global clearTimeout, document, fetch, indexedDB, performance, setTimeout, window */
 
@@ -197,11 +197,16 @@ const App: React.FC<{
   );
   // Công tác vừa chọn "Chèn vào báo giá" ở thư viện; form Thêm công tác dùng một lần rồi xóa.
   const [prefill, setPrefill] = React.useState<LibraryPrefill | null>(null);
-  // Màn hình ban đầu do nút Ribbon chọn (taskpane.html?view=…); mở thường thì không chuyển focus.
+  // Màn hình ban đầu do nút Ribbon chọn (taskpane.html?view=…); mở thường thì không chuyển focus,
+  // trừ khi nút chỉ định phần cần tới (&focus=…).
   const [nav, setNav] = React.useState<Navigation>(() => ({
     view: parseInitialView(window.location.search),
-    focusId: null,
+    focusId: parseInitialFocus(window.location.search),
   }));
+  const initialLibrarySection = React.useMemo(
+    () => parseLibrarySection(window.location.search),
+    []
+  );
   const [lastTab, setLastTab] = React.useState<View>(() =>
     nav.view === "help" ? "overview" : nav.view
   );
@@ -406,6 +411,7 @@ const App: React.FC<{
                 gateway={gateway}
                 normExporter={normExporter}
                 onInsert={(item) => void insertFromLibrary(item)}
+                initialSection={initialLibrarySection}
               />
             </div>
           )}

@@ -13,7 +13,7 @@
   xmlns:ov="http://schemas.microsoft.com/office/taskpaneappversionoverrides" xsi:type="TaskPaneApp">
   <Id>03040238-2423-498b-b0fe-30f0425b2ed2</Id>
   <!-- Trình kiểm tra manifest yêu cầu Version >= 1.0; tăng phiên bản này mỗi lần phát hành manifest mới. -->
-  <Version>1.8.0.0</Version>
+  <Version>1.9.0.0</Version>
   <ProviderName>ConsQuotation</ProviderName>
   <DefaultLocale>vi-VN</DefaultLocale>
   <DisplayName DefaultValue="ConsQuotation (Dev)"/>
@@ -41,7 +41,9 @@
           <FunctionFile resid="Commands.Url"/>
           <!--
             Chỉ hiển thị lệnh đã có implementation (prompts/05_RIBBON_TASKPANE_UX.md).
-            Các nút dùng chung TaskpaneId: pane được giữ mở và nội dung thay bằng SourceLocation của nút.
+            Mọi nút dùng chung TaskpaneId: pane được giữ mở và nội dung thay bằng SourceLocation của nút.
+            Tham số: view = màn hình, focus = tiêu đề phần cần cuộn tới, section = phần của thư viện
+            (src/taskpane/navigation.ts).
           -->
           <ExtensionPoint xsi:type="PrimaryCommandSurface">
             <CustomTab id="CQ.Tab">
@@ -75,15 +77,111 @@
                     <Description resid="CQ.CreateQuote.Tooltip"/>
                   </Supertip>
                   <Icon>
-                    <bt:Image size="16" resid="TableAdd.16x16"/>
-                    <bt:Image size="32" resid="TableAdd.32x32"/>
-                    <bt:Image size="80" resid="TableAdd.80x80"/>
+                    <bt:Image size="16" resid="CreateQuote.16x16"/>
+                    <bt:Image size="32" resid="CreateQuote.32x32"/>
+                    <bt:Image size="80" resid="CreateQuote.80x80"/>
                   </Icon>
                   <Action xsi:type="ShowTaskpane">
                     <TaskpaneId>CQ.MainTaskpane</TaskpaneId>
                     <SourceLocation resid="Taskpane.Quote.Url"/>
                   </Action>
                 </Control>
+                <Control xsi:type="Button" id="CQ.QuoteInfo">
+                  <Label resid="CQ.QuoteInfo.Label"/>
+                  <Supertip>
+                    <Title resid="CQ.QuoteInfo.Label"/>
+                    <Description resid="CQ.QuoteInfo.Tooltip"/>
+                  </Supertip>
+                  <Icon>
+                    <bt:Image size="16" resid="QuoteInfo.16x16"/>
+                    <bt:Image size="32" resid="QuoteInfo.32x32"/>
+                    <bt:Image size="80" resid="QuoteInfo.80x80"/>
+                  </Icon>
+                  <Action xsi:type="ShowTaskpane">
+                    <TaskpaneId>CQ.MainTaskpane</TaskpaneId>
+                    <SourceLocation resid="Taskpane.QuoteInfo.Url"/>
+                  </Action>
+                </Control>
+                <Control xsi:type="Button" id="CQ.AddItem">
+                  <Label resid="CQ.AddItem.Label"/>
+                  <Supertip>
+                    <Title resid="CQ.AddItem.Label"/>
+                    <Description resid="CQ.AddItem.Tooltip"/>
+                  </Supertip>
+                  <Icon>
+                    <bt:Image size="16" resid="AddItem.16x16"/>
+                    <bt:Image size="32" resid="AddItem.32x32"/>
+                    <bt:Image size="80" resid="AddItem.80x80"/>
+                  </Icon>
+                  <Action xsi:type="ShowTaskpane">
+                    <TaskpaneId>CQ.MainTaskpane</TaskpaneId>
+                    <SourceLocation resid="Taskpane.AddItem.Url"/>
+                  </Action>
+                </Control>
+              </Group>
+              <Group id="CQ.Group.Pricing">
+                <Label resid="CQ.Group.Pricing.Label"/>
+                <Icon>
+                  <bt:Image size="16" resid="Pricing.16x16"/>
+                  <bt:Image size="32" resid="Pricing.32x32"/>
+                  <bt:Image size="80" resid="Pricing.80x80"/>
+                </Icon>
+                <Control xsi:type="Button" id="CQ.OpenItems">
+                  <Label resid="CQ.OpenItems.Label"/>
+                  <Supertip>
+                    <Title resid="CQ.OpenItems.Label"/>
+                    <Description resid="CQ.OpenItems.Tooltip"/>
+                  </Supertip>
+                  <Icon>
+                    <bt:Image size="16" resid="Items.16x16"/>
+                    <bt:Image size="32" resid="Items.32x32"/>
+                    <bt:Image size="80" resid="Items.80x80"/>
+                  </Icon>
+                  <Action xsi:type="ShowTaskpane">
+                    <TaskpaneId>CQ.MainTaskpane</TaskpaneId>
+                    <SourceLocation resid="Taskpane.OpenItems.Url"/>
+                  </Action>
+                </Control>
+                <Control xsi:type="Button" id="CQ.OpenPricing">
+                  <Label resid="CQ.OpenPricing.Label"/>
+                  <Supertip>
+                    <Title resid="CQ.OpenPricing.Label"/>
+                    <Description resid="CQ.OpenPricing.Tooltip"/>
+                  </Supertip>
+                  <Icon>
+                    <bt:Image size="16" resid="Pricing.16x16"/>
+                    <bt:Image size="32" resid="Pricing.32x32"/>
+                    <bt:Image size="80" resid="Pricing.80x80"/>
+                  </Icon>
+                  <Action xsi:type="ShowTaskpane">
+                    <TaskpaneId>CQ.MainTaskpane</TaskpaneId>
+                    <SourceLocation resid="Taskpane.OpenPricing.Url"/>
+                  </Action>
+                </Control>
+                <Control xsi:type="Button" id="CQ.OpenPrint">
+                  <Label resid="CQ.OpenPrint.Label"/>
+                  <Supertip>
+                    <Title resid="CQ.OpenPrint.Label"/>
+                    <Description resid="CQ.OpenPrint.Tooltip"/>
+                  </Supertip>
+                  <Icon>
+                    <bt:Image size="16" resid="Print.16x16"/>
+                    <bt:Image size="32" resid="Print.32x32"/>
+                    <bt:Image size="80" resid="Print.80x80"/>
+                  </Icon>
+                  <Action xsi:type="ShowTaskpane">
+                    <TaskpaneId>CQ.MainTaskpane</TaskpaneId>
+                    <SourceLocation resid="Taskpane.OpenPrint.Url"/>
+                  </Action>
+                </Control>
+              </Group>
+              <Group id="CQ.Group.Library">
+                <Label resid="CQ.Group.Library.Label"/>
+                <Icon>
+                  <bt:Image size="16" resid="Library.16x16"/>
+                  <bt:Image size="32" resid="Library.32x32"/>
+                  <bt:Image size="80" resid="Library.80x80"/>
+                </Icon>
                 <Control xsi:type="Button" id="CQ.OpenLibrary">
                   <Label resid="CQ.OpenLibrary.Label"/>
                   <Supertip>
@@ -98,6 +196,140 @@
                   <Action xsi:type="ShowTaskpane">
                     <TaskpaneId>CQ.MainTaskpane</TaskpaneId>
                     <SourceLocation resid="Taskpane.Library.Url"/>
+                  </Action>
+                </Control>
+                <Control xsi:type="Button" id="CQ.OpenResources">
+                  <Label resid="CQ.OpenResources.Label"/>
+                  <Supertip>
+                    <Title resid="CQ.OpenResources.Label"/>
+                    <Description resid="CQ.OpenResources.Tooltip"/>
+                  </Supertip>
+                  <Icon>
+                    <bt:Image size="16" resid="Resources.16x16"/>
+                    <bt:Image size="32" resid="Resources.32x32"/>
+                    <bt:Image size="80" resid="Resources.80x80"/>
+                  </Icon>
+                  <Action xsi:type="ShowTaskpane">
+                    <TaskpaneId>CQ.MainTaskpane</TaskpaneId>
+                    <SourceLocation resid="Taskpane.OpenResources.Url"/>
+                  </Action>
+                </Control>
+                <Control xsi:type="Button" id="CQ.OpenNorms">
+                  <Label resid="CQ.OpenNorms.Label"/>
+                  <Supertip>
+                    <Title resid="CQ.OpenNorms.Label"/>
+                    <Description resid="CQ.OpenNorms.Tooltip"/>
+                  </Supertip>
+                  <Icon>
+                    <bt:Image size="16" resid="Norms.16x16"/>
+                    <bt:Image size="32" resid="Norms.32x32"/>
+                    <bt:Image size="80" resid="Norms.80x80"/>
+                  </Icon>
+                  <Action xsi:type="ShowTaskpane">
+                    <TaskpaneId>CQ.MainTaskpane</TaskpaneId>
+                    <SourceLocation resid="Taskpane.OpenNorms.Url"/>
+                  </Action>
+                </Control>
+                <Control xsi:type="Menu" id="CQ.LibraryMenu">
+                  <Label resid="CQ.LibraryMenu.Label"/>
+                  <Supertip>
+                    <Title resid="CQ.LibraryMenu.Label"/>
+                    <Description resid="CQ.LibraryMenu.Tooltip"/>
+                  </Supertip>
+                  <Icon>
+                    <bt:Image size="16" resid="LibraryManage.16x16"/>
+                    <bt:Image size="32" resid="LibraryManage.32x32"/>
+                    <bt:Image size="80" resid="LibraryManage.80x80"/>
+                  </Icon>
+                  <Items>
+                    <Item id="CQ.OpenCatalog">
+                      <Label resid="CQ.OpenCatalog.Label"/>
+                      <Supertip>
+                        <Title resid="CQ.OpenCatalog.Label"/>
+                        <Description resid="CQ.OpenCatalog.Tooltip"/>
+                      </Supertip>
+                      <Icon>
+                        <bt:Image size="16" resid="Catalog.16x16"/>
+                        <bt:Image size="32" resid="Catalog.32x32"/>
+                        <bt:Image size="80" resid="Catalog.80x80"/>
+                      </Icon>
+                      <Action xsi:type="ShowTaskpane">
+                        <TaskpaneId>CQ.MainTaskpane</TaskpaneId>
+                        <SourceLocation resid="Taskpane.OpenCatalog.Url"/>
+                      </Action>
+                    </Item>
+                    <Item id="CQ.OpenLibraryCheck">
+                      <Label resid="CQ.OpenLibraryCheck.Label"/>
+                      <Supertip>
+                        <Title resid="CQ.OpenLibraryCheck.Label"/>
+                        <Description resid="CQ.OpenLibraryCheck.Tooltip"/>
+                      </Supertip>
+                      <Icon>
+                        <bt:Image size="16" resid="LibraryCheck.16x16"/>
+                        <bt:Image size="32" resid="LibraryCheck.32x32"/>
+                        <bt:Image size="80" resid="LibraryCheck.80x80"/>
+                      </Icon>
+                      <Action xsi:type="ShowTaskpane">
+                        <TaskpaneId>CQ.MainTaskpane</TaskpaneId>
+                        <SourceLocation resid="Taskpane.OpenLibraryCheck.Url"/>
+                      </Action>
+                    </Item>
+                    <Item id="CQ.OpenExchange">
+                      <Label resid="CQ.OpenExchange.Label"/>
+                      <Supertip>
+                        <Title resid="CQ.OpenExchange.Label"/>
+                        <Description resid="CQ.OpenExchange.Tooltip"/>
+                      </Supertip>
+                      <Icon>
+                        <bt:Image size="16" resid="Exchange.16x16"/>
+                        <bt:Image size="32" resid="Exchange.32x32"/>
+                        <bt:Image size="80" resid="Exchange.80x80"/>
+                      </Icon>
+                      <Action xsi:type="ShowTaskpane">
+                        <TaskpaneId>CQ.MainTaskpane</TaskpaneId>
+                        <SourceLocation resid="Taskpane.OpenExchange.Url"/>
+                      </Action>
+                    </Item>
+                  </Items>
+                </Control>
+              </Group>
+              <Group id="CQ.Group.System">
+                <Label resid="CQ.Group.System.Label"/>
+                <Icon>
+                  <bt:Image size="16" resid="Settings.16x16"/>
+                  <bt:Image size="32" resid="Settings.32x32"/>
+                  <bt:Image size="80" resid="Settings.80x80"/>
+                </Icon>
+                <Control xsi:type="Button" id="CQ.OpenSettings">
+                  <Label resid="CQ.OpenSettings.Label"/>
+                  <Supertip>
+                    <Title resid="CQ.OpenSettings.Label"/>
+                    <Description resid="CQ.OpenSettings.Tooltip"/>
+                  </Supertip>
+                  <Icon>
+                    <bt:Image size="16" resid="Settings.16x16"/>
+                    <bt:Image size="32" resid="Settings.32x32"/>
+                    <bt:Image size="80" resid="Settings.80x80"/>
+                  </Icon>
+                  <Action xsi:type="ShowTaskpane">
+                    <TaskpaneId>CQ.MainTaskpane</TaskpaneId>
+                    <SourceLocation resid="Taskpane.OpenSettings.Url"/>
+                  </Action>
+                </Control>
+                <Control xsi:type="Button" id="CQ.OpenLicense">
+                  <Label resid="CQ.OpenLicense.Label"/>
+                  <Supertip>
+                    <Title resid="CQ.OpenLicense.Label"/>
+                    <Description resid="CQ.OpenLicense.Tooltip"/>
+                  </Supertip>
+                  <Icon>
+                    <bt:Image size="16" resid="License.16x16"/>
+                    <bt:Image size="32" resid="License.32x32"/>
+                    <bt:Image size="80" resid="License.80x80"/>
+                  </Icon>
+                  <Action xsi:type="ShowTaskpane">
+                    <TaskpaneId>CQ.MainTaskpane</TaskpaneId>
+                    <SourceLocation resid="Taskpane.OpenLicense.Url"/>
                   </Action>
                 </Control>
               </Group>
@@ -136,12 +368,51 @@
         <bt:Image id="Icon.16x16" DefaultValue="https://localhost:3000/assets/icon-16.png"/>
         <bt:Image id="Icon.32x32" DefaultValue="https://localhost:3000/assets/icon-32.png"/>
         <bt:Image id="Icon.80x80" DefaultValue="https://localhost:3000/assets/icon-80.png"/>
-        <bt:Image id="TableAdd.16x16" DefaultValue="https://localhost:3000/assets/table-add-16.png"/>
-        <bt:Image id="TableAdd.32x32" DefaultValue="https://localhost:3000/assets/table-add-32.png"/>
-        <bt:Image id="TableAdd.80x80" DefaultValue="https://localhost:3000/assets/table-add-80.png"/>
+        <bt:Image id="CreateQuote.16x16" DefaultValue="https://localhost:3000/assets/create-quote-16.png"/>
+        <bt:Image id="CreateQuote.32x32" DefaultValue="https://localhost:3000/assets/create-quote-32.png"/>
+        <bt:Image id="CreateQuote.80x80" DefaultValue="https://localhost:3000/assets/create-quote-80.png"/>
+        <bt:Image id="QuoteInfo.16x16" DefaultValue="https://localhost:3000/assets/quote-info-16.png"/>
+        <bt:Image id="QuoteInfo.32x32" DefaultValue="https://localhost:3000/assets/quote-info-32.png"/>
+        <bt:Image id="QuoteInfo.80x80" DefaultValue="https://localhost:3000/assets/quote-info-80.png"/>
+        <bt:Image id="AddItem.16x16" DefaultValue="https://localhost:3000/assets/add-item-16.png"/>
+        <bt:Image id="AddItem.32x32" DefaultValue="https://localhost:3000/assets/add-item-32.png"/>
+        <bt:Image id="AddItem.80x80" DefaultValue="https://localhost:3000/assets/add-item-80.png"/>
+        <bt:Image id="Items.16x16" DefaultValue="https://localhost:3000/assets/items-16.png"/>
+        <bt:Image id="Items.32x32" DefaultValue="https://localhost:3000/assets/items-32.png"/>
+        <bt:Image id="Items.80x80" DefaultValue="https://localhost:3000/assets/items-80.png"/>
+        <bt:Image id="Pricing.16x16" DefaultValue="https://localhost:3000/assets/pricing-16.png"/>
+        <bt:Image id="Pricing.32x32" DefaultValue="https://localhost:3000/assets/pricing-32.png"/>
+        <bt:Image id="Pricing.80x80" DefaultValue="https://localhost:3000/assets/pricing-80.png"/>
+        <bt:Image id="Print.16x16" DefaultValue="https://localhost:3000/assets/print-16.png"/>
+        <bt:Image id="Print.32x32" DefaultValue="https://localhost:3000/assets/print-32.png"/>
+        <bt:Image id="Print.80x80" DefaultValue="https://localhost:3000/assets/print-80.png"/>
         <bt:Image id="Library.16x16" DefaultValue="https://localhost:3000/assets/library-16.png"/>
         <bt:Image id="Library.32x32" DefaultValue="https://localhost:3000/assets/library-32.png"/>
         <bt:Image id="Library.80x80" DefaultValue="https://localhost:3000/assets/library-80.png"/>
+        <bt:Image id="Resources.16x16" DefaultValue="https://localhost:3000/assets/resources-16.png"/>
+        <bt:Image id="Resources.32x32" DefaultValue="https://localhost:3000/assets/resources-32.png"/>
+        <bt:Image id="Resources.80x80" DefaultValue="https://localhost:3000/assets/resources-80.png"/>
+        <bt:Image id="Norms.16x16" DefaultValue="https://localhost:3000/assets/norms-16.png"/>
+        <bt:Image id="Norms.32x32" DefaultValue="https://localhost:3000/assets/norms-32.png"/>
+        <bt:Image id="Norms.80x80" DefaultValue="https://localhost:3000/assets/norms-80.png"/>
+        <bt:Image id="LibraryManage.16x16" DefaultValue="https://localhost:3000/assets/library-manage-16.png"/>
+        <bt:Image id="LibraryManage.32x32" DefaultValue="https://localhost:3000/assets/library-manage-32.png"/>
+        <bt:Image id="LibraryManage.80x80" DefaultValue="https://localhost:3000/assets/library-manage-80.png"/>
+        <bt:Image id="Catalog.16x16" DefaultValue="https://localhost:3000/assets/catalog-16.png"/>
+        <bt:Image id="Catalog.32x32" DefaultValue="https://localhost:3000/assets/catalog-32.png"/>
+        <bt:Image id="Catalog.80x80" DefaultValue="https://localhost:3000/assets/catalog-80.png"/>
+        <bt:Image id="LibraryCheck.16x16" DefaultValue="https://localhost:3000/assets/library-check-16.png"/>
+        <bt:Image id="LibraryCheck.32x32" DefaultValue="https://localhost:3000/assets/library-check-32.png"/>
+        <bt:Image id="LibraryCheck.80x80" DefaultValue="https://localhost:3000/assets/library-check-80.png"/>
+        <bt:Image id="Exchange.16x16" DefaultValue="https://localhost:3000/assets/exchange-16.png"/>
+        <bt:Image id="Exchange.32x32" DefaultValue="https://localhost:3000/assets/exchange-32.png"/>
+        <bt:Image id="Exchange.80x80" DefaultValue="https://localhost:3000/assets/exchange-80.png"/>
+        <bt:Image id="Settings.16x16" DefaultValue="https://localhost:3000/assets/settings-16.png"/>
+        <bt:Image id="Settings.32x32" DefaultValue="https://localhost:3000/assets/settings-32.png"/>
+        <bt:Image id="Settings.80x80" DefaultValue="https://localhost:3000/assets/settings-80.png"/>
+        <bt:Image id="License.16x16" DefaultValue="https://localhost:3000/assets/license-16.png"/>
+        <bt:Image id="License.32x32" DefaultValue="https://localhost:3000/assets/license-32.png"/>
+        <bt:Image id="License.80x80" DefaultValue="https://localhost:3000/assets/license-80.png"/>
         <bt:Image id="Help.16x16" DefaultValue="https://localhost:3000/assets/help-16.png"/>
         <bt:Image id="Help.32x32" DefaultValue="https://localhost:3000/assets/help-32.png"/>
         <bt:Image id="Help.80x80" DefaultValue="https://localhost:3000/assets/help-80.png"/>
@@ -150,7 +421,19 @@
         <bt:Url id="Commands.Url" DefaultValue="https://localhost:3000/commands.html"/>
         <bt:Url id="Taskpane.Url" DefaultValue="https://localhost:3000/taskpane.html"/>
         <bt:Url id="Taskpane.Quote.Url" DefaultValue="https://localhost:3000/taskpane.html?view=quote"/>
+        <bt:Url id="Taskpane.QuoteInfo.Url" DefaultValue="https://localhost:3000/taskpane.html?view=quote&amp;focus=cq-info-title"/>
+        <bt:Url id="Taskpane.AddItem.Url" DefaultValue="https://localhost:3000/taskpane.html?view=quote&amp;focus=cq-append-title"/>
+        <bt:Url id="Taskpane.OpenItems.Url" DefaultValue="https://localhost:3000/taskpane.html?view=items"/>
+        <bt:Url id="Taskpane.OpenPricing.Url" DefaultValue="https://localhost:3000/taskpane.html?view=pricing"/>
+        <bt:Url id="Taskpane.OpenPrint.Url" DefaultValue="https://localhost:3000/taskpane.html?view=print"/>
         <bt:Url id="Taskpane.Library.Url" DefaultValue="https://localhost:3000/taskpane.html?view=library"/>
+        <bt:Url id="Taskpane.OpenResources.Url" DefaultValue="https://localhost:3000/taskpane.html?view=library&amp;section=resources"/>
+        <bt:Url id="Taskpane.OpenNorms.Url" DefaultValue="https://localhost:3000/taskpane.html?view=library&amp;section=norms"/>
+        <bt:Url id="Taskpane.OpenCatalog.Url" DefaultValue="https://localhost:3000/taskpane.html?view=library&amp;section=catalog"/>
+        <bt:Url id="Taskpane.OpenLibraryCheck.Url" DefaultValue="https://localhost:3000/taskpane.html?view=library&amp;section=check"/>
+        <bt:Url id="Taskpane.OpenExchange.Url" DefaultValue="https://localhost:3000/taskpane.html?view=library&amp;section=exchange"/>
+        <bt:Url id="Taskpane.OpenSettings.Url" DefaultValue="https://localhost:3000/taskpane.html?view=settings"/>
+        <bt:Url id="Taskpane.OpenLicense.Url" DefaultValue="https://localhost:3000/taskpane.html?view=settings&amp;focus=cq-license-title"/>
         <bt:Url id="Taskpane.Help.Url" DefaultValue="https://localhost:3000/taskpane.html?view=help"/>
       </bt:Urls>
       <bt:ShortStrings>
@@ -158,14 +441,43 @@
         <bt:String id="CQ.Group.Main.Label" DefaultValue="Báo giá"/>
         <bt:String id="CQ.OpenTaskpane.Label" DefaultValue="Mở ConsQuotation"/>
         <bt:String id="CQ.CreateQuote.Label" DefaultValue="Tạo bảng báo giá"/>
+        <bt:String id="CQ.QuoteInfo.Label" DefaultValue="Thông tin công trình"/>
+        <bt:String id="CQ.AddItem.Label" DefaultValue="Thêm công tác"/>
+        <bt:String id="CQ.Group.Pricing.Label" DefaultValue="Lập và tính giá"/>
+        <bt:String id="CQ.OpenItems.Label" DefaultValue="Công tác"/>
+        <bt:String id="CQ.OpenPricing.Label" DefaultValue="Tính giá"/>
+        <bt:String id="CQ.OpenPrint.Label" DefaultValue="In ấn"/>
+        <bt:String id="CQ.Group.Library.Label" DefaultValue="Thư viện"/>
         <bt:String id="CQ.OpenLibrary.Label" DefaultValue="Thư viện của tôi"/>
+        <bt:String id="CQ.OpenResources.Label" DefaultValue="Tài nguyên"/>
+        <bt:String id="CQ.OpenNorms.Label" DefaultValue="Định mức"/>
+        <bt:String id="CQ.LibraryMenu.Label" DefaultValue="Quản lý"/>
+        <bt:String id="CQ.OpenCatalog.Label" DefaultValue="Danh mục"/>
+        <bt:String id="CQ.OpenLibraryCheck.Label" DefaultValue="Kiểm tra thư viện"/>
+        <bt:String id="CQ.OpenExchange.Label" DefaultValue="Nhập/Xuất và sao lưu"/>
+        <bt:String id="CQ.Group.System.Label" DefaultValue="Hệ thống"/>
+        <bt:String id="CQ.OpenSettings.Label" DefaultValue="Cài đặt"/>
+        <bt:String id="CQ.OpenLicense.Label" DefaultValue="Bản quyền"/>
         <bt:String id="CQ.Group.Help.Label" DefaultValue="Trợ giúp"/>
         <bt:String id="CQ.OpenHelp.Label" DefaultValue="Trợ giúp"/>
       </bt:ShortStrings>
       <bt:LongStrings>
         <bt:String id="CQ.OpenTaskpane.Tooltip" DefaultValue="Mở bảng điều khiển ConsQuotation: xem workbook hiện tại, tạo bảng báo giá và các lối tắt."/>
         <bt:String id="CQ.CreateQuote.Tooltip" DefaultValue="Mở phần Tạo bảng báo giá: chọn sheet mới hoặc ô đang chọn, add-in kiểm tra vùng đích trước khi ghi."/>
+        <bt:String id="CQ.QuoteInfo.Tooltip" DefaultValue="Nhập mã báo giá, khách hàng, dự án, địa điểm và các thông tin đầu bảng báo giá."/>
+        <bt:String id="CQ.AddItem.Tooltip" DefaultValue="Thêm một công tác vào bảng báo giá: nhập trực tiếp, lấy từ thư viện hoặc phân tích từ định mức."/>
+        <bt:String id="CQ.OpenItems.Tooltip" DefaultValue="Xem từng dòng của báo giá: phương pháp tính, nguồn giá, trạng thái; tính lại và lưu."/>
+        <bt:String id="CQ.OpenPricing.Tooltip" DefaultValue="Kiểm tra báo giá: lỗi công thức, thiếu dữ liệu, đơn giá lệch sheet phân tích."/>
+        <bt:String id="CQ.OpenPrint.Tooltip" DefaultValue="Điều khoản, chữ ký và thiết lập trang in cho bảng báo giá."/>
         <bt:String id="CQ.OpenLibrary.Tooltip" DefaultValue="Quản lý công tác, tài nguyên, giá và định mức do bạn tự tạo; chèn công tác từ thư viện vào bảng báo giá."/>
+        <bt:String id="CQ.OpenResources.Tooltip" DefaultValue="Vật liệu, nhân công, máy và các mức giá theo nhà cung cấp, ngày áp dụng."/>
+        <bt:String id="CQ.OpenNorms.Tooltip" DefaultValue="Định mức có phiên bản: hao phí, hao hụt và giá tài nguyên áp dụng."/>
+        <bt:String id="CQ.LibraryMenu.Tooltip" DefaultValue="Danh mục, kiểm tra thư viện, nhập/xuất và sao lưu."/>
+        <bt:String id="CQ.OpenCatalog.Tooltip" DefaultValue="Nhóm công tác, nhóm tài nguyên và nhà cung cấp."/>
+        <bt:String id="CQ.OpenLibraryCheck.Tooltip" DefaultValue="Tìm mã trùng, giá thiếu, định mức chưa duyệt trong thư viện."/>
+        <bt:String id="CQ.OpenExchange.Tooltip" DefaultValue="Sao lưu thư viện ra file .json, khôi phục, nhập/xuất Excel."/>
+        <bt:String id="CQ.OpenSettings.Tooltip" DefaultValue="Phiên bản, lưu trữ thư viện, môi trường Excel và chẩn đoán."/>
+        <bt:String id="CQ.OpenLicense.Tooltip" DefaultValue="Thời hạn dùng thử, gửi yêu cầu cấp phép và nhập mã cấp phép."/>
         <bt:String id="CQ.OpenHelp.Tooltip" DefaultValue="Mở hướng dẫn sử dụng ConsQuotation."/>
       </bt:LongStrings>
     </Resources>

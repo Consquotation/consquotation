@@ -7,7 +7,12 @@ Microsoft Excel Add-in hỗ trợ lập báo giá thi công xây dựng **ngay t
 Đã triển khai theo bộ đặc tả trong `prompts/`: 04 (setup, manifest), 05 (Ribbon, task pane), 06 (workbook integration), 08 (thư viện cá nhân), 09 (nhập/xuất, sao lưu thư viện), 10 (tính đơn giá và thành tiền), 07 (quy trình báo giá), 11 (mẫu báo giá và in ấn), 13–17 (kiểm tra lỗi, tương thích, bảo mật, kiểm thử, hiệu năng), 20 (nghiệm thu — xem [biên bản](tests/manual/acceptance-checklist.md)).
 
 Đã có:
-- **Ribbon**: tab **ConsQuotation** gồm nhóm **Báo giá** (Mở ConsQuotation, Tạo bảng báo giá, Thư viện của tôi) và nhóm **Trợ giúp**.
+- **Ribbon** (từ bản 1.13.0): tab **ConsQuotation** gồm 5 nhóm, mỗi nút mở thẳng phần tương ứng trong task pane:
+  - **Báo giá**: Mở ConsQuotation, Tạo bảng báo giá, Thông tin công trình, Thêm công tác;
+  - **Lập và tính giá**: Công tác, Tính giá, In ấn;
+  - **Thư viện**: Thư viện của tôi, Tài nguyên, Định mức, menu Quản lý (Danh mục, Kiểm tra thư viện, Nhập/Xuất và sao lưu);
+  - **Hệ thống**: Cài đặt, Bản quyền;
+  - **Trợ giúp**.
 - **Task pane** tiếng Việt với các tab Tổng quan, Báo giá, Thư viện, Cài đặt, cùng màn hình Trợ giúp.
 - **Tạo bảng báo giá** trên sheet mới (tự đặt tên) hoặc tại ô đang chọn:
   - Gồm khối thông tin và Excel Table 9 cột.
