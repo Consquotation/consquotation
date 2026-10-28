@@ -38,6 +38,8 @@ const useStyles = makeStyles({
     padding: tokens.spacingHorizontalS,
     backgroundColor: tokens.colorNeutralBackground2,
     borderRadius: tokens.borderRadiusMedium,
+    // Ô có gợi ý/lỗi cao hơn không kéo giãn các ô cùng hàng.
+    alignItems: "start",
   },
   row: { display: "flex", flexWrap: "wrap", gap: tokens.spacingHorizontalS, alignItems: "center" },
 });

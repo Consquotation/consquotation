@@ -48,6 +48,8 @@ const useStyles = makeStyles({
     gridTemplateColumns: "repeat(auto-fit, minmax(150px, 1fr))",
     columnGap: tokens.spacingHorizontalM,
     rowGap: tokens.spacingVerticalS,
+    // Ô có gợi ý/lỗi cao hơn không kéo giãn các ô cùng hàng.
+    alignItems: "start",
   },
   actions: { display: "flex", columnGap: tokens.spacingHorizontalS },
   normRow: {

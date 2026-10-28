@@ -39,6 +39,8 @@ const useStyles = makeStyles({
     gridTemplateColumns: "repeat(auto-fit, minmax(160px, 1fr))",
     columnGap: tokens.spacingHorizontalM,
     rowGap: tokens.spacingVerticalS,
+    // Ô có gợi ý/lỗi cao hơn không kéo giãn các ô cùng hàng.
+    alignItems: "start",
   },
   row: { display: "flex", flexWrap: "wrap", gap: tokens.spacingHorizontalS, alignItems: "center" },
 });

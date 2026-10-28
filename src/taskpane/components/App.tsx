@@ -82,11 +82,14 @@ function createLibraryService(): LibraryService {
  * Ô chọn của Fluent rộng theo lựa chọn dài nhất (tên sheet, tên bảng, mô tả kiểu làm tròn…). Trong
  * task pane hẹp (320px) điều đó làm cả trang tràn ngang. Cho trường và ô chọn co lại theo khung;
  * lựa chọn dài bị cắt bớt khi hiển thị nhưng vẫn đọc đủ trong danh sách thả xuống.
+ * Ô nhập cũng vậy: bề rộng tự nhiên (~20 ký tự) lớn hơn cột lưới 2–3 cột nên đè sang ô bên cạnh.
  */
 const useNarrowPaneStyles = makeStaticStyles({
   ".fui-Field": { minWidth: 0 },
   ".fui-Select": { minWidth: 0, maxWidth: "100%" },
   ".fui-Select__select": { minWidth: 0, textOverflow: "ellipsis" },
+  ".fui-Input": { minWidth: 0, maxWidth: "100%" },
+  ".fui-Input__input": { minWidth: 0 },
 });
 
 const useStyles = makeStyles({

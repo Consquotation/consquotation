@@ -62,6 +62,8 @@ const useStyles = makeStyles({
     rowGap: tokens.spacingVerticalS,
     // Ô chọn có tùy chọn dài không được đẩy cột rộng hơn task pane.
     "& > *": { minWidth: 0 },
+    // Ô có gợi ý/lỗi cao hơn không kéo giãn các ô cùng hàng.
+    alignItems: "start",
   },
   head: { display: "flex", alignItems: "center", flexWrap: "wrap", gap: tokens.spacingHorizontalS },
   actions: { display: "flex", flexWrap: "wrap", gap: tokens.spacingHorizontalXS },
@@ -308,6 +310,7 @@ const NormEditor: React.FC<{
           />
           <RefSelect
             label={f.workItem}
+            hint={f.workItemHint}
             value={form.workItemId}
             options={workItemOptions}
             noneLabel={f.noWorkItem}
@@ -665,6 +668,7 @@ const ComponentsAndResult: React.FC<{
                   value={form.consumption}
                   onChange={(v) => setForm((cur) => ({ ...cur, consumption: v }))}
                   error={errorFor(errors, "consumption")}
+                  hint={c.consumptionHint}
                   inputMode="decimal"
                 />
                 <TextField

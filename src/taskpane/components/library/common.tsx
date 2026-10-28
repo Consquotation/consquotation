@@ -106,6 +106,7 @@ export const RefSelect: React.FC<{
   noneLabel: string;
   onChange: (value: string) => void;
   error?: string;
+  hint?: string;
   newLabel?: string;
   newName?: string;
   newNameLabel?: string;
@@ -122,6 +123,7 @@ export const RefSelect: React.FC<{
       <Field
         label={props.label}
         validationMessage={creating ? undefined : props.error}
+        hint={props.hint}
         className={styles.field}
       >
         <Select
