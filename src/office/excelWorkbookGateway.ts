@@ -41,6 +41,7 @@ import {
   templateTotalRow,
 } from "../domain/quoteTemplate";
 import { cellAddress, fitsInSheet, rangeAddress, stripSheetName } from "../shared/a1";
+import { detachOrphanRecords } from "./excelQuotationGateway";
 import {
   CellRect,
   SAMPLE_LIMIT,
@@ -591,6 +592,9 @@ export class ExcelWorkbookGateway implements WorkbookGateway {
       }
 
       const tableName = uniqueQuoteTableName(await loadTakenNames(context));
+      // Tên bảng có thể trùng bảng báo giá đã bị xóa trước đó: tách hồ sơ cũ để bảng mới không
+      // nhận nhầm id, trạng thái và mục của báo giá cũ (ADR-0014). Không xóa hồ sơ.
+      await detachOrphanRecords(context, tableName, new Date().toISOString());
       const isNewSheet = target.kind === "newSheet";
       const sheet = isNewSheet
         ? context.workbook.worksheets.add(inspection.sheetName)

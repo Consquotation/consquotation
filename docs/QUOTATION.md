@@ -128,6 +128,8 @@ Số lượng, đơn giá, thành tiền, nhóm, ghi chú và thứ tự dòng l
 | Ghi ô xong nhưng lưu hồ sơ lỗi | Báo lỗi; lần Tính lại và lưu sau đồng bộ lại từ sheet |
 | Sheet bị bảo vệ | Excel từ chối, add-in báo; hồ sơ không đổi |
 | Bảng bị xóa hoặc đổi tên | Không tìm thấy bảng; hồ sơ cũ nằm yên trong file |
+| Tạo bảng mới trùng tên bảng đã xóa | Hồ sơ cũ được tách khỏi tên bảng (thuộc tính `table` thành `<tên>#tách <thời điểm>`), vẫn giữ trong file; bảng mới bắt đầu "Chưa có hồ sơ" |
+| Hai task pane cùng ghi một bảng | Mỗi lần ghi đọc lại kết quả; bên bị ghi đè báo "vừa thay đổi" và không lưu hồ sơ; Tính lại và lưu lần nữa để khớp |
 
 Không có giao dịch chung giữa ô Excel và hồ sơ. Thứ tự luôn là ghi ô trước, lưu hồ sơ sau.
 
@@ -135,3 +137,5 @@ Không có giao dịch chung giữa ô Excel và hồ sơ. Thứ tự luôn là 
 
 - Unit test: `npm test`, file [tests/unit/quotation.test.ts](../tests/unit/quotation.test.ts) (10 tình huống bắt buộc của giai đoạn 17 cùng đồng bộ, hoàn tất, mã hóa XML).
 - Chạy thử trong Excel: [tests/manual/quotation-checklist.md](../tests/manual/quotation-checklist.md).
+- Kịch bản tích hợp trên Excel thật (cần `npm start`, task pane đang mở): `node tests/integration/run-in-taskpane.mjs tests/integration/quotation.scenarios.js` (23 tình huống, tự dọn dữ liệu thử).
+- Kiểm thử tổng thể giai đoạn 18: [PHASE_18_TEST_REPORT.md](PHASE_18_TEST_REPORT.md).

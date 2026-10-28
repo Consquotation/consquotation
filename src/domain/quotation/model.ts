@@ -192,6 +192,18 @@ export function recordTableOf(xml: string): string | null {
   return table ? unescapeXml(table[1]) : null;
 }
 
+/**
+ * Tách hồ sơ khỏi tên bảng (giữ nguyên dữ liệu): dùng khi tạo bảng mới trùng tên với bảng đã bị xóa,
+ * để bảng mới không nhận nhầm id, trạng thái, mục của báo giá cũ. Chỉ đổi thuộc tính `table` của phần
+ * tử gốc; phần JSON giữ nguyên để còn đọc lại được nếu cần.
+ */
+export function detachRecordXml(xml: string, now: string): string {
+  return xml.replace(
+    /(<(?:\w+:)?quotation\b[^>]*\btable=")([^"]*)(")/,
+    (_m, head: string, table: string, tail: string) => `${head}${table}#tách ${now}${tail}`
+  );
+}
+
 export type DecodeResult =
   | { ok: true; record: QuotationRecord; migrated: boolean }
   | { ok: false; reason: "invalid" | "newer"; message: string };

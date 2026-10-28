@@ -155,7 +155,7 @@ npm run check          # chạy lần lượt typecheck, lint, test, validate, b
 
 Kiểm thử lớp tích hợp Excel trên Excel thật (cần `npm start` và task pane đang mở): `node tests/integration/run-in-taskpane.mjs tests/integration/excel-core.scenarios.js`. Chi tiết: [docs/EXCEL_INTEGRATION.md](docs/EXCEL_INTEGRATION.md#kiểm-thử).
 
-Kiểm tra quy trình lập báo giá trong Excel: làm theo [tests/manual/quotation-checklist.md](tests/manual/quotation-checklist.md) (tạo báo giá, chèn công tác, tab Công tác, đổi giá thư viện, sửa/chép/xóa dòng trong Excel, lưu và mở lại file). Unit test của phần này: `npx vitest run tests/unit/quotation.test.ts`.
+Kiểm tra quy trình lập báo giá trong Excel: làm theo [tests/manual/quotation-checklist.md](tests/manual/quotation-checklist.md) (tạo báo giá, chèn công tác, tab Công tác, đổi giá thư viện, sửa/chép/xóa dòng trong Excel, lưu và mở lại file). Unit test của phần này: `npx vitest run tests/unit/quotation.test.ts`. Kịch bản tích hợp trên Excel thật (23 tình huống, tự dọn dữ liệu thử): `node tests/integration/run-in-taskpane.mjs tests/integration/quotation.scenarios.js`. Kết quả kiểm thử tổng thể: [docs/PHASE_18_TEST_REPORT.md](docs/PHASE_18_TEST_REPORT.md); checklist thủ công: [docs/PHASE_18_MANUAL_QA_CHECKLIST.md](docs/PHASE_18_MANUAL_QA_CHECKLIST.md).
 
 Excel trên web: `npm run start:web -- --document "<link workbook OneDrive>"` (chưa kiểm thử). Hướng dẫn đầy đủ: [docs/SIDELOAD.md](docs/SIDELOAD.md); triển khai bản production: [docs/DEPLOY.md](docs/DEPLOY.md).
 

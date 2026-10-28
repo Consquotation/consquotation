@@ -485,7 +485,7 @@ const AddWorkItemPanel: React.FC<{
                 hint={
                   field === "unitPrice" && usingComposition
                     ? p.unitPriceLocked
-                    : numeric
+                    : numeric && !errorFor(field)
                       ? s.numberHint
                       : undefined
                 }

@@ -3,7 +3,12 @@
  * và đồng bộ với sheet. Số liệu là dữ liệu kiểm thử kỹ thuật, không phải định mức hay đơn giá thực tế.
  */
 
+import { IDBFactory } from "fake-indexeddb";
 import { describe, expect, it } from "vitest";
+import { LibraryService } from "../../src/application/libraryService";
+import { IndexedDbLibraryRepository } from "../../src/storage/indexedDbLibraryRepository";
+import { ANALYSIS_COLUMNS } from "../../src/domain/pricing/analysis";
+import { buildComposition, compositionLines, compositionNote, defaultSelection } from "../../src/domain/pricing/composition";
 import { QuotationService } from "../../src/application/quotationService";
 import type {
   AnalysisCellWrite,
@@ -19,7 +24,7 @@ import { TargetChangedError } from "../../src/application/workbookGateway";
 import type { LibrarySnapshot, Norm, NormComponent, Resource, ResourcePrice, WorkItem } from "../../src/domain/library/types";
 import type { CompositionLine } from "../../src/domain/pricing/composition";
 import { AnalysisLine, QuoteSnapshot, SheetRow, checkQuote } from "../../src/domain/pricing/quoteCheck";
-import { DEFAULT_ROUNDING, NO_ROUNDING, RoundingConfig } from "../../src/domain/pricing/rounding";
+import { DEFAULT_ROUNDING, NO_ROUNDING, RoundingConfig, roundLikeExcel } from "../../src/domain/pricing/rounding";
 import { analysisBreakdown, costTypeFromLabel, lineAmount } from "../../src/domain/quotation/calculate";
 import { completionBlockers, evaluateQuotation } from "../../src/domain/quotation/evaluate";
 import { compositionBreakdown, libraryItem, manualItem, normItem } from "../../src/domain/quotation/fromInsert";
@@ -29,6 +34,7 @@ import {
   QuotationItemRecord,
   QuotationRecord,
   decodeRecord,
+  detachRecordXml,
   encodeRecord,
   newRecord,
   recordTableOf,
@@ -40,6 +46,7 @@ import {
   TEMPLATE_COLUMNS,
   alignRowToHeaders,
   missingExtensionColumns,
+  quoteColumnFormulas,
   templateTotalRow,
 } from "../../src/domain/quoteTemplate";
 
@@ -113,7 +120,8 @@ class FakeWorkbook {
     if (rows.some((a) => typeof a.quantity !== "number" || typeof a.price !== "number")) {
       return "";
     }
-    return rows.reduce((s, a) => s + (a.quantity as number) * (a.price as number), 0);
+    // Như công thức Excel: cộng rồi làm tròn MỘT lần theo quy tắc cấp đơn giá (ROUND/ROUNDUP/ROUNDDOWN).
+    return roundLikeExcel(rows.reduce((s, a) => s + (a.quantity as number) * (a.price as number), 0), this.rounding.unitPrice);
   }
 
   snapshot(): QuoteSnapshot {
@@ -127,9 +135,11 @@ class FakeWorkbook {
     const a = this.col("Thành tiền");
     const rows = this.rows.map((r) => {
       const values = [...r];
-      values[a] = typeof r[q] === "number" && typeof r[p] === "number" ? (r[q] as number) * (r[p] as number) : "";
+      values[a] =
+        typeof r[q] === "number" && typeof r[p] === "number" ? roundLikeExcel((r[q] as number) * (r[p] as number), this.rounding.amount) : "";
       const formulas = [...values];
-      formulas[a] = '=IF(OR([@[Khối lượng]]="",[@[Đơn giá]]=""),"",[@[Khối lượng]]*[@[Đơn giá]])';
+      // Công thức Thành tiền đúng như add-in ghi theo quy tắc làm tròn hiện tại.
+      formulas[a] = quoteColumnFormulas("CQ_Quote_1", this.rounding.amount).amount;
       formulas[this.col("STT")] = "=ROW()-ROW(CQ_Quote_1[#Headers])";
       return sheetRow(values, formulas);
     });
@@ -632,6 +642,234 @@ describe("test 10: dữ liệu không hợp lệ", () => {
     const back = decodeRecord(xml.replace("&lt;D100&gt;", "&#60;D100&#x3E;"));
     expect(back.ok && back.record.items[0].workName).toBe(item.workName);
     expect(back.ok && back.record).toEqual(record);
+  });
+});
+
+describe("tính toán (giai đoạn 18): làm tròn, thập phân, số lớn, giá trị 0 — kỳ vọng tính tay", () => {
+  it("làm tròn cấp đơn giá tới hàng nghìn: đơn giá theo loại giữ số chưa làm tròn, tổng lệch trong một bước làm tròn", () => {
+    const wb = new FakeWorkbook();
+    wb.rounding = { ...DEFAULT_ROUNDING, unitPrice: { mode: "round", digits: -3 } };
+    // A: 2,1 × 10.333 = 21.699,3; B: 0,5 × 40.000 = 20.000; C: 0,25 × 80.000 = 20.000 → 61.699,3 → 62.000
+    seedNormAnalysis(wb, 10333, 2.1);
+    const result = analysisBreakdown(wb.snapshot().analysis!, "DM-01", wb.rounding.unitPrice);
+    expect(result.totals).toEqual({ material: 21699.3, labor: 20000, machine: 20000, other: 0 });
+    expect(result.unitPrice).toBe(62000);
+    wb.add({ id: "L1", code: "DM-01", quantity: 3, unitPrice: 62000, notes: NOTE_NORM, breakdown: [21699.3, 20000, 20000, 0] });
+    const item = { ...normRecordItem("L1", 0.05), writtenBreakdown: { material: 21699.3, labor: 20000, machine: 20000, other: 0 } };
+    const ev = evaluate(wb, { ...newRecord("Q1", "CQ_Quote_1", T), items: [item] });
+    expect(ev.lines[0].result).toMatchObject({ status: "valid", unitPrice: 62000, amount: 186000, materialCost: 21699.3 });
+    expect(ev.lines[0].result.issues).toEqual([]);
+  });
+
+  it("ROUNDUP và ROUNDDOWN cấp thành tiền; số âm không làm tròn sai hướng", () => {
+    expect(lineAmount(3, 333.335, { mode: "roundUp", digits: 0 })).toBe(1001); // 1.000,005 → 1.001
+    expect(lineAmount(3, 333.335, { mode: "roundDown", digits: 2 })).toBe(1000); // 1.000,005 → 1.000,00
+    expect(lineAmount(2.5, 1.01, { mode: "round", digits: 1 })).toBe(2.5); // 2,525 → 2,5
+    expect(lineAmount(1.005, 1000, { mode: "round", digits: -1 })).toBe(1010); // 1.005 → 1.010
+    const wb = new FakeWorkbook();
+    wb.rounding = { ...DEFAULT_ROUNDING, amount: { mode: "roundUp", digits: -2 } };
+    wb.add({ id: "R1", code: "R1", quantity: 3, unitPrice: 333.335 }); // 1.000,005 → 1.100
+    const ev = evaluate(wb);
+    expect(ev.lines[0].result).toMatchObject({ status: "valid", amount: 1100 });
+  });
+
+  it("thập phân không sai số số thực: 0,1 × 3 = 0,3; 0,7 × 0,1 = 0,07; 1,15 × 100 = 115", () => {
+    const wb = new FakeWorkbook();
+    wb.analysis = [
+      { code: "D", resourceCode: "A", type: "material", quantity: 0.1, price: 3 },
+      { code: "D", resourceCode: "B", type: "labor", quantity: 0.7, price: 0.1 },
+      { code: "D", resourceCode: "C", type: "other", quantity: 1.15, price: 100 },
+    ];
+    const r = analysisBreakdown(wb.snapshot().analysis!, "D", NO_ROUNDING);
+    expect(r.totals).toEqual({ material: 0.3, labor: 0.07, machine: 0, other: 115 });
+    expect(r.unitPrice).toBe(115.37);
+    expect(lineAmount(0.1, 0.2, NO_ROUNDING)).toBe(0.02);
+  });
+
+  it("số lớn: 15 chữ số phần nguyên tính đúng; 16 chữ số là lỗi tràn, không trả số", () => {
+    const ok = analysisBreakdown(
+      [{ ...new FakeWorkbook().snapshot().analysis?.[0], code: "B", resourceCode: "A", resourceType: "Vật liệu", quantity: 999999, quantityType: "Double", price: 1000000000, priceType: "Double", rowIndex: 4 } as never],
+      "B",
+      NO_ROUNDING
+    );
+    expect(ok.unitPrice).toBe(999999000000000); // 15 chữ số
+    const wb = new FakeWorkbook();
+    wb.analysis = [{ code: "B", resourceCode: "A", type: "material", quantity: 1000000, price: 1000000000 }]; // 1e15: 16 chữ số
+    const big = analysisBreakdown(wb.snapshot().analysis!, "B", NO_ROUNDING);
+    expect([big.unitPrice, big.totals, big.issues.map((i) => i.code)]).toEqual([null, null, ["overflow"]]);
+  });
+
+  it("giá trị 0 hợp lệ: khối lượng 0 hoặc tài nguyên giá 0 → tính được, có cảnh báo, thành tiền 0", () => {
+    const wb = new FakeWorkbook();
+    wb.analysis = [
+      { code: "Z", resourceCode: "A", type: "material", quantity: 2, price: 0 },
+      { code: "Z", resourceCode: "B", type: "labor", quantity: 1, price: 500 },
+    ];
+    expect(analysisBreakdown(wb.snapshot().analysis!, "Z", NO_ROUNDING)).toMatchObject({ unitPrice: 500, totals: { material: 0, labor: 500 } });
+    wb.add({ id: "K0", code: "K0", quantity: 0, unitPrice: 500 });
+    const ev = evaluate(wb);
+    expect(ev.lines[0].result).toMatchObject({ status: "validWithWarnings", amount: 0, quantity: 0 });
+  });
+
+  it("thiếu định mức (dòng phân tích không còn khối phân tích) → invalid analysisMissing", () => {
+    const wb = new FakeWorkbook();
+    wb.add({ id: "L1", code: "DM-01", quantity: 1, unitPrice: 60000, notes: NOTE_NORM });
+    const ev = evaluate(wb, { ...newRecord("Q1", "CQ_Quote_1", T), items: [normRecordItem("L1")] });
+    expect(ev.lines[0].result.status).toBe("invalid");
+    expect(ev.lines[0].result.issues.map((i) => i.code)).toContain("analysisMissing");
+  });
+});
+
+describe("luồng đầy đủ: thư viện IndexedDB → định mức → phân tích → báo giá → hồ sơ → mở lại (giai đoạn 18)", () => {
+  /** Dựng sheet phân tích giả lập từ đúng các dòng add-in sẽ ghi (ANALYSIS_COLUMNS). */
+  function analysisFromRows(rows: (string | number)[][]): AnalysisSpec[] {
+    const at = (key: string) => ANALYSIS_COLUMNS.findIndex((c) => c.key === key);
+    const text = (v: unknown) => String(v).replace(/^'/, "");
+    const typeOf = (label: string) => (Object.entries(TYPE).find(([, l]) => l === label)?.[0] ?? "other") as keyof typeof TYPE;
+    return rows.map((r) => ({
+      code: text(r[at("code")]),
+      resourceCode: text(r[at("resourceCode")]),
+      type: typeOf(text(r[at("resourceType")])),
+      quantity: r[at("quantity")],
+      price: r[at("price")],
+    }));
+  }
+
+  it("lập báo giá, đổi thư viện, ngừng định mức, xóa giá; báo giá cũ giữ snapshot tới khi người dùng cập nhật", async () => {
+    // Thư viện thật (IndexedDB giả lập), dữ liệu giả định.
+    const repo = new IndexedDbLibraryRepository(new IDBFactory(), "flow");
+    let n = 0;
+    let clock = Date.UTC(2026, 9, 27);
+    const libs = new LibraryService(repo, { now: () => new Date((clock += 1000)), newId: () => `id-${++n}` });
+    const ids: Record<string, string> = {};
+    for (const [code, type, unit, price] of [["VA", "material", "kg", "10000"], ["NB", "labor", "công", "40000"], ["MC", "machine", "ca", "80000"]] as const) {
+      const r = await libs.saveResource({ code, name: `Thử ${code}`, type, categoryId: "", unit, notes: "" }, null, await libs.load());
+      if (!r.ok) throw new Error();
+      ids[code] = r.value.id;
+      await libs.savePrice(r.value.id, { price, unit, currency: "VND", effectiveFrom: "", effectiveTo: "", supplierId: "", source: "Thử", status: "active", notes: "" }, null, await libs.load());
+    }
+    const w = await libs.saveWorkItem(
+      { code: "CT-F", name: "Công tác luồng", categoryId: "", unit: "m3", description: "", unitPrice: "", currency: "VND", supplierId: "", source: "", effectiveFrom: "", effectiveTo: "", notes: "" },
+      null,
+      await libs.load()
+    );
+    if (!w.ok) throw new Error();
+    const normSaved = await libs.saveNorm(
+      { code: "DM-F", name: "Định mức luồng", unit: "m3", categoryId: "", workItemId: w.value.id, version: "1", effectiveFrom: "", sourceType: "user", source: "", sourceVerified: false, wasteIncluded: false, notes: "" },
+      null,
+      await libs.load()
+    );
+    if (!normSaved.ok) throw new Error();
+    for (const [code, consumption, waste] of [["VA", "2", "5"], ["NB", "0,5", ""], ["MC", "0,25", ""]] as const) {
+      const c = await libs.saveNormComponent(normSaved.value.id, { resourceId: ids[code], consumption, wastePercent: waste, notes: "" }, null, await libs.load());
+      if (!c.ok) throw new Error(JSON.stringify(c.errors));
+    }
+    expect(await libs.setNormStatus(normSaved.value.id, "approved", await libs.load())).toEqual({ ok: true });
+
+    // Chọn định mức, đọc thành phần, áp dụng giá.
+    let lib = await libs.load();
+    const lines = compositionLines(w.value, lib, "2026-10-27");
+    expect(lines.map((l) => [l.resource?.code, l.consumption])).toEqual([["VA", 2.1], ["NB", 0.5], ["MC", 0.25]]);
+    const selection = defaultSelection(lines);
+    const comp = buildComposition(w.value, lines, selection, NO_ROUNDING);
+    expect([comp.ok, comp.preview]).toEqual([true, 61000]);
+
+    // Ghi vào workbook (giả lập công thức Excel): phân tích + dòng báo giá + hồ sơ.
+    const { wb, gateway } = setup();
+    const svc = new QuotationService(new FakePricing(wb) as unknown as PricingGateway, gateway, {
+      now: () => new Date((clock += 1000)),
+      newId: () => `L${++n}`,
+      loadLibrary: async () => lib,
+    });
+    wb.analysis = analysisFromRows(comp.rows);
+    wb.analysisSource = comp.rows.map((r) => String(r[ANALYSIS_COLUMNS.findIndex((c) => c.key === "source")]).replace(/^'/, ""));
+    const breakdown = compositionBreakdown(lines, selection)!;
+    expect(breakdown).toEqual({ material: 21000, labor: 20000, machine: 20000, other: 0 });
+    wb.add({
+      id: "LF",
+      code: "CT-F",
+      group: "Móng",
+      quantity: 10,
+      unitPrice: 61000,
+      notes: compositionNote(w.value, 3, "VND"),
+      breakdown: [21000, 20000, 20000, 0],
+    });
+    wb.add({ id: "LM", code: "TAY", group: "Móng", quantity: 4, unitPrice: 2500 });
+    const item = normItem({ id: "LF", code: "CT-F", name: "Công tác luồng", unit: "m3", now: T }, w.value, lines, selection, comp.rows);
+    expect(await svc.registerInsertedLine("CQ_Quote_1", { ...item, writtenBreakdown: breakdown })).toEqual({ saved: true });
+    expect(await svc.registerInsertedLine("CQ_Quote_1", manualItem({ id: "LM", code: "TAY", name: "x", unit: "m", now: T }))).toEqual({ saved: true });
+
+    let view = await svc.load("CQ_Quote_1");
+    expect(view.evaluation.counts).toEqual({ valid: 2, validWithWarnings: 0, invalid: 0 });
+    expect([view.evaluation.total.value, view.evaluation.computedTotal]).toEqual([620000, 620000]);
+    expect(view.evaluation.groups).toEqual([{ group: "Móng", amount: 620000, lines: 2, uncomputed: 0 }]);
+    expect((await svc.recalculate("CQ_Quote_1", view.evaluation.fingerprint)).status).toBe("done");
+    view = await svc.load("CQ_Quote_1");
+    expect((await svc.complete("CQ_Quote_1", view.evaluation.fingerprint)).status).toBe("done");
+
+    // Đổi giá trong thư viện (sửa bản ghi giá có sẵn): báo giá giữ 61.000, trạng thái vẫn hoàn tất.
+    const priceVA = lib.resourcePrices.find((p) => p.resourceId === ids.VA)!;
+    await libs.savePrice(ids.VA, { price: "10500", unit: "kg", currency: "VND", effectiveFrom: "", effectiveTo: "", supplierId: "", source: "Thử", status: "active", notes: "" }, priceVA.id, lib);
+    lib = await libs.load();
+    view = await svc.load("CQ_Quote_1");
+    expect(view.state).toBe("completed");
+    expect(wb.cell(0, "Đơn giá")).toBe(61000);
+    expect(view.evaluation.lines[0].result.issues.map((i) => i.code)).toEqual(["libraryPriceChanged"]);
+
+    // Định mức chuyển Ngừng dùng (không có phiên bản mới): cảnh báo, báo giá không đổi.
+    expect(await libs.setNormStatus(normSaved.value.id, "inactive", lib)).toEqual({ ok: true });
+    lib = await libs.load();
+    view = await svc.load("CQ_Quote_1");
+    expect(view.evaluation.lines[0].result.issues.map((i) => i.code)).toEqual(["normVersionChanged", "libraryPriceChanged"]);
+    expect(view.evaluation.lines[0].result.issues[0].message).toContain("Ngừng dùng");
+
+    // Giá đã dùng bị xóa khỏi thư viện: cảnh báo, không có kế hoạch cập nhật cho tài nguyên đó.
+    const priceMC = lib.resourcePrices.find((p) => p.resourceId === ids.MC)!;
+    await libs.deletePrice(priceMC.id);
+    lib = await libs.load();
+    view = await svc.load("CQ_Quote_1");
+    const issues = view.evaluation.lines[0].result.issues;
+    expect(issues.find((i) => i.resourceCode === "MC")?.code).toBe("libraryMissing");
+    expect(view.evaluation.lines[0].plan).toMatchObject({ kind: "norm", prices: [{ resourceCode: "VA", newPrice: 10500 }] });
+    expect(wb.snapshot().quote.totals?.values[wb.col("Thành tiền")]).toBe(620000);
+
+    // Người dùng chủ động cập nhật: 2,1 × 10.500 + 20.000 + 20.000 = 62.050; × 10 = 620.500; báo giá về nháp.
+    const updated = await svc.applyLibraryUpdate("CQ_Quote_1", "LF", view.evaluation.fingerprint);
+    expect(updated).toMatchObject({ status: "done", completionCleared: true });
+    expect(wb.cell(0, "Đơn giá")).toBe(62050);
+    expect(wb.snapshot().quote.totals?.values[wb.col("Thành tiền")]).toBe(630500);
+
+    // Mở lại bằng service mới (đọc lại hồ sơ XML): không mất, không trùng, khớp kết quả.
+    const reopened = new QuotationService(new FakePricing(wb) as unknown as PricingGateway, new FakeQuotationGateway(wb), {
+      now: () => new Date(),
+      newId: () => "X",
+      loadLibrary: async () => lib,
+    });
+    view = await reopened.load("CQ_Quote_1");
+    expect(view.state).toBe("draft");
+    expect(view.pending).toEqual({ assignIds: 0, removeItems: 0, writeBreakdown: 0 });
+    expect(view.evaluation.lines.map((l) => [l.line.lineId, l.result.amount, l.changedSinceLastCalc])).toEqual([
+      ["LF", 620500, false],
+      ["LM", 10000, false],
+    ]);
+    const saved = decodeRecord(wb.xml!);
+    expect(saved.ok && saved.record.items.map((i) => i.id)).toEqual(["LF", "LM"]);
+  });
+});
+
+describe("hồ sơ mồ côi (lỗi B1, giai đoạn 18)", () => {
+  it("tách hồ sơ khỏi tên bảng: không còn khớp bảng mới cùng tên, dữ liệu giữ nguyên", () => {
+    const record = { ...newRecord("Q-old", "CQ_Quote_2", T), status: "completed" as const };
+    const xml = encodeRecord(record);
+    const detached = detachRecordXml(xml, "2026-10-27T10:00:00.000Z");
+    expect(recordTableOf(detached)).toBe("CQ_Quote_2#tách 2026-10-27T10:00:00.000Z");
+    const back = decodeRecord(detached);
+    expect(back.ok && back.record).toEqual(record);
+    // Chỉ đổi thuộc tính của phần tử gốc, không đụng chữ "table=" trong dữ liệu.
+    const tricky = encodeRecord({ ...record, items: [manualItem({ id: "x", code: 'table="CQ_Quote_2"', name: "", unit: "", now: T })] });
+    const d2 = detachRecordXml(tricky, "N");
+    expect(recordTableOf(d2)).toBe("CQ_Quote_2#tách N");
+    expect(decodeRecord(d2).ok && (decodeRecord(d2) as { record: QuotationRecord }).record.items[0].workCode).toBe('table="CQ_Quote_2"');
   });
 });
 

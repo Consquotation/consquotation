@@ -22,6 +22,7 @@ import {
   QUOTATION_XML_NAMESPACE,
   QuotationRecord,
   decodeRecord,
+  detachRecordXml,
   encodeRecord,
   recordTableOf,
 } from "../domain/quotation/model";
@@ -70,6 +71,33 @@ async function isSheetProtected(
   return sheet.protection.protected;
 }
 
+/**
+ * Hồ sơ còn mang tên một bảng không còn tồn tại (bảng đã bị xóa) được tách khỏi tên đó trước khi tạo
+ * bảng mới cùng tên. Không xóa hồ sơ. Gọi trong cùng Excel.run với việc tạo bảng.
+ */
+export async function detachOrphanRecords(
+  context: Excel.RequestContext,
+  tableName: string,
+  now: string
+): Promise<number> {
+  const parts = context.workbook.customXmlParts.getByNamespace(QUOTATION_XML_NAMESPACE);
+  parts.load("items/id");
+  await context.sync();
+  const loaded = parts.items.map((part) => ({ part, xml: part.getXml() }));
+  await context.sync();
+  let detached = 0;
+  for (const { part, xml } of loaded) {
+    if (recordTableOf(xml.value) === tableName) {
+      part.setXml(detachRecordXml(xml.value, now));
+      detached++;
+    }
+  }
+  if (detached > 0) {
+    await context.sync();
+  }
+  return detached;
+}
+
 /** Ô trống của Excel đọc ra "", giá trị chờ có thể là null/undefined: coi như nhau. */
 function sameCell(actual: unknown, expected: unknown): boolean {
   if (isEmptyCell(actual) || isEmptyCell(expected)) {
@@ -108,6 +136,16 @@ export class ExcelQuotationGateway implements QuotationGateway {
         context.workbook.customXmlParts.add(xml);
       }
       await context.sync();
+      // Office.js không có khóa: một task pane khác có thể ghi xen giữa bước kiểm tra và bước ghi.
+      // Đọc lại; nếu hồ sơ không phải của lần ghi này thì báo thay đổi (bên ghi sau thắng, bên này dừng).
+      const after = await findRecord(context, record.tableName);
+      if (
+        after.read.kind !== "ok" ||
+        after.read.record.id !== record.id ||
+        after.read.record.updatedAt !== record.updatedAt
+      ) {
+        throw new RecordChangedError();
+      }
     });
   }
 
@@ -157,8 +195,13 @@ export class ExcelQuotationGateway implements QuotationGateway {
       }
       for (const { write, range } of targets) {
         range.values = [[cellInput(write.value)]];
+        range.load("values");
       }
       await context.sync();
+      // Đọc lại: ô bị một task pane khác ghi xen vào thì dừng, không đi tiếp tới bước lưu hồ sơ.
+      if (!targets.every(({ write, range }) => sameCell(range.values[0][0], write.value))) {
+        throw new TargetChangedError();
+      }
     });
   }
 

@@ -87,6 +87,13 @@ export function libraryDrift(item: QuotationItemRecord, library: LibrarySnapshot
         message: `Định mức ${source.normCode} v${source.normVersion} không còn trong thư viện.`,
         hint: "Báo giá giữ hao phí đã chèn trên sheet phân tích.",
       });
+    } else if (norm.status === "inactive" && !approved) {
+      issues.push({
+        code: "normVersionChanged",
+        severity: "warning",
+        message: `Định mức ${source.normCode} v${source.normVersion} đã chuyển sang Ngừng dùng và chưa có phiên bản đang dùng khác.`,
+        hint: "Báo giá giữ hao phí đã chèn. Kiểm tra lại định mức trong thư viện nếu cần.",
+      });
     } else if (approved && approved.id !== norm.id) {
       issues.push({
         code: "normVersionChanged",

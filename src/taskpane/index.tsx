@@ -19,6 +19,8 @@ declare global {
      * (tests/integration/excel-core.scenarios.js) gọi trực tiếp qua DevTools.
      */
     __CQ_DEV_EXCEL_CORE__?: typeof import("../office/core");
+    /** Chỉ bản phát triển: lớp thật của quy trình báo giá cho tests/integration/quotation.scenarios.js. */
+    __CQ_DEV_QUOTATION__?: typeof import("./devQuotationHarness");
   }
 }
 
@@ -52,6 +54,9 @@ if (!window.__CQ_UNSUPPORTED_WEBVIEW__) {
     ) {
       void import("../office/core").then((core) => {
         window.__CQ_DEV_EXCEL_CORE__ = core;
+      });
+      void import("./devQuotationHarness").then((harness) => {
+        window.__CQ_DEV_QUOTATION__ = harness;
       });
     }
     render(reason ? <UnsupportedScreen reason={reason} /> : <App />);
