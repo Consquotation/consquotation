@@ -11,6 +11,8 @@ const PLATFORM_LABELS: Record<string, string> = {
 export const STRINGS = {
   appName: "ConsQuotation",
   appTagline: "Lập báo giá thi công xây dựng ngay trong Excel",
+  /** Nhãn đọc màn hình của biểu tượng gợi ý cạnh nhãn ô nhập (hintLabel). */
+  fieldHint: { info: "Gợi ý", warning: "Lưu ý" },
   /** Dòng trạng thái dưới tiêu đề — chỉ hiện sau khi Office.js sẵn sàng và Excel đạt mức API tối thiểu. */
   readyStatus: (platform: string, version: string, dev: boolean) =>
     `Đã tải xong · Đã kết nối Excel trên ${PLATFORM_LABELS[platform] ?? platform} · Bản ${version}${dev ? " (dev)" : ""}`,

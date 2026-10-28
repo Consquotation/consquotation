@@ -152,6 +152,7 @@ const WorkItemEditor: React.FC<WorkItemEditorProps> = ({
             value={form.name}
             onChange={set("name")}
             error={errorFor(errors, "name")}
+            hintKind="warning"
             hint={sameName.length > 0 ? s.sameName(sameName.map((w) => w.code).join(", ")) : undefined}
           />
           <RefSelect

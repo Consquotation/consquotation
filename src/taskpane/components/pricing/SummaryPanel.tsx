@@ -13,6 +13,7 @@ import {
   makeStyles,
   tokens,
 } from "@fluentui/react-components";
+import { hintLabel } from "../hintLabel";
 import ConfirmDialog from "../ConfirmDialog";
 import { PricingGateway, SummaryState } from "../../../application/pricingGateway";
 import { TargetChangedError } from "../../../application/workbookGateway";
@@ -221,9 +222,8 @@ const SummaryPanel: React.FC<{ pricing: PricingGateway; tableName: string }> = (
             </Select>
           </Field>
           <Field
-            label={s.value}
+            label={hintLabel(s.value, d.method === "fixed" ? s.valueHintFixed : s.valueHintPercent)}
             validationMessage={errorOf(index, "value")}
-            hint={d.method === "fixed" ? s.valueHintFixed : s.valueHintPercent}
           >
             <Input value={d.value} inputMode="decimal" onChange={(_e, v) => update(d.key, { value: v.value })} />
           </Field>

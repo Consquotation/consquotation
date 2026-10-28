@@ -10,6 +10,7 @@ import {
   makeStyles,
   tokens,
 } from "@fluentui/react-components";
+import { hintLabel } from "../hintLabel";
 import { AnalysisPrice } from "../../../application/pricingGateway";
 import { formatIsoDate } from "../../../domain/library/dates";
 import { CompositionLine, CompositionResult, PriceSelection } from "../../../domain/pricing/composition";
@@ -68,15 +69,14 @@ const CompositionPicker: React.FC<{
         return (
           <div key={line.component.id} className={styles.line}>
             <Field
-              label={label}
-              hint={
+              label={
                 line.options.length === 0
-                  ? s.noOptions
+                  ? hintLabel(label, s.noOptions, "warning")
                   : chosen && chosen === line.defaultPriceId
-                    ? s.onlyValid
+                    ? hintLabel(label, s.onlyValid)
                     : usableCount > 1 && !chosen
-                      ? s.mustChoose
-                      : undefined
+                      ? hintLabel(label, s.mustChoose, "warning")
+                      : label
               }
             >
               <Select

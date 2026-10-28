@@ -14,6 +14,7 @@ import {
   makeStyles,
   tokens,
 } from "@fluentui/react-components";
+import { hintLabel } from "../hintLabel";
 import ImportReview, { AnalysisDetails, ImportReport } from "./ImportReview";
 import { LibraryService } from "../../../application/libraryService";
 import { WorkbookGateway, SheetSummary, TableSummary } from "../../../application/workbookGateway";
@@ -367,7 +368,7 @@ const ImportSection: React.FC<{
         )}
         {sheets !== null && tables.length > 0 && (
           <div className={styles.row}>
-            <Field label={s.table} hint={s.tableHint}>
+            <Field label={hintLabel(s.table, s.tableHint)}>
               <Select value={tableName} onChange={(_e, data) => setTableName(data.value)}>
                 {tables.map((t) => (
                   <option key={t.name} value={t.name}>
@@ -446,7 +447,7 @@ const TableStep: React.FC<{
     <>
       <Body1>{s.sourceRead(table.label, Math.max(0, table.rows.length - headerIndex - 1))}</Body1>
       <div className={styles.row}>
-        <Field label={s.headerRow} hint={s.headerRowHint}>
+        <Field label={hintLabel(s.headerRow, s.headerRowHint)}>
           <Input type="number" inputMode="numeric" value={headerInput} onChange={(_e, d) => changeHeader(d.value)} />
         </Field>
         <Field label={s.kind}>

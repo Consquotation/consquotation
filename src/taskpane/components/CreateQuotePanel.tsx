@@ -14,6 +14,7 @@ import {
   makeStyles,
   tokens,
 } from "@fluentui/react-components";
+import { hintLabel } from "./hintLabel";
 import ConfirmDialog from "./ConfirmDialog";
 import { describeBlocker } from "../../application/blockerMessages";
 import { Placement, TemplatePlan, executeTemplate, planTemplate } from "../../application/quoteService";
@@ -126,9 +127,8 @@ const CreateQuotePanel: React.FC<{ gateway: WorkbookGateway; onCreated: () => vo
 
         {placement === "newSheet" && (
           <Field
-            label={s.sheetName}
+            label={hintLabel(s.sheetName, s.sheetNameHint)}
             required
-            hint={s.sheetNameHint}
             validationMessage={sheetNameCheck.ok ? undefined : sheetNameCheck.message}
           >
             <Input
@@ -139,7 +139,7 @@ const CreateQuotePanel: React.FC<{ gateway: WorkbookGateway; onCreated: () => vo
           </Field>
         )}
 
-        <Field label={s.initialRows} hint={`1–${MAX_INITIAL_ROWS}`}>
+        <Field label={hintLabel(s.initialRows, `1–${MAX_INITIAL_ROWS}`)}>
           <Input
             type="number"
             min={1}

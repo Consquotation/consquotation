@@ -13,6 +13,7 @@ import {
   makeStyles,
   tokens,
 } from "@fluentui/react-components";
+import { hintLabel } from "../hintLabel";
 import ConfirmDialog from "../ConfirmDialog";
 import { LibraryService } from "../../../application/libraryService";
 import { DuplicateMode, ImportAnalysis, changeCount } from "../../../domain/library/exchange/analyze";
@@ -208,7 +209,7 @@ const ImportReview: React.FC<{
       )}
 
       {!blocked && (
-        <Field label={s.duplicateMode} hint={s.updateHint}>
+        <Field label={hintLabel(s.duplicateMode, s.updateHint)}>
           <RadioGroup value={mode} disabled={importing} onChange={(_e, data) => setMode(data.value as DuplicateMode)}>
             <Radio value="skip" label={s.skip} />
             <Radio value="update" label={s.update} />

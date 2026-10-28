@@ -15,6 +15,7 @@ import {
   makeStyles,
   tokens,
 } from "@fluentui/react-components";
+import { hintLabel } from "../hintLabel";
 import {
   RefSelect,
   STATUS_COLOR,
@@ -539,7 +540,7 @@ const ComponentsAndResult: React.FC<{
           </Caption1>
         ))}
         {prices.length > 0 && (
-          <Field label={c.choosePrice} hint={c.choosePriceHint}>
+          <Field label={hintLabel(c.choosePrice, c.choosePriceHint)}>
             <Select
               className={styles.select}
               value={component?.priceId ?? ""}

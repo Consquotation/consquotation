@@ -139,6 +139,7 @@ const ResourceEditor: React.FC<ResourceEditorProps> = ({ service, library, editi
             value={form.name}
             onChange={set("name")}
             error={errorFor(errors, "name")}
+            hintKind="warning"
             hint={
               sameName.length > 0
                 ? LIBRARY_STRINGS.sameName(sameName.map((r) => r.code).join(", "))

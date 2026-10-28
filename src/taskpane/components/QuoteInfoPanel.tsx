@@ -12,6 +12,7 @@ import {
   makeStyles,
   tokens,
 } from "@fluentui/react-components";
+import { hintLabel } from "./hintLabel";
 import { preferredTable } from "../../application/quoteTableSelection";
 import {
   QuoteInfoRead,
@@ -206,19 +207,19 @@ const QuoteInfoPanel: React.FC<{ gateway: WorkbookGateway; tablesVersion: number
                 return (
                   <Field
                     key={field.key}
-                    label={field.label.replace(/:$/, "")}
-                    validationMessage={
-                      errorOf(field.key) ?? (found || optionalMissing ? undefined : s.notFound)
-                    }
-                    validationState={
-                      errorOf(field.key) ? "error" : found || optionalMissing ? "none" : "warning"
-                    }
-                    hint={
+                    label={hintLabel(
+                      field.label.replace(/:$/, ""),
                       optionalMissing
                         ? s.addedLater(field.label)
                         : field.type === "date" && found
                           ? s.dateHint
                           : undefined
+                    )}
+                    validationMessage={
+                      errorOf(field.key) ?? (found || optionalMissing ? undefined : s.notFound)
+                    }
+                    validationState={
+                      errorOf(field.key) ? "error" : found || optionalMissing ? "none" : "warning"
                     }
                   >
                     <Input

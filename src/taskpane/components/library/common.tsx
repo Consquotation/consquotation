@@ -11,6 +11,7 @@ import {
 import { Validity } from "../../../domain/library/dates";
 import { compareText } from "../../../domain/library/search";
 import { LIBRARY_STRINGS } from "../../../shared/strings.library.vi";
+import { hintLabel } from "../hintLabel";
 
 /** Ô nhập có nhãn và thông báo lỗi tiếng Việt. */
 export const TextField: React.FC<{
@@ -19,13 +20,15 @@ export const TextField: React.FC<{
   onChange: (value: string) => void;
   error?: string;
   hint?: string;
+  /** "warning": gợi ý là lưu ý theo tình huống (dấu !). */
+  hintKind?: "info" | "warning";
   required?: boolean;
   type?: InputProps["type"];
   multiline?: boolean;
   inputMode?: InputProps["inputMode"];
   disabled?: boolean;
-}> = ({ label, value, onChange, error, hint, required, type, multiline, inputMode, disabled }) => (
-  <Field label={label} required={required} validationMessage={error} hint={hint}>
+}> = ({ label, value, onChange, error, hint, hintKind, required, type, multiline, inputMode, disabled }) => (
+  <Field label={hintLabel(label, hint, hintKind)} required={required} validationMessage={error}>
     {multiline ? (
       <Textarea
         value={value}
@@ -121,9 +124,8 @@ export const RefSelect: React.FC<{
   return (
     <>
       <Field
-        label={props.label}
+        label={hintLabel(props.label, props.hint)}
         validationMessage={creating ? undefined : props.error}
-        hint={props.hint}
         className={styles.field}
       >
         <Select

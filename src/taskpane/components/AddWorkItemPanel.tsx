@@ -15,6 +15,7 @@ import {
   makeStyles,
   tokens,
 } from "@fluentui/react-components";
+import { hintLabel } from "./hintLabel";
 import ConfirmDialog from "./ConfirmDialog";
 import { describeBlocker } from "../../application/blockerMessages";
 import { AppendPlan, executeAppend, planAppend } from "../../application/quoteService";
@@ -430,8 +431,7 @@ const AddWorkItemPanel: React.FC<{
           </Field>
 
           <Field
-            label={s.position}
-            hint={positionHint.kind === "hint" ? positionHint.text : undefined}
+            label={hintLabel(s.position, positionHint.kind === "hint" ? positionHint.text : undefined)}
             validationState={positionHint.kind === "warning" ? "warning" : "none"}
             validationMessage={positionHint.kind === "warning" ? positionHint.text : undefined}
           >
@@ -481,16 +481,16 @@ const AddWorkItemPanel: React.FC<{
             {FIELDS.map(({ field, label, numeric }) => (
               <Field
                 key={field}
-                label={label}
-                required={field === "description"}
-                validationMessage={errorFor(field)}
-                hint={
+                label={hintLabel(
+                  label,
                   field === "unitPrice" && usingComposition
                     ? p.unitPriceLocked
                     : numeric && !errorFor(field)
                       ? s.numberHint
                       : undefined
-                }
+                )}
+                required={field === "description"}
+                validationMessage={errorFor(field)}
               >
                 <Input
                   value={draft[field]}
