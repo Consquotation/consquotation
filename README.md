@@ -59,6 +59,7 @@ Microsoft Excel Add-in hỗ trợ lập báo giá thi công xây dựng **ngay t
   - Quy tắc làm tròn của workbook: kiểu làm tròn, độ chính xác và cấp làm tròn. Mặc định không làm tròn.
   - **Kiểm tra báo giá**: lỗi công thức, thiếu dữ liệu, đơn giá bằng 0, công thức bị sửa tay, đơn giá lệch sheet phân tích. Có nút Đi tới và đề xuất cập nhật (cần xác nhận).
 - Thông báo "không tương thích" cho Excel dùng webview cũ (IE11/EdgeHTML) hoặc thiếu ExcelApi 1.8.
+- **Cấp phép** (từ bản 1.12.0): dùng thử 30 ngày, sau đó cần mã 20 ký tự do chủ sản phẩm cấp theo email. Nhập ở Cài đặt › Cấp phép. Xem [ADR-0015](docs/ADR/0015-cap-phep-bang-ma-khong-may-chu.md) và [hướng dẫn duyệt cấp phép](docs/LICENSING.md).
 
 Chưa làm: đặc tả 12 (lưu trữ và quyền riêng tư), 18, 19 và 21.
 
@@ -176,6 +177,7 @@ Bộ công cụ Office Add-in của Microsoft có thể hỏi về việc gửi 
 ## Dữ liệu và quyền riêng tư
 
 - Add-in không gửi workbook hay thư viện lên máy chủ nào và không có backend.
+- Khi bấm Kích hoạt, add-in tải `licenses.json` từ chính địa chỉ GitHub Pages của add-in. File này chỉ chứa giá trị băm SHA-256. Email và mã cấp phép lưu cục bộ trong localStorage của add-in, không gửi đi. Thư xin cấp phép do người dùng tự gửi từ hộp thư của họ.
 - Hồ sơ báo giá (nguồn gốc, snapshot giá, trạng thái) nằm trong chính workbook, đi cùng file khi lưu hoặc gửi; không lưu ở nơi khác.
 - Thư viện cá nhân lưu cục bộ trong IndexedDB của add-in. Dữ liệu này **bị xóa khi xóa cache add-in của Office** và không đồng bộ giữa các máy hoặc giữa Excel desktop và Excel trên web — người dùng phải sao lưu bằng chức năng export. Xem [ADR-0003](docs/ADR/0003-luu-tru-thu-vien-ca-nhan.md) và [ADR-0004](docs/ADR/0004-import-export-thu-vien.md).
 

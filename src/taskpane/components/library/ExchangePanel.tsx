@@ -13,34 +13,25 @@ import {
 import ImportSection from "./ImportSection";
 import { LibraryService } from "../../../application/libraryService";
 import { WorkbookGateway } from "../../../application/workbookGateway";
-import { backupFileName, exportSheets, toBackupJson } from "../../../domain/library/exchange/backup";
+import { exportSheets } from "../../../domain/library/exchange/backup";
 import { EMPTY_LIBRARY, LibrarySnapshot } from "../../../domain/library/types";
 import { APP_VERSION } from "../../../shared/buildInfo";
 import { EXCHANGE_STRINGS } from "../../../shared/strings.exchange.vi";
 import { buildXlsx } from "../../../shared/xlsx";
 import { toBase64 } from "../../../shared/zip";
 import { useExclusive } from "../../useExclusive";
-
-/* global Blob, URL, document, setTimeout */
+import { downloadLibraryBackup } from "../../libraryBackup";
 
 const useStyles = makeStyles({
   root: { display: "flex", flexDirection: "column", rowGap: tokens.spacingVerticalL },
   section: { display: "flex", flexDirection: "column", rowGap: tokens.spacingVerticalS },
-  action: { display: "flex", flexDirection: "column", alignItems: "flex-start", rowGap: tokens.spacingVerticalXXS },
+  action: {
+    display: "flex",
+    flexDirection: "column",
+    alignItems: "flex-start",
+    rowGap: tokens.spacingVerticalXXS,
+  },
 });
-
-/** Tải file qua thẻ <a download> (đã kiểm chứng trên Excel Windows/WebView2: lưu vào Downloads). */
-function downloadText(fileName: string, text: string, type: string): void {
-  const url = URL.createObjectURL(new Blob([text], { type }));
-  const link = document.createElement("a");
-  link.href = url;
-  link.download = fileName;
-  document.body.appendChild(link);
-  link.click();
-  link.remove();
-  // Thu hồi sau khi trình duyệt đã bắt đầu tải.
-  setTimeout(() => URL.revokeObjectURL(url), 30_000);
-}
 
 type Notice = { intent: "success" | "error"; text: string } | null;
 
@@ -61,7 +52,10 @@ const ExchangePanel: React.FC<{
       try {
         setNotice({ intent: "success", text: await task() });
       } catch (e) {
-        setNotice({ intent: "error", text: `${s.failed}: ${e instanceof Error ? e.message : String(e)}` });
+        setNotice({
+          intent: "error",
+          text: `${s.failed}: ${e instanceof Error ? e.message : String(e)}`,
+        });
       }
     });
 
@@ -74,11 +68,7 @@ const ExchangePanel: React.FC<{
   const backupJson = () =>
     run(async () => {
       // Đọc lại từ bộ nhớ để file sao lưu chắc chắn khớp dữ liệu đã lưu.
-      const current = await service.load();
-      const now = new Date();
-      const fileName = backupFileName(now, "json");
-      downloadText(fileName, toBackupJson(current, await meta(now)), "application/json");
-      await service.recordBackup(now);
+      const fileName = await downloadLibraryBackup(service);
       await onLibraryChanged();
       return s.jsonDone(fileName);
     });
@@ -103,7 +93,11 @@ const ExchangePanel: React.FC<{
         </Subtitle2>
         <Body1>{s.description}</Body1>
         {notice && (
-          <MessageBar intent={notice.intent} layout="multiline" politeness={notice.intent === "error" ? "assertive" : "polite"}>
+          <MessageBar
+            intent={notice.intent}
+            layout="multiline"
+            politeness={notice.intent === "error" ? "assertive" : "polite"}
+          >
             <MessageBarBody>{notice.text}</MessageBarBody>
           </MessageBar>
         )}
@@ -123,7 +117,12 @@ const ExchangePanel: React.FC<{
         </div>
       </section>
       <Divider />
-      <ImportSection service={service} gateway={gateway} library={library} onImported={onLibraryChanged} />
+      <ImportSection
+        service={service}
+        gateway={gateway}
+        library={library}
+        onImported={onLibraryChanged}
+      />
     </div>
   );
 };

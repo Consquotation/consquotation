@@ -1,6 +1,6 @@
 {
   "name": "consquotation",
-  "version": "1.11.0",
+  "version": "1.12.0",
   "license": "UNLICENSED",
   "config": {
     "app_to_debug": "excel",
@@ -23,7 +23,8 @@
     "test:watch": "vitest",
     "validate": "office-addin-manifest validate manifest/manifest.dev.xml",
     "validate:prod": "office-addin-manifest validate dist/manifest.prod.xml",
-    "check": "npm run typecheck && npm run lint && npm run test && npm run validate && npm run build"
+    "check": "npm run typecheck && npm run lint && npm run test && npm run validate && npm run build",
+    "license:grant": "node scripts/license-grant.mjs"
   },
   "dependencies": {
     "@fluentui/react-components": "^9.55.1",

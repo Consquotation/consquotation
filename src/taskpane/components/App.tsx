@@ -29,6 +29,12 @@ import QuoteInfoPanel from "./QuoteInfoPanel";
 import WorkflowPanel from "./WorkflowPanel";
 import PrintView from "./print/PrintView";
 import QuotationItemsView from "./quotation/QuotationItemsView";
+import LicensePanel from "./license/LicensePanel";
+import { LicenseService } from "../../application/licenseService";
+import { browserLicenseStorage } from "../licenseStorage";
+import { downloadLibraryBackup } from "../libraryBackup";
+import { LICENSE_UI } from "../../shared/strings.license.vi";
+import { EXCHANGE_STRINGS } from "../../shared/strings.exchange.vi";
 import { QuotationService } from "../../application/quotationService";
 import { ExcelQuotationGateway } from "../../office/excelQuotationGateway";
 import { LayoutGateway } from "../../application/layoutGateway";
@@ -54,7 +60,7 @@ import { STRINGS } from "../../shared/strings.vi";
 import { randomId } from "../../shared/uuid";
 import { View, parseInitialView } from "../navigation";
 
-/* global clearTimeout, document, indexedDB, performance, setTimeout, window */
+/* global clearTimeout, document, fetch, indexedDB, performance, setTimeout, window */
 
 declare const __CQ_BUILD_MODE__: string;
 
@@ -162,6 +168,23 @@ const App: React.FC<{
     [injectedLibrary]
   );
   const loadLibrary = React.useCallback(() => libraryService.load(), [libraryService]);
+  // Cấp phép (ADR-0015): dùng thử 30 ngày, kích hoạt bằng email + mã đối chiếu với licenses.json.
+  const licenseService = React.useMemo(
+    () =>
+      new LicenseService(
+        browserLicenseStorage,
+        async () => {
+          const response = await fetch("licenses.json", { cache: "no-store" });
+          if (!response.ok) {
+            throw new Error(`HTTP ${response.status}`);
+          }
+          return response.json();
+        },
+        () => new Date()
+      ),
+    []
+  );
+  const [license, setLicense] = React.useState(() => licenseService.state());
   // Hồ sơ báo giá trong workbook (ADR-0014); thư viện dùng để phát hiện giá đã đổi so với snapshot.
   const quotation = React.useMemo(
     () =>
@@ -254,11 +277,33 @@ const App: React.FC<{
             <span className={styles.readyDot} aria-hidden="true" />
             {s.readyStatus(hostPlatform, APP_VERSION, BUILD_MODE === "development")}
           </Caption1>
+          {license.kind !== "expired" && (
+            <Caption1>
+              {license.kind === "trial"
+                ? LICENSE_UI.headerTrial(license.daysLeft)
+                : LICENSE_UI.headerLicensed}
+            </Caption1>
+          )}
         </div>
-        {nav.view !== "help" && <Button onClick={() => go("help")}>{s.header.help}</Button>}
+        {nav.view !== "help" && license.kind !== "expired" && (
+          <Button onClick={() => go("help")}>{s.header.help}</Button>
+        )}
       </header>
 
-      {nav.view === "help" ? (
+      {license.kind === "expired" ? (
+        // Hết dùng thử, chưa cấp phép: khóa thao tác ghi; vẫn xin cấp phép, kích hoạt, sao lưu thư viện.
+        <div className={styles.panel}>
+          <LicensePanel
+            service={licenseService}
+            state={license}
+            onChange={setLicense}
+            onBackup={async () =>
+              EXCHANGE_STRINGS.backup.jsonDone(await downloadLibraryBackup(libraryService))
+            }
+            allowMailApp={hostPlatform === "OfficeOnline"}
+          />
+        </div>
+      ) : nav.view === "help" ? (
         <HelpView onBack={() => go(lastTab)} />
       ) : (
         <>
@@ -367,6 +412,12 @@ const App: React.FC<{
 
           {nav.view === "settings" && (
             <div className={styles.panel} role="tabpanel" aria-label={s.tabs.settings}>
+              <LicensePanel
+                service={licenseService}
+                state={license}
+                onChange={setLicense}
+                allowMailApp={hostPlatform === "OfficeOnline"}
+              />
               <VersionPanel />
               <LibraryStoragePanel service={libraryService} />
               <EnvironmentPanel />

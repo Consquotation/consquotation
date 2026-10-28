@@ -150,6 +150,8 @@ module.exports = async (env, options) => {
           // minimized: true để Terser bỏ qua — file phải giữ nguyên ES5 như bản đã test.
           { from: "src/compat/compat-gate.js", to: "compat-gate.js", info: { minimized: true } },
           { from: "src/help/help.html", to: "help.html" },
+          // Danh sách cấp phép (ADR-0015): chỉ chứa giá trị băm; cập nhật bằng npm run license:grant.
+          { from: "licenses.json", to: "licenses.json" },
           ...manifestPatterns,
         ],
       }),
