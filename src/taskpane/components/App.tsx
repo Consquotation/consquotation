@@ -36,8 +36,6 @@ import { downloadLibraryBackup } from "../libraryBackup";
 import { LICENSE_UI } from "../../shared/strings.license.vi";
 import { EXCHANGE_STRINGS } from "../../shared/strings.exchange.vi";
 import { QuotationService } from "../../application/quotationService";
-import { QuotationGateway } from "../../application/quotationGateway";
-import { NormExportGateway } from "../../application/normExportGateway";
 import { ExcelQuotationGateway } from "../../office/excelQuotationGateway";
 import { LayoutGateway } from "../../application/layoutGateway";
 import { ExcelLayoutGateway } from "../../office/excelLayoutGateway";
@@ -151,19 +149,12 @@ const App: React.FC<{
   gateway?: WorkbookGateway;
   pricing?: PricingGateway;
   layout?: LayoutGateway;
-  quotationGateway?: QuotationGateway;
-  normExporter?: NormExportGateway;
   libraryService?: LibraryService;
-  /** Chạy trong cửa sổ nổi (ADR-0016): gateway là bản đại diện gọi qua task pane. */
-  inDialog?: boolean;
 }> = ({
   gateway: injected,
   pricing: injectedPricing,
   layout: injectedLayout,
-  quotationGateway: injectedQuotation,
-  normExporter: injectedNormExporter,
   libraryService: injectedLibrary,
-  inDialog = false,
 }) => {
   useNarrowPaneStyles();
   const styles = useStyles();
@@ -174,10 +165,7 @@ const App: React.FC<{
     [injectedPricing]
   );
   const layout = React.useMemo(() => injectedLayout ?? new ExcelLayoutGateway(), [injectedLayout]);
-  const normExporter = React.useMemo(
-    () => injectedNormExporter ?? new ExcelNormExportGateway(),
-    [injectedNormExporter]
-  );
+  const normExporter = React.useMemo(() => new ExcelNormExportGateway(), []);
   const libraryService = React.useMemo(
     () => injectedLibrary ?? createLibraryService(),
     [injectedLibrary]
@@ -203,12 +191,12 @@ const App: React.FC<{
   // Hồ sơ báo giá trong workbook (ADR-0014); thư viện dùng để phát hiện giá đã đổi so với snapshot.
   const quotation = React.useMemo(
     () =>
-      new QuotationService(pricing, injectedQuotation ?? new ExcelQuotationGateway(), {
+      new QuotationService(pricing, new ExcelQuotationGateway(), {
         now: () => new Date(),
         newId: randomId,
         loadLibrary,
       }),
-    [pricing, injectedQuotation, loadLibrary]
+    [pricing, loadLibrary]
   );
   // Công tác vừa chọn "Chèn vào báo giá" ở thư viện; form Thêm công tác dùng một lần rồi xóa.
   const [prefill, setPrefill] = React.useState<LibraryPrefill | null>(null);
@@ -444,7 +432,7 @@ const App: React.FC<{
               <EnvironmentPanel />
               <StorageProbePanel />
               <DiagnosticsPanel />
-              {ExcelLabSection && !inDialog && (
+              {ExcelLabSection && (
                 <React.Suspense fallback={null}>
                   <ExcelLabSection />
                 </React.Suspense>
