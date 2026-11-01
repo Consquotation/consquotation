@@ -22,11 +22,12 @@ import {
   mailtoUrl,
   outlookComposeUrl,
 } from "../../../domain/license/license";
+import { openBrowserWindow } from "../../../office/environment";
 import { APP_VERSION } from "../../../shared/buildInfo";
 import { LICENSE_UI as s } from "../../../shared/strings.license.vi";
 import { useExclusive } from "../../useExclusive";
 
-/* global document, HTMLTextAreaElement, navigator, Office, window */
+/* global document, HTMLTextAreaElement, navigator, window */
 
 const useStyles = makeStyles({
   root: { display: "flex", flexDirection: "column", rowGap: tokens.spacingVerticalM },
@@ -44,8 +45,7 @@ type Notice = { intent: "success" | "warning" | "error" | "info"; text: string }
 function openUrl(url: string): void {
   if (url.startsWith("https:")) {
     try {
-      if (typeof Office !== "undefined" && Office.context?.ui?.openBrowserWindow) {
-        Office.context.ui.openBrowserWindow(url);
+      if (openBrowserWindow(url)) {
         return;
       }
     } catch {

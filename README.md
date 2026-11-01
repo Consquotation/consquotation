@@ -13,6 +13,7 @@ Microsoft Excel Add-in hỗ trợ lập báo giá thi công xây dựng **ngay t
   - **Thư viện**: Thư viện của tôi, Tài nguyên, Định mức, menu Quản lý (Danh mục, Kiểm tra thư viện, Nhập/Xuất và sao lưu);
   - **Hệ thống**: Cài đặt, Bản quyền;
   - **Trợ giúp**.
+- **Cửa sổ nổi** (từ bản 1.14.0, Excel trên Windows): giao diện mở trong một cửa sổ riêng, kéo và đổi kích thước được; task pane chỉ còn khung nhỏ làm cầu nối với workbook và phải để mở. Excel trên web và Mac vẫn dùng task pane. Xem [ADR-0016](docs/ADR/0016-giao-dien-cua-so-noi.md).
 - **Task pane** tiếng Việt với các tab Tổng quan, Báo giá, Thư viện, Cài đặt, cùng màn hình Trợ giúp.
 - **Tạo bảng báo giá** trên sheet mới (tự đặt tên) hoặc tại ô đang chọn:
   - Gồm khối thông tin và Excel Table 9 cột.
