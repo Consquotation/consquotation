@@ -15,3 +15,8 @@ Thumbs.db
 *.bak
 user-library/
 local-data/
+
+# Bản Windows (.NET) và bộ cài
+native/**/bin/
+native/**/obj/
+installer/Output/

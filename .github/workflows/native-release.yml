@@ -1,0 +1,72 @@
+# Build bản Windows (native/), chạy test, đóng gói bộ cài Inno Setup.
+# Gắn tag vX.Y.Z (hoặc vX.Y.Z-alpha.N) thì đăng lên GitHub Releases; chạy tay thì chỉ lưu file làm artifact.
+name: Native release
+
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "8.0.x"
+
+      - name: Xác định phiên bản
+        shell: pwsh
+        run: |
+          $version = if ($env:GITHUB_REF_TYPE -eq "tag") { $env:GITHUB_REF_NAME.TrimStart("v") } else { "0.0.0-ci.$env:GITHUB_RUN_NUMBER" }
+          if ($version -notmatch '^\d+\.\d+\.\d+(-[0-9A-Za-z.]+)?$') { throw "Tag không đúng dạng vX.Y.Z: $version" }
+          $numeric = ($version -split '-')[0] + ".0"
+          "VERSION=$version" >> $env:GITHUB_ENV
+          "NUMERIC_VERSION=$numeric" >> $env:GITHUB_ENV
+
+      - name: Test
+        run: dotnet test native/ConsQuotation.sln -c Release
+
+      - name: Build add-in
+        run: dotnet build native/src/ConsQuotation.AddIn/ConsQuotation.AddIn.csproj -c Release -p:Version=${{ env.VERSION }}
+
+      - name: Đóng gói bộ cài
+        shell: pwsh
+        run: |
+          choco install innosetup --no-progress -y
+          $iscc = "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe"
+          $build = "$env:GITHUB_WORKSPACE\native\src\ConsQuotation.AddIn\bin\Release\net48\publish"
+          & $iscc "/DAppVersion=$env:VERSION" "/DNumericVersion=$env:NUMERIC_VERSION" "/DBuildDir=$build" installer\ConsQuotation.iss
+          if ($LASTEXITCODE -ne 0) { throw "ISCC lỗi $LASTEXITCODE" }
+          $exe = "installer\Output\ConsQuotation-Setup-$env:VERSION.exe"
+          $hash = (Get-FileHash $exe -Algorithm SHA256).Hash.ToLower()
+          "$hash  ConsQuotation-Setup-$env:VERSION.exe" | Out-File -Encoding ascii "$exe.sha256"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ConsQuotation-Setup-${{ env.VERSION }}
+          path: installer/Output/*
+
+      - name: Đăng Release
+        if: github.ref_type == 'tag'
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          $notes = @"
+          Bản cài đặt ConsQuotation cho Excel trên Windows (Excel 2016 trở lên, 32 và 64-bit).
+
+          Cài đặt: tải ConsQuotation-Setup-$env:VERSION.exe, đóng Excel, chạy file vừa tải. File chưa ký số nên Windows có thể hiện "Windows protected your PC": bấm More info › Run anyway. Mở Excel: tab ConsQuotation xuất hiện trên ribbon.
+
+          Gỡ cài: Settings › Apps › ConsQuotation › Uninstall.
+
+          Kiểm tra file: so mã SHA-256 với file .sha256 đi kèm.
+          "@
+          $flags = @()
+          if ($env:VERSION -match '-') { $flags += "--prerelease" }
+          gh release create $env:GITHUB_REF_NAME installer/Output/* --title "ConsQuotation $env:VERSION" --notes $notes @flags

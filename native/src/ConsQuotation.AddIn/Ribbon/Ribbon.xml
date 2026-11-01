@@ -1,0 +1,56 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Ribbon ConsQuotation: cùng 5 nhóm, 16 nút và 1 menu như bản web 1.13 (docs/NATIVE_PLAN.md).
+  Icon là icon có sẵn của Office (imageMso), đã kiểm tên trên Excel 16.0.20527 ngày 2026-11-01.
+  Mọi nút gọi RibbonController.OnAction; mã lệnh là id của nút (RibbonCommands).
+-->
+<customUI xmlns="http://schemas.microsoft.com/office/2009/07/customui">
+  <ribbon>
+    <tabs>
+      <tab id="cqTab" label="ConsQuotation">
+        <group id="cqGroupQuote" label="Báo giá">
+          <button id="cqOpen" label="Mở ConsQuotation" size="large" imageMso="Calculator" onAction="OnAction"
+                  screentip="Mở ConsQuotation" supertip="Xem workbook hiện tại, quy trình báo giá và các lối tắt." />
+          <button id="cqCreateQuote" label="Tạo bảng báo giá" imageMso="TableInsert" onAction="OnAction"
+                  screentip="Tạo bảng báo giá" supertip="Tạo khối thông tin và bảng báo giá trên sheet mới hoặc tại ô đang chọn." />
+          <button id="cqQuoteInfo" label="Thông tin công trình" imageMso="PropertySheet" onAction="OnAction"
+                  screentip="Thông tin công trình" supertip="Mã báo giá, khách hàng, dự án, địa điểm và các thông tin đầu bảng." />
+          <button id="cqAddItem" label="Thêm công tác" imageMso="TableRowsInsertBelowExcel" onAction="OnAction"
+                  screentip="Thêm công tác" supertip="Thêm công tác vào bảng: nhập trực tiếp, lấy từ thư viện hoặc phân tích từ định mức." />
+        </group>
+        <group id="cqGroupPricing" label="Lập và tính giá">
+          <button id="cqItems" label="Công tác" size="large" imageMso="ViewsDatasheetView" onAction="OnAction"
+                  screentip="Công tác" supertip="Từng dòng của báo giá: phương pháp tính, nguồn giá, trạng thái; tính lại và lưu." />
+          <button id="cqPricing" label="Tính giá" size="large" imageMso="AutoSum" onAction="OnAction"
+                  screentip="Tính giá" supertip="Kiểm tra báo giá, tổng hợp chiết khấu và thuế, quy tắc làm tròn." />
+          <button id="cqPrint" label="In ấn" size="large" imageMso="FilePrintPreview" onAction="OnAction"
+                  screentip="In ấn" supertip="Điều khoản, chữ ký và thiết lập trang in." />
+        </group>
+        <group id="cqGroupLibrary" label="Thư viện">
+          <button id="cqLibrary" label="Thư viện của tôi" size="large" imageMso="BlogCategories" onAction="OnAction"
+                  screentip="Thư viện của tôi" supertip="Công tác, tài nguyên, giá và định mức do bạn tự tạo." />
+          <button id="cqResources" label="Tài nguyên" imageMso="ClipArtInsert" onAction="OnAction"
+                  screentip="Tài nguyên" supertip="Vật liệu, nhân công, máy và các mức giá." />
+          <button id="cqNorms" label="Định mức" imageMso="FunctionWizard" onAction="OnAction"
+                  screentip="Định mức" supertip="Định mức có phiên bản: hao phí, hao hụt và giá áp dụng." />
+          <menu id="cqLibraryMenu" label="Quản lý" imageMso="DatabaseRelationships"
+                screentip="Quản lý thư viện" supertip="Danh mục, kiểm tra thư viện, nhập/xuất và sao lưu.">
+            <button id="cqCatalog" label="Danh mục" imageMso="Bullets" onAction="OnAction" />
+            <button id="cqLibraryCheck" label="Kiểm tra thư viện" imageMso="DataValidation" onAction="OnAction" />
+            <button id="cqExchange" label="Nhập/Xuất và sao lưu" imageMso="ImportExcel" onAction="OnAction" />
+          </menu>
+        </group>
+        <group id="cqGroupSystem" label="Hệ thống">
+          <button id="cqSettings" label="Cài đặt" size="large" imageMso="ApplicationOptionsDialog" onAction="OnAction"
+                  screentip="Cài đặt" supertip="Phiên bản, nơi lưu thư viện, kiểm tra cập nhật." />
+          <button id="cqLicense" label="Bản quyền" size="large" imageMso="AdpPrimaryKey" onAction="OnAction"
+                  screentip="Bản quyền" supertip="Thời hạn dùng thử, gửi yêu cầu cấp phép và nhập mã cấp phép." />
+        </group>
+        <group id="cqGroupHelp" label="Trợ giúp">
+          <button id="cqHelp" label="Trợ giúp" size="large" imageMso="Help" onAction="OnAction"
+                  screentip="Trợ giúp" supertip="Hướng dẫn sử dụng và thông tin phiên bản." />
+        </group>
+      </tab>
+    </tabs>
+  </ribbon>
+</customUI>

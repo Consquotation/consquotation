@@ -1,0 +1,22 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <!-- .NET Framework 4.8 có sẵn trên Windows 10/11: người dùng không phải cài thêm runtime. -->
+    <TargetFramework>net48</TargetFramework>
+    <UseWindowsForms>true</UseWindowsForms>
+    <RootNamespace>ConsQuotation</RootNamespace>
+    <AssemblyName>ConsQuotation</AssemblyName>
+    <!-- Excel-DNA: tên add-in hiện trong Excel và tên file .xll (bản 32-bit và 64-bit). -->
+    <ExcelAddInName>ConsQuotation</ExcelAddInName>
+    <ExcelAddInFileName>ConsQuotation</ExcelAddInFileName>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="ExcelDna.AddIn" Version="1.9.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <EmbeddedResource Include="Ribbon\Ribbon.xml" LogicalName="ConsQuotation.Ribbon.xml" />
+  </ItemGroup>
+
+</Project>
