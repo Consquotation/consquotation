@@ -14,6 +14,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\src\ConsQuotation.AddIn\ConsQuotation.AddIn.csproj" />
+    <ProjectReference Include="..\..\src\ConsQuotation.Core\ConsQuotation.Core.csproj" />
   </ItemGroup>
 
 </Project>

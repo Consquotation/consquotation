@@ -9,10 +9,16 @@
     <!-- Excel-DNA: tên add-in hiện trong Excel và tên file .xll (bản 32-bit và 64-bit). -->
     <ExcelAddInName>ConsQuotation</ExcelAddInName>
     <ExcelAddInFileName>ConsQuotation</ExcelAddInFileName>
+    <!-- DLL phụ phải đóng gói vào .xll (bộ cài chỉ chép file .xll). -->
+    <ExcelAddInInclude>ConsQuotation.Core.dll;Newtonsoft.Json.dll</ExcelAddInInclude>
   </PropertyGroup>
 
   <ItemGroup>
     <PackageReference Include="ExcelDna.AddIn" Version="1.9.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\ConsQuotation.Core\ConsQuotation.Core.csproj" />
   </ItemGroup>
 
   <ItemGroup>

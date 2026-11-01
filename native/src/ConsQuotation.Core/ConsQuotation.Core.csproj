@@ -1,0 +1,20 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!-- Nghiệp vụ thuần (thư viện, định mức, tính giá, cấp phép): không phụ thuộc Excel, test được độc lập. -->
+  <PropertyGroup>
+    <TargetFramework>net48</TargetFramework>
+    <RootNamespace>ConsQuotation.Core</RootNamespace>
+    <AssemblyName>ConsQuotation.Core</AssemblyName>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- Một DLL, không kéo theo thư viện phụ (System.Text.Json trên .NET Framework cần nhiều DLL và dễ
+         xung đột phiên bản khi chạy trong Excel). -->
+    <PackageReference Include="Newtonsoft.Json" Version="13.0.4" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="ConsQuotation.Tests" />
+  </ItemGroup>
+
+</Project>
