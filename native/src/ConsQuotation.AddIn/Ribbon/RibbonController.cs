@@ -2,7 +2,9 @@ using System.IO;
 using System.Reflection;
 using System.Runtime.InteropServices;
 using System.Windows.Forms;
+using ConsQuotation.Core.Storage;
 using ExcelDna.Integration;
+using Newtonsoft.Json.Linq;
 using ExcelDna.Integration.CustomUI;
 
 namespace ConsQuotation.Ribbon
@@ -30,7 +32,7 @@ namespace ConsQuotation.Ribbon
             var owner = new ExcelWindow();
             if (control.Id == RibbonCommands.Help)
             {
-                MessageBox.Show(owner, AppInfo.AboutText, AppInfo.Name, MessageBoxButtons.OK, MessageBoxIcon.Information);
+                MessageBox.Show(owner, $"{AppInfo.AboutText}\n\n{LibraryLine()}", AppInfo.Name, MessageBoxButtons.OK, MessageBoxIcon.Information);
                 return;
             }
             var title = RibbonCommands.All.TryGetValue(control.Id, out var command) ? command.Title : control.Id;
@@ -41,6 +43,25 @@ namespace ConsQuotation.Ribbon
                 AppInfo.Name,
                 MessageBoxButtons.OK,
                 MessageBoxIcon.Information);
+        }
+
+        /// <summary>
+        /// Nơi lưu và số bản ghi của thư viện trên máy, kèm phiên bản thư viện mã đã nạp (để chẩn đoán bản
+        /// cài thiếu thành phần). Chỉ đọc: file chưa có thì không tạo.
+        /// </summary>
+        private static string LibraryLine()
+        {
+            var store = new LibraryStore(LibraryStore.DefaultPath);
+            var components = $"Thành phần: ConsQuotation.Core {typeof(LibraryStore).Assembly.GetName().Version}, Newtonsoft.Json {typeof(JToken).Assembly.GetName().Version}.";
+            try
+            {
+                var library = store.LoadAll();
+                return $"Thư viện trên máy: {store.FilePath}\n{library.WorkItems.Count} công tác, {library.Resources.Count} tài nguyên, {library.Norms.Count} định mức.\n{components}";
+            }
+            catch (LibraryStorageException ex)
+            {
+                return $"{ex.Message}\n{components}";
+            }
         }
 
         /// <summary>Cửa sổ Excel làm cửa sổ cha cho hộp thoại, để hộp thoại nằm trên Excel.</summary>

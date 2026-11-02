@@ -1,0 +1,499 @@
+[
+  {
+    "name": "Thông tin",
+    "columns": [
+      {
+        "width": 16,
+        "text": true
+      },
+      {
+        "width": 90,
+        "text": true
+      }
+    ],
+    "rows": [
+      [
+        "format",
+        "consquotation-library"
+      ],
+      [
+        "schemaVersion",
+        "3"
+      ],
+      [
+        "exportedAt",
+        "2026-10-21T00:00:00.000Z"
+      ],
+      [
+        "appVersion",
+        "1.13.1"
+      ],
+      [
+        "libraryName",
+        "Thư viện thử"
+      ],
+      [
+        null,
+        null
+      ],
+      [
+        "Hướng dẫn",
+        "Thư viện ConsQuotation. Lưu workbook này bằng File › Save As vào nơi an toàn (OneDrive, ổ đĩa ngoài)."
+      ],
+      [
+        null,
+        "Khôi phục: mở workbook này trong Excel, mở ConsQuotation › Thư viện › Nhập/Xuất › Đọc workbook đang mở."
+      ],
+      [
+        null,
+        "Không đổi tên sheet hay tiêu đề cột. Ngày dạng yyyy-mm-dd hoặc dd/mm/yyyy. Giá và định mức tham chiếu bằng mã; nhóm và nhà cung cấp tham chiếu bằng tên."
+      ]
+    ],
+    "headerRows": 0
+  },
+  {
+    "name": "Nhóm",
+    "columns": [
+      {
+        "width": 30,
+        "text": true
+      },
+      {
+        "width": 40,
+        "text": true
+      }
+    ],
+    "rows": [
+      [
+        "Tên nhóm",
+        "Ghi chú"
+      ],
+      [
+        "Móng",
+        "nhóm thử"
+      ]
+    ],
+    "headerRows": 1
+  },
+  {
+    "name": "Nhà cung cấp",
+    "columns": [
+      {
+        "width": 30,
+        "text": true
+      },
+      {
+        "width": 40,
+        "text": true
+      },
+      {
+        "width": 40,
+        "text": true
+      }
+    ],
+    "rows": [
+      [
+        "Tên nhà cung cấp",
+        "Liên hệ",
+        "Ghi chú"
+      ],
+      [
+        "Công ty Thử A",
+        "0901 000 000",
+        ""
+      ]
+    ],
+    "headerRows": 1
+  },
+  {
+    "name": "Công tác",
+    "columns": [
+      {
+        "width": 14,
+        "text": true
+      },
+      {
+        "width": 40,
+        "text": true
+      },
+      {
+        "width": 14,
+        "text": true
+      },
+      {
+        "width": 10,
+        "text": true
+      },
+      {
+        "width": 30,
+        "text": true
+      },
+      {
+        "width": 14,
+        "text": false
+      },
+      {
+        "width": 8,
+        "text": true
+      },
+      {
+        "width": 20,
+        "text": true
+      },
+      {
+        "width": 20,
+        "text": true
+      },
+      {
+        "width": 14,
+        "text": true
+      },
+      {
+        "width": 14,
+        "text": true
+      },
+      {
+        "width": 30,
+        "text": true
+      }
+    ],
+    "rows": [
+      [
+        "Mã công tác",
+        "Tên công tác",
+        "Nhóm",
+        "Đơn vị tính",
+        "Mô tả",
+        "Đơn giá",
+        "Tiền tệ",
+        "Nhà cung cấp",
+        "Nguồn giá",
+        "Hiệu lực từ ngày",
+        "Hiệu lực đến ngày",
+        "Ghi chú"
+      ],
+      [
+        "007",
+        "Bê tông lót móng \"đá 4x6\"",
+        "Móng",
+        "m3",
+        "Dòng 1\nDòng 2",
+        1234567.891,
+        "VND",
+        "Công ty Thử A",
+        "Báo giá NCC A",
+        "2026-01-01",
+        "2026-12-31",
+        "=SUM(A1)"
+      ],
+      [
+        "DD-01",
+        "Đào đất",
+        null,
+        "m3",
+        "",
+        null,
+        "",
+        null,
+        "",
+        null,
+        null,
+        ""
+      ]
+    ],
+    "headerRows": 1
+  },
+  {
+    "name": "Tài nguyên",
+    "columns": [
+      {
+        "width": 14,
+        "text": true
+      },
+      {
+        "width": 40,
+        "text": true
+      },
+      {
+        "width": 14,
+        "text": true
+      },
+      {
+        "width": 14,
+        "text": true
+      },
+      {
+        "width": 10,
+        "text": true
+      },
+      {
+        "width": 30,
+        "text": true
+      }
+    ],
+    "rows": [
+      [
+        "Mã tài nguyên",
+        "Tên tài nguyên",
+        "Loại",
+        "Nhóm",
+        "Đơn vị tính",
+        "Ghi chú"
+      ],
+      [
+        "NC3/7",
+        "Nhân công 3/7",
+        "Nhân công",
+        null,
+        "công",
+        "ghi chú"
+      ],
+      [
+        "XM",
+        "Xi măng PCB40",
+        "Vật liệu",
+        "Móng",
+        "kg",
+        ""
+      ]
+    ],
+    "headerRows": 1
+  },
+  {
+    "name": "Giá tài nguyên",
+    "columns": [
+      {
+        "width": 14,
+        "text": true
+      },
+      {
+        "width": 14,
+        "text": false
+      },
+      {
+        "width": 10,
+        "text": true
+      },
+      {
+        "width": 8,
+        "text": true
+      },
+      {
+        "width": 14,
+        "text": true
+      },
+      {
+        "width": 14,
+        "text": true
+      },
+      {
+        "width": 20,
+        "text": true
+      },
+      {
+        "width": 20,
+        "text": true
+      },
+      {
+        "width": 12,
+        "text": true
+      },
+      {
+        "width": 30,
+        "text": true
+      }
+    ],
+    "rows": [
+      [
+        "Mã tài nguyên",
+        "Đơn giá",
+        "Đơn vị tính",
+        "Tiền tệ",
+        "Hiệu lực từ ngày",
+        "Hiệu lực đến ngày",
+        "Nhà cung cấp",
+        "Nguồn",
+        "Trạng thái",
+        "Ghi chú"
+      ],
+      [
+        "XM",
+        1.6,
+        "kg",
+        "VND",
+        null,
+        null,
+        null,
+        "",
+        "Ngưng dùng",
+        "cũ"
+      ],
+      [
+        "XM",
+        1.5,
+        "kg",
+        "VND",
+        "2026-01-01",
+        null,
+        "Công ty Thử A",
+        "TB giá Q1",
+        "Đang dùng",
+        ""
+      ]
+    ],
+    "headerRows": 1
+  },
+  {
+    "name": "Định mức",
+    "columns": [
+      {
+        "width": 14,
+        "text": true
+      },
+      {
+        "width": 40,
+        "text": true
+      },
+      {
+        "width": 10,
+        "text": true
+      },
+      {
+        "width": 14,
+        "text": true
+      },
+      {
+        "width": 10,
+        "text": true
+      },
+      {
+        "width": 14,
+        "text": true
+      },
+      {
+        "width": 14,
+        "text": true
+      },
+      {
+        "width": 30,
+        "text": true
+      },
+      {
+        "width": 12,
+        "text": true
+      },
+      {
+        "width": 12,
+        "text": true
+      },
+      {
+        "width": 12,
+        "text": true
+      },
+      {
+        "width": 14,
+        "text": true
+      },
+      {
+        "width": 30,
+        "text": true
+      }
+    ],
+    "rows": [
+      [
+        "Mã định mức",
+        "Tên công tác",
+        "Đơn vị tính",
+        "Nhóm",
+        "Phiên bản",
+        "Ngày áp dụng",
+        "Loại nguồn",
+        "Nguồn",
+        "Đã đối chiếu nguồn",
+        "Trạng thái",
+        "Hao phí đã gồm hao hụt",
+        "Mã công tác liên kết",
+        "Ghi chú"
+      ],
+      [
+        "007",
+        "Bê tông lót móng \"đá 4x6\"",
+        "m3",
+        "Móng",
+        "1",
+        "2026-01-01",
+        "Tài liệu",
+        "Tài liệu thử",
+        "Không",
+        "Đang dùng",
+        "Không",
+        "007",
+        ""
+      ]
+    ],
+    "headerRows": 1
+  },
+  {
+    "name": "Thành phần định mức",
+    "columns": [
+      {
+        "width": 14,
+        "text": true
+      },
+      {
+        "width": 10,
+        "text": true
+      },
+      {
+        "width": 14,
+        "text": true
+      },
+      {
+        "width": 14,
+        "text": false
+      },
+      {
+        "width": 10,
+        "text": false
+      },
+      {
+        "width": 8,
+        "text": false
+      },
+      {
+        "width": 30,
+        "text": true
+      }
+    ],
+    "rows": [
+      [
+        "Mã định mức",
+        "Phiên bản",
+        "Mã tài nguyên",
+        "Hao phí",
+        "Hao hụt (%)",
+        "Thứ tự",
+        "Ghi chú"
+      ],
+      [
+        "007",
+        "1",
+        "XM",
+        0.000123,
+        5,
+        1,
+        ""
+      ],
+      [
+        "007",
+        "1",
+        "NC3/7",
+        1.25,
+        null,
+        2,
+        "x"
+      ]
+    ],
+    "headerRows": 1
+  }
+]

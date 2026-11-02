@@ -1,0 +1,178 @@
+{
+  "format": "consquotation-library",
+  "schemaVersion": 3,
+  "exportedAt": "2026-10-21T00:00:00.000Z",
+  "appVersion": "1.13.1",
+  "library": {
+    "name": "Thư viện thử"
+  },
+  "data": {
+    "categories": [
+      {
+        "id": "c1",
+        "name": "Móng",
+        "notes": "nhóm thử",
+        "createdAt": "2026-01-02T03:04:05.000Z",
+        "updatedAt": "2026-02-03T04:05:06.000Z"
+      }
+    ],
+    "suppliers": [
+      {
+        "id": "s1",
+        "name": "Công ty Thử A",
+        "contactInfo": "0901 000 000",
+        "notes": "",
+        "createdAt": "2026-01-02T03:04:05.000Z",
+        "updatedAt": "2026-02-03T04:05:06.000Z"
+      }
+    ],
+    "workItems": [
+      {
+        "id": "w1",
+        "code": "007",
+        "name": "Bê tông lót móng \"đá 4x6\"",
+        "categoryId": "c1",
+        "unit": "m3",
+        "description": "Dòng 1\nDòng 2",
+        "pricingMethod": "direct",
+        "unitPrice": 1234567.891,
+        "currency": "VND",
+        "supplierId": "s1",
+        "source": "Báo giá NCC A",
+        "effectiveFrom": "2026-01-01",
+        "effectiveTo": "2026-12-31",
+        "notes": "=SUM(A1)",
+        "createdAt": "2026-01-02T03:04:05.000Z",
+        "updatedAt": "2026-02-03T04:05:06.000Z"
+      },
+      {
+        "id": "w2",
+        "code": "DD-01",
+        "name": "Đào đất",
+        "categoryId": null,
+        "unit": "m3",
+        "description": "",
+        "pricingMethod": "direct",
+        "unitPrice": null,
+        "currency": "",
+        "supplierId": null,
+        "source": "",
+        "effectiveFrom": null,
+        "effectiveTo": null,
+        "notes": "",
+        "createdAt": "2026-01-02T03:04:05.000Z",
+        "updatedAt": "2026-02-03T04:05:06.000Z"
+      }
+    ],
+    "resources": [
+      {
+        "id": "r1",
+        "code": "XM",
+        "name": "Xi măng PCB40",
+        "type": "material",
+        "categoryId": "c1",
+        "unit": "kg",
+        "notes": "",
+        "createdAt": "2026-01-02T03:04:05.000Z",
+        "updatedAt": "2026-02-03T04:05:06.000Z"
+      },
+      {
+        "id": "r2",
+        "code": "NC3/7",
+        "name": "Nhân công 3/7",
+        "type": "labor",
+        "categoryId": null,
+        "unit": "công",
+        "notes": "ghi chú",
+        "createdAt": "2026-01-02T03:04:05.000Z",
+        "updatedAt": "2026-02-03T04:05:06.000Z"
+      }
+    ],
+    "resourcePrices": [
+      {
+        "id": "p1",
+        "resourceId": "r1",
+        "price": 1.5,
+        "unit": "kg",
+        "currency": "VND",
+        "effectiveFrom": "2026-01-01",
+        "effectiveTo": null,
+        "supplierId": "s1",
+        "source": "TB giá Q1",
+        "status": "active",
+        "notes": "",
+        "createdAt": "2026-01-02T03:04:05.000Z",
+        "updatedAt": "2026-02-03T04:05:06.000Z"
+      },
+      {
+        "id": "p2",
+        "resourceId": "r1",
+        "price": 1.6,
+        "unit": "kg",
+        "currency": "VND",
+        "effectiveFrom": null,
+        "effectiveTo": null,
+        "supplierId": null,
+        "source": "",
+        "status": "inactive",
+        "notes": "cũ",
+        "createdAt": "2026-01-02T03:04:05.000Z",
+        "updatedAt": "2026-02-03T04:05:06.000Z"
+      }
+    ],
+    "norms": [
+      {
+        "id": "n1",
+        "code": "007",
+        "name": "Bê tông lót móng \"đá 4x6\"",
+        "unit": "m3",
+        "categoryId": "c1",
+        "workItemId": "w1",
+        "version": "1",
+        "effectiveFrom": "2026-01-01",
+        "sourceType": "document",
+        "source": "Tài liệu thử",
+        "sourceVerified": false,
+        "status": "approved",
+        "wasteIncluded": false,
+        "notes": "",
+        "createdAt": "2026-01-02T03:04:05.000Z",
+        "updatedAt": "2026-02-03T04:05:06.000Z"
+      }
+    ],
+    "normComponents": [
+      {
+        "id": "nc1",
+        "normId": "n1",
+        "resourceId": "r1",
+        "resourceCodeSnapshot": "XM",
+        "resourceNameSnapshot": "Xi măng PCB40",
+        "resourceUnitSnapshot": "kg",
+        "resourceTypeSnapshot": "material",
+        "consumption": 0.000123,
+        "wasteRate": 0.05,
+        "priceId": "p1",
+        "sortOrder": 1,
+        "notes": "",
+        "createdAt": "2026-01-02T03:04:05.000Z",
+        "updatedAt": "2026-02-03T04:05:06.000Z"
+      },
+      {
+        "id": "nc2",
+        "normId": "n1",
+        "resourceId": "r2",
+        "resourceCodeSnapshot": "NC3/7",
+        "resourceNameSnapshot": "Nhân công 3/7",
+        "resourceUnitSnapshot": "công",
+        "resourceTypeSnapshot": "labor",
+        "consumption": 1.25,
+        "wasteRate": 0,
+        "priceId": null,
+        "sortOrder": 2,
+        "notes": "x",
+        "createdAt": "2026-01-02T03:04:05.000Z",
+        "updatedAt": "2026-02-03T04:05:06.000Z"
+      }
+    ]
+  }
+}

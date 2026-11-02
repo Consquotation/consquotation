@@ -17,4 +17,10 @@
     <ProjectReference Include="..\..\src\ConsQuotation.Core\ConsQuotation.Core.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <!-- Dữ liệu đối chiếu sinh bằng mã bản web (file sao lưu, sheet xuất) và file mẫu CSV công bố. -->
+    <None Include="Fixtures\**" CopyToOutputDirectory="PreserveNewest" />
+    <None Include="..\..\..\docs\templates\*.csv" Link="Templates\%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
 </Project>

@@ -2,6 +2,7 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.Text;
 using System.Text.RegularExpressions;
+using Newtonsoft.Json;
 
 namespace ConsQuotation.Core.Library
 {
@@ -186,6 +187,7 @@ namespace ConsQuotation.Core.Library
         public List<Norm> Norms { get; set; } = new List<Norm>();
         public List<NormComponent> NormComponents { get; set; } = new List<NormComponent>();
 
+        [JsonIgnore]
         public bool IsEmpty =>
             Categories.Count == 0 && Suppliers.Count == 0 && WorkItems.Count == 0 && Resources.Count == 0 &&
             ResourcePrices.Count == 0 && Norms.Count == 0 && NormComponents.Count == 0;
