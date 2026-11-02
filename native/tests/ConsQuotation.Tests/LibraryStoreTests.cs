@@ -45,6 +45,23 @@ namespace ConsQuotation.Tests
         private LibraryStore NewStore() => new LibraryStore(dir.File("library.json"));
 
         [Fact]
+        public void NoiLuuMacDinh_AppData_HoacBienMoiTruong()
+        {
+            var old = Environment.GetEnvironmentVariable(LibraryStore.PathVariable);
+            try
+            {
+                Environment.SetEnvironmentVariable(LibraryStore.PathVariable, null);
+                Assert.Equal(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "ConsQuotation", "library.json"), LibraryStore.DefaultPath);
+                Environment.SetEnvironmentVariable(LibraryStore.PathVariable, "  " + dir.File("x.json") + " ");
+                Assert.Equal(dir.File("x.json"), LibraryStore.DefaultPath);
+            }
+            finally
+            {
+                Environment.SetEnvironmentVariable(LibraryStore.PathVariable, old);
+            }
+        }
+
+        [Fact]
         public void FileChuaCo_ThuVienTrong_KhongTaoFile()
         {
             var store = NewStore();

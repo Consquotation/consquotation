@@ -14,6 +14,11 @@
   </ItemGroup>
 
   <ItemGroup>
+    <!-- Nén file .xlsx khi xuất thư viện; có sẵn trong .NET Framework, không phải đóng gói. -->
+    <Reference Include="System.IO.Compression" />
+  </ItemGroup>
+
+  <ItemGroup>
     <InternalsVisibleTo Include="ConsQuotation.Tests" />
   </ItemGroup>
 

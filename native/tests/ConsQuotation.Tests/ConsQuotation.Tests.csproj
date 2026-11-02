@@ -13,6 +13,11 @@
   </ItemGroup>
 
   <ItemGroup>
+    <Reference Include="System.IO.Compression" />
+    <Reference Include="System.Windows.Forms" />
+  </ItemGroup>
+
+  <ItemGroup>
     <ProjectReference Include="..\..\src\ConsQuotation.AddIn\ConsQuotation.AddIn.csproj" />
     <ProjectReference Include="..\..\src\ConsQuotation.Core\ConsQuotation.Core.csproj" />
   </ItemGroup>

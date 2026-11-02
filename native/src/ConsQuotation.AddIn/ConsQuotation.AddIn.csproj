@@ -22,6 +22,15 @@
   </ItemGroup>
 
   <ItemGroup>
+    <!-- Gọi mô hình đối tượng COM của Excel bằng dynamic (không cần PIA); có sẵn trong .NET Framework. -->
+    <Reference Include="Microsoft.CSharp" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="ConsQuotation.Tests" />
+  </ItemGroup>
+
+  <ItemGroup>
     <EmbeddedResource Include="Ribbon\Ribbon.xml" LogicalName="ConsQuotation.Ribbon.xml" />
   </ItemGroup>
 

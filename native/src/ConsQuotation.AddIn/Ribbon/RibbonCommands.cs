@@ -4,7 +4,7 @@ namespace ConsQuotation.Ribbon
 {
     /// <summary>
     /// Danh mục lệnh của ribbon: id nút → tên lệnh và giai đoạn sẽ có chức năng (docs/NATIVE_PLAN.md).
-    /// Giai đoạn N0 chỉ có khung, các lệnh báo "đang chuyển sang bản Windows".
+    /// Lệnh chưa có chức năng báo "đang chuyển sang bản Windows"; các lệnh Thư viện (N3) mở cửa sổ Thư viện.
     /// </summary>
     public static class RibbonCommands
     {
@@ -38,7 +38,7 @@ namespace ConsQuotation.Ribbon
             ["cqNorms"] = new Command("Định mức", "N3"),
             ["cqCatalog"] = new Command("Danh mục", "N3"),
             ["cqLibraryCheck"] = new Command("Kiểm tra thư viện", "N3"),
-            ["cqExchange"] = new Command("Nhập/Xuất và sao lưu", "N2"),
+            ["cqExchange"] = new Command("Nhập/Xuất và sao lưu", "N3"),
             ["cqSettings"] = new Command("Cài đặt", "N6"),
             ["cqLicense"] = new Command("Bản quyền", "N6"),
             [Help] = new Command("Trợ giúp", "N6"),

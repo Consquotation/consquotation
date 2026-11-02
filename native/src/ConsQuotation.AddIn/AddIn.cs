@@ -7,11 +7,12 @@ namespace ConsQuotation
     {
         public void AutoOpen()
         {
-            // Giai đoạn N0: chưa có khởi tạo. Ribbon do RibbonController tự đăng ký.
+            // Ribbon do RibbonController tự đăng ký; cửa sổ Thư viện tạo khi người dùng bấm nút.
         }
 
         public void AutoClose()
         {
+            LibraryUi.LibraryWindow.CloseAll();
         }
     }
 }

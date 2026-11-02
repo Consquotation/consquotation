@@ -50,9 +50,14 @@ namespace ConsQuotation.Core.Storage
             mutexName = @"Local\ConsQuotation.Library." + StableHash(Path.GetFullPath(path).ToLowerInvariant());
         }
 
-        /// <summary>%APPDATA%\ConsQuotation\library.json</summary>
+        /// <summary>Biến môi trường chỉ file thư viện khác (kiểm thử trên Excel thật không đụng thư viện của người dùng).</summary>
+        public const string PathVariable = "CONSQUOTATION_LIBRARY";
+
+        /// <summary>%APPDATA%\ConsQuotation\library.json, hoặc file trong biến CONSQUOTATION_LIBRARY nếu có.</summary>
         public static string DefaultPath =>
-            System.IO.Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "ConsQuotation", "library.json");
+            Environment.GetEnvironmentVariable(PathVariable) is string custom && custom.Trim() != ""
+                ? custom.Trim()
+                : System.IO.Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "ConsQuotation", "library.json");
 
         public string FilePath => path;
         public string BackupPath => path + ".bak";

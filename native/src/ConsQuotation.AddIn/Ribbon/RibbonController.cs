@@ -3,6 +3,7 @@ using System.Reflection;
 using System.Runtime.InteropServices;
 using System.Windows.Forms;
 using ConsQuotation.Core.Storage;
+using ConsQuotation.LibraryUi;
 using ExcelDna.Integration;
 using Newtonsoft.Json.Linq;
 using ExcelDna.Integration.CustomUI;
@@ -29,6 +30,11 @@ namespace ConsQuotation.Ribbon
         /// <summary>Mọi nút ribbon gọi về đây; id nút là mã lệnh.</summary>
         public void OnAction(IRibbonControl control)
         {
+            if (LibraryWindow.RibbonSections.TryGetValue(control.Id, out var section))
+            {
+                LibraryWindow.Show(section, ExcelDnaUtil.WindowHandle);
+                return;
+            }
             var owner = new ExcelWindow();
             if (control.Id == RibbonCommands.Help)
             {
