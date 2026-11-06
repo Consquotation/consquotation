@@ -256,6 +256,7 @@ namespace ConsQuotation.LibraryUi
         private readonly Button edit;
         private readonly Button copy;
         private readonly Button delete;
+        private readonly Button insert;
         private Dictionary<string, int> normCounts = new Dictionary<string, int>();
         private NameLookup lookup = NameLookup.Empty;
 
@@ -265,7 +266,15 @@ namespace ConsQuotation.LibraryUi
             edit = Ux.Button(S.Edit, (_, __) => EditSelected());
             copy = Ux.Button(S.Copy, (_, __) => CopySelected());
             delete = Ux.Button(S.Delete, (_, __) => DeleteSelected());
-            Root.Controls.Add(Ux.ButtonRow(add, edit, copy, delete));
+            insert = Ux.Button(S.Insert, (_, __) =>
+            {
+                if (List!.Selected != null)
+                {
+                    Session.InsertToQuote?.Invoke(List.Selected);
+                }
+            });
+            insert.Visible = Session.InsertToQuote != null;
+            Root.Controls.Add(Ux.ButtonRow(insert, add, edit, copy, delete));
             empty = Ux.Notice(S.WorkItemsEmpty, SystemColors.ControlText);
             Root.Controls.Add(empty);
             Filters = new FilterBar(showType: false);
@@ -286,13 +295,14 @@ namespace ConsQuotation.LibraryUi
                 new Column<WorkItem>(S.ColNorms, 120, w => normCounts.TryGetValue(w.Id, out var n) && n > 0 ? S.LinkedCount(n) : ""));
             List.ItemActivate += (_, __) => EditSelected();
             List.DeleteRequested += DeleteSelected;
-            List.SelectedIndexChanged += (_, __) => edit.Enabled = copy.Enabled = delete.Enabled = List.Selected != null;
+            List.SelectedIndexChanged += (_, __) => insert.Enabled = edit.Enabled = copy.Enabled = delete.Enabled = List.Selected != null;
             Ux.AddFill(Root, List);
             RefreshView();
         }
 
         public FilterBar Filters { get; }
         public RecordList<WorkItem> List { get; }
+        public Button InsertButton => insert;
 
         public override void RefreshView()
         {
@@ -862,7 +872,7 @@ namespace ConsQuotation.LibraryUi
             };
             List.ItemActivate += (_, __) =>
             {
-                if (List.Selected != null)
+                if (List!.Selected != null)
                 {
                     Editors.Open(this, Session, List.Selected);
                 }

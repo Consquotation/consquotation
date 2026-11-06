@@ -1,0 +1,375 @@
+{
+ "snapshot": {
+  "quote": {
+   "name": "CQ_Quote_1",
+   "sheetName": "BG",
+   "headers": [
+    "STT",
+    "Mã công tác",
+    "Nhóm công tác",
+    "Nội dung công việc",
+    "Đơn vị tính",
+    "Khối lượng",
+    "Đơn giá vật liệu",
+    "Đơn giá nhân công",
+    "Đơn giá máy",
+    "Đơn giá khác",
+    "Đơn giá",
+    "Thành tiền",
+    "Ghi chú",
+    "Mã dòng"
+   ],
+   "firstRowIndex": 13,
+   "firstColumnIndex": 0,
+   "rows": [
+    {
+     "values": [
+      1,
+      "Đ-01 \"x\" \\ y",
+      "nhóm\nxuống\tdòng\u0001\b\f\r",
+      "Nội dung",
+      "m3",
+      0.1,
+      1e+21,
+      1.5e-7,
+      123456789012345680,
+      0.30000000000000004,
+      -2.5,
+      true,
+      "#N/A",
+      ""
+     ],
+     "formulas": [
+      1,
+      "Đ-01 \"x\" \\ y",
+      "nhóm\nxuống\tdòng\u0001\b\f\r",
+      "Nội dung",
+      "m3",
+      0.1,
+      1e+21,
+      1.5e-7,
+      123456789012345680,
+      0.30000000000000004,
+      -2.5,
+      true,
+      "#N/A",
+      ""
+     ],
+     "types": [
+      "String",
+      "String",
+      "String",
+      "String",
+      "String",
+      "String",
+      "String",
+      "String",
+      "String",
+      "String",
+      "String",
+      "String",
+      "String",
+      "String"
+     ]
+    },
+    {
+     "values": [
+      2,
+      "dm-01",
+      "",
+      "",
+      "",
+      0.000001,
+      100000000000000000000,
+      999999000000000,
+      100,
+      0,
+      1234.5678,
+      61000,
+      "",
+      "L2"
+     ],
+     "formulas": [
+      2,
+      "dm-01",
+      "",
+      "",
+      "",
+      0.000001,
+      100000000000000000000,
+      999999000000000,
+      100,
+      0,
+      1234.5678,
+      61000,
+      "",
+      "L2"
+     ],
+     "types": [
+      "String",
+      "String",
+      "String",
+      "String",
+      "String",
+      "String",
+      "String",
+      "String",
+      "String",
+      "String",
+      "String",
+      "String",
+      "String",
+      "String"
+     ]
+    }
+   ],
+   "totals": {
+    "values": [
+     "",
+     "",
+     "",
+     "Tổng cộng",
+     "",
+     "",
+     "",
+     "",
+     "",
+     "",
+     "",
+     600.5,
+     "",
+     ""
+    ],
+    "formulas": [],
+    "types": []
+   }
+  },
+  "summary": null,
+  "analysis": [
+   {
+    "code": "DM-01",
+    "resourceCode": "A",
+    "quantity": 2.1,
+    "price": 10000,
+    "unitPrice": 61000
+   },
+   {
+    "code": "KHAC",
+    "resourceCode": "B",
+    "quantity": 1,
+    "price": 1,
+    "unitPrice": 1
+   },
+   {
+    "code": "dm-01",
+    "resourceCode": "C",
+    "quantity": "",
+    "price": "",
+    "unitPrice": ""
+   }
+  ],
+  "amountRule": {
+   "mode": "none",
+   "digits": 0
+  }
+ },
+ "fingerprint": "744efba0",
+ "noTotalsFingerprint": "5b67b030",
+ "hashes": {
+  "": "00001505",
+  "a": "0002b606",
+  "Đơn giá thành phần": "32bd3f54",
+  "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxx": "99315ec5"
+ },
+ "numbers": [
+  [
+   0.1,
+   "0.1"
+  ],
+  [
+   1e+21,
+   "1e+21"
+  ],
+  [
+   100000000000000000000,
+   "100000000000000000000"
+  ],
+  [
+   1.5e-7,
+   "1.5e-7"
+  ],
+  [
+   0.000001,
+   "0.000001"
+  ],
+  [
+   123456789012345680,
+   "123456789012345680"
+  ],
+  [
+   0.30000000000000004,
+   "0.30000000000000004"
+  ],
+  [
+   -2.5,
+   "-2.5"
+  ],
+  [
+   5e-324,
+   "5e-324"
+  ],
+  [
+   1.7976931348623157e+308,
+   "1.7976931348623157e+308"
+  ],
+  [
+   999999000000000,
+   "999999000000000"
+  ],
+  [
+   1234.5678,
+   "1234.5678"
+  ]
+ ],
+ "xml": "<quotation xmlns=\"urn:consquotation:quotation\" schemaVersion=\"1\" table=\"CQ_Quote_1\"><data>{\"schemaVersion\":1,\"id\":\"Q1\",\"tableName\":\"CQ_Quote_1\",\"status\":\"completed\",\"completedAt\":\"2026-10-27T00:00:00.000Z\",\"completedFingerprint\":\"abc\",\"createdAt\":\"2026-10-27T00:00:00.000Z\",\"updatedAt\":\"2026-10-27T00:00:00.000Z\",\"items\":[{\"id\":\"L1\",\"workCode\":\"A&amp;B\",\"workName\":\"Ống &lt;D100&gt; \\\"loại 1\\\" 'x'\",\"unit\":\"m\",\"components\":[{\"resourceType\":\"material\",\"resourceId\":\"rA\",\"resourceCodeSnapshot\":\"A\",\"resourceNameSnapshot\":\"Vật liệu A\",\"unitSnapshot\":\"kg\",\"baseConsumption\":2,\"wasteRate\":0.05,\"appliedConsumption\":2.1,\"priceId\":\"pA\",\"unitPriceSnapshot\":10000,\"priceUnitSnapshot\":\"kg\",\"currency\":\"VND\",\"sourceReference\":\"Thử; VND\"}],\"result\":{\"materialCost\":21000,\"laborCost\":0,\"machineCost\":0,\"otherCost\":0,\"unitPrice\":21000,\"quantity\":1.5,\"amount\":31500,\"roundingPolicy\":\"Đơn giá: Không làm tròn; thành tiền: Không làm tròn\",\"status\":\"validWithWarnings\",\"issues\":[{\"code\":\"libraryPriceChanged\",\"severity\":\"warning\",\"message\":\"m\",\"hint\":\"h\",\"resourceCode\":\"A\"},{\"code\":\"noTrace\",\"severity\":\"warning\",\"message\":\"m2\"}],\"calculatedAt\":\"2026-10-27T00:00:00.000Z\",\"calculationVersion\":\"quote-line-1\"},\"writtenBreakdown\":{\"material\":21000,\"labor\":0,\"machine\":0,\"other\":0},\"createdAt\":\"2026-10-27T00:00:00.000Z\",\"updatedAt\":\"2026-10-27T00:00:00.000Z\",\"pricingMethod\":\"norm\",\"source\":{\"workItemId\":\"w1\",\"normId\":\"n1\",\"normCode\":\"DM-01\",\"normVersion\":\"1\"},\"libraryPrice\":null},{\"id\":\"L2\",\"workCode\":\"\",\"workName\":\"\",\"unit\":\"\",\"components\":[],\"result\":null,\"writtenBreakdown\":null,\"createdAt\":\"2026-10-27T00:00:00.000Z\",\"updatedAt\":\"2026-10-27T00:00:00.000Z\",\"pricingMethod\":\"manual\",\"source\":null,\"libraryPrice\":null}]}</data></quotation>",
+ "stt": "=ROW()-ROW(CQ_Quote_1[#Headers])",
+ "totalRow": [
+  "",
+  "",
+  "",
+  "Tổng cộng",
+  "",
+  "",
+  "",
+  "",
+  "",
+  "",
+  "",
+  "=SUBTOTAL(109,CQ_Quote_1[Thành tiền])",
+  "",
+  ""
+ ],
+ "lineAmount": "=IF(OR([@[Hao phí]]=\"\",[@[Đơn giá nguồn]]=\"\"),\"\",[@[Hao phí]]*[@[Đơn giá nguồn]])",
+ "amountFormulas": {
+  "none:0": "=IF(OR([@[Khối lượng]]=\"\",[@[Đơn giá]]=\"\"),\"\",[@[Khối lượng]]*[@[Đơn giá]])",
+  "round:-9": "=IF(OR([@[Khối lượng]]=\"\",[@[Đơn giá]]=\"\"),\"\",ROUND([@[Khối lượng]]*[@[Đơn giá]],-9))",
+  "round:-8": "=IF(OR([@[Khối lượng]]=\"\",[@[Đơn giá]]=\"\"),\"\",ROUND([@[Khối lượng]]*[@[Đơn giá]],-8))",
+  "round:-7": "=IF(OR([@[Khối lượng]]=\"\",[@[Đơn giá]]=\"\"),\"\",ROUND([@[Khối lượng]]*[@[Đơn giá]],-7))",
+  "round:-6": "=IF(OR([@[Khối lượng]]=\"\",[@[Đơn giá]]=\"\"),\"\",ROUND([@[Khối lượng]]*[@[Đơn giá]],-6))",
+  "round:-5": "=IF(OR([@[Khối lượng]]=\"\",[@[Đơn giá]]=\"\"),\"\",ROUND([@[Khối lượng]]*[@[Đơn giá]],-5))",
+  "round:-4": "=IF(OR([@[Khối lượng]]=\"\",[@[Đơn giá]]=\"\"),\"\",ROUND([@[Khối lượng]]*[@[Đơn giá]],-4))",
+  "round:-3": "=IF(OR([@[Khối lượng]]=\"\",[@[Đơn giá]]=\"\"),\"\",ROUND([@[Khối lượng]]*[@[Đơn giá]],-3))",
+  "round:-2": "=IF(OR([@[Khối lượng]]=\"\",[@[Đơn giá]]=\"\"),\"\",ROUND([@[Khối lượng]]*[@[Đơn giá]],-2))",
+  "round:-1": "=IF(OR([@[Khối lượng]]=\"\",[@[Đơn giá]]=\"\"),\"\",ROUND([@[Khối lượng]]*[@[Đơn giá]],-1))",
+  "round:0": "=IF(OR([@[Khối lượng]]=\"\",[@[Đơn giá]]=\"\"),\"\",ROUND([@[Khối lượng]]*[@[Đơn giá]],0))",
+  "round:1": "=IF(OR([@[Khối lượng]]=\"\",[@[Đơn giá]]=\"\"),\"\",ROUND([@[Khối lượng]]*[@[Đơn giá]],1))",
+  "round:2": "=IF(OR([@[Khối lượng]]=\"\",[@[Đơn giá]]=\"\"),\"\",ROUND([@[Khối lượng]]*[@[Đơn giá]],2))",
+  "round:3": "=IF(OR([@[Khối lượng]]=\"\",[@[Đơn giá]]=\"\"),\"\",ROUND([@[Khối lượng]]*[@[Đơn giá]],3))",
+  "round:4": "=IF(OR([@[Khối lượng]]=\"\",[@[Đơn giá]]=\"\"),\"\",ROUND([@[Khối lượng]]*[@[Đơn giá]],4))",
+  "round:5": "=IF(OR([@[Khối lượng]]=\"\",[@[Đơn giá]]=\"\"),\"\",ROUND([@[Khối lượng]]*[@[Đơn giá]],5))",
+  "round:6": "=IF(OR([@[Khối lượng]]=\"\",[@[Đơn giá]]=\"\"),\"\",ROUND([@[Khối lượng]]*[@[Đơn giá]],6))",
+  "roundUp:-9": "=IF(OR([@[Khối lượng]]=\"\",[@[Đơn giá]]=\"\"),\"\",ROUNDUP([@[Khối lượng]]*[@[Đơn giá]],-9))",
+  "roundUp:-8": "=IF(OR([@[Khối lượng]]=\"\",[@[Đơn giá]]=\"\"),\"\",ROUNDUP([@[Khối lượng]]*[@[Đơn giá]],-8))",
+  "roundUp:-7": "=IF(OR([@[Khối lượng]]=\"\",[@[Đơn giá]]=\"\"),\"\",ROUNDUP([@[Khối lượng]]*[@[Đơn giá]],-7))",
+  "roundUp:-6": "=IF(OR([@[Khối lượng]]=\"\",[@[Đơn giá]]=\"\"),\"\",ROUNDUP([@[Khối lượng]]*[@[Đơn giá]],-6))",
+  "roundUp:-5": "=IF(OR([@[Khối lượng]]=\"\",[@[Đơn giá]]=\"\"),\"\",ROUNDUP([@[Khối lượng]]*[@[Đơn giá]],-5))",
+  "roundUp:-4": "=IF(OR([@[Khối lượng]]=\"\",[@[Đơn giá]]=\"\"),\"\",ROUNDUP([@[Khối lượng]]*[@[Đơn giá]],-4))",
+  "roundUp:-3": "=IF(OR([@[Khối lượng]]=\"\",[@[Đơn giá]]=\"\"),\"\",ROUNDUP([@[Khối lượng]]*[@[Đơn giá]],-3))",
+  "roundUp:-2": "=IF(OR([@[Khối lượng]]=\"\",[@[Đơn giá]]=\"\"),\"\",ROUNDUP([@[Khối lượng]]*[@[Đơn giá]],-2))",
+  "roundUp:-1": "=IF(OR([@[Khối lượng]]=\"\",[@[Đơn giá]]=\"\"),\"\",ROUNDUP([@[Khối lượng]]*[@[Đơn giá]],-1))",
+  "roundUp:0": "=IF(OR([@[Khối lượng]]=\"\",[@[Đơn giá]]=\"\"),\"\",ROUNDUP([@[Khối lượng]]*[@[Đơn giá]],0))",
+  "roundUp:1": "=IF(OR([@[Khối lượng]]=\"\",[@[Đơn giá]]=\"\"),\"\",ROUNDUP([@[Khối lượng]]*[@[Đơn giá]],1))",
+  "roundUp:2": "=IF(OR([@[Khối lượng]]=\"\",[@[Đơn giá]]=\"\"),\"\",ROUNDUP([@[Khối lượng]]*[@[Đơn giá]],2))",
+  "roundUp:3": "=IF(OR([@[Khối lượng]]=\"\",[@[Đơn giá]]=\"\"),\"\",ROUNDUP([@[Khối lượng]]*[@[Đơn giá]],3))",
+  "roundUp:4": "=IF(OR([@[Khối lượng]]=\"\",[@[Đơn giá]]=\"\"),\"\",ROUNDUP([@[Khối lượng]]*[@[Đơn giá]],4))",
+  "roundUp:5": "=IF(OR([@[Khối lượng]]=\"\",[@[Đơn giá]]=\"\"),\"\",ROUNDUP([@[Khối lượng]]*[@[Đơn giá]],5))",
+  "roundUp:6": "=IF(OR([@[Khối lượng]]=\"\",[@[Đơn giá]]=\"\"),\"\",ROUNDUP([@[Khối lượng]]*[@[Đơn giá]],6))",
+  "roundDown:-9": "=IF(OR([@[Khối lượng]]=\"\",[@[Đơn giá]]=\"\"),\"\",ROUNDDOWN([@[Khối lượng]]*[@[Đơn giá]],-9))",
+  "roundDown:-8": "=IF(OR([@[Khối lượng]]=\"\",[@[Đơn giá]]=\"\"),\"\",ROUNDDOWN([@[Khối lượng]]*[@[Đơn giá]],-8))",
+  "roundDown:-7": "=IF(OR([@[Khối lượng]]=\"\",[@[Đơn giá]]=\"\"),\"\",ROUNDDOWN([@[Khối lượng]]*[@[Đơn giá]],-7))",
+  "roundDown:-6": "=IF(OR([@[Khối lượng]]=\"\",[@[Đơn giá]]=\"\"),\"\",ROUNDDOWN([@[Khối lượng]]*[@[Đơn giá]],-6))",
+  "roundDown:-5": "=IF(OR([@[Khối lượng]]=\"\",[@[Đơn giá]]=\"\"),\"\",ROUNDDOWN([@[Khối lượng]]*[@[Đơn giá]],-5))",
+  "roundDown:-4": "=IF(OR([@[Khối lượng]]=\"\",[@[Đơn giá]]=\"\"),\"\",ROUNDDOWN([@[Khối lượng]]*[@[Đơn giá]],-4))",
+  "roundDown:-3": "=IF(OR([@[Khối lượng]]=\"\",[@[Đơn giá]]=\"\"),\"\",ROUNDDOWN([@[Khối lượng]]*[@[Đơn giá]],-3))",
+  "roundDown:-2": "=IF(OR([@[Khối lượng]]=\"\",[@[Đơn giá]]=\"\"),\"\",ROUNDDOWN([@[Khối lượng]]*[@[Đơn giá]],-2))",
+  "roundDown:-1": "=IF(OR([@[Khối lượng]]=\"\",[@[Đơn giá]]=\"\"),\"\",ROUNDDOWN([@[Khối lượng]]*[@[Đơn giá]],-1))",
+  "roundDown:0": "=IF(OR([@[Khối lượng]]=\"\",[@[Đơn giá]]=\"\"),\"\",ROUNDDOWN([@[Khối lượng]]*[@[Đơn giá]],0))",
+  "roundDown:1": "=IF(OR([@[Khối lượng]]=\"\",[@[Đơn giá]]=\"\"),\"\",ROUNDDOWN([@[Khối lượng]]*[@[Đơn giá]],1))",
+  "roundDown:2": "=IF(OR([@[Khối lượng]]=\"\",[@[Đơn giá]]=\"\"),\"\",ROUNDDOWN([@[Khối lượng]]*[@[Đơn giá]],2))",
+  "roundDown:3": "=IF(OR([@[Khối lượng]]=\"\",[@[Đơn giá]]=\"\"),\"\",ROUNDDOWN([@[Khối lượng]]*[@[Đơn giá]],3))",
+  "roundDown:4": "=IF(OR([@[Khối lượng]]=\"\",[@[Đơn giá]]=\"\"),\"\",ROUNDDOWN([@[Khối lượng]]*[@[Đơn giá]],4))",
+  "roundDown:5": "=IF(OR([@[Khối lượng]]=\"\",[@[Đơn giá]]=\"\"),\"\",ROUNDDOWN([@[Khối lượng]]*[@[Đơn giá]],5))",
+  "roundDown:6": "=IF(OR([@[Khối lượng]]=\"\",[@[Đơn giá]]=\"\"),\"\",ROUNDDOWN([@[Khối lượng]]*[@[Đơn giá]],6))"
+ },
+ "unitPriceFormulas": {
+  "none:0": "=IF(SUMPRODUCT(--(CQ_Analysis[Mã công tác]=[@[Mã công tác]]),--(CQ_Analysis[Thành tiền]=\"\"))>0,\"\",SUMPRODUCT(--(CQ_Analysis[Mã công tác]=[@[Mã công tác]]),CQ_Analysis[Thành tiền]))",
+  "round:-9": "=IF(SUMPRODUCT(--(CQ_Analysis[Mã công tác]=[@[Mã công tác]]),--(CQ_Analysis[Thành tiền]=\"\"))>0,\"\",ROUND(SUMPRODUCT(--(CQ_Analysis[Mã công tác]=[@[Mã công tác]]),CQ_Analysis[Thành tiền]),-9))",
+  "round:-8": "=IF(SUMPRODUCT(--(CQ_Analysis[Mã công tác]=[@[Mã công tác]]),--(CQ_Analysis[Thành tiền]=\"\"))>0,\"\",ROUND(SUMPRODUCT(--(CQ_Analysis[Mã công tác]=[@[Mã công tác]]),CQ_Analysis[Thành tiền]),-8))",
+  "round:-7": "=IF(SUMPRODUCT(--(CQ_Analysis[Mã công tác]=[@[Mã công tác]]),--(CQ_Analysis[Thành tiền]=\"\"))>0,\"\",ROUND(SUMPRODUCT(--(CQ_Analysis[Mã công tác]=[@[Mã công tác]]),CQ_Analysis[Thành tiền]),-7))",
+  "round:-6": "=IF(SUMPRODUCT(--(CQ_Analysis[Mã công tác]=[@[Mã công tác]]),--(CQ_Analysis[Thành tiền]=\"\"))>0,\"\",ROUND(SUMPRODUCT(--(CQ_Analysis[Mã công tác]=[@[Mã công tác]]),CQ_Analysis[Thành tiền]),-6))",
+  "round:-5": "=IF(SUMPRODUCT(--(CQ_Analysis[Mã công tác]=[@[Mã công tác]]),--(CQ_Analysis[Thành tiền]=\"\"))>0,\"\",ROUND(SUMPRODUCT(--(CQ_Analysis[Mã công tác]=[@[Mã công tác]]),CQ_Analysis[Thành tiền]),-5))",
+  "round:-4": "=IF(SUMPRODUCT(--(CQ_Analysis[Mã công tác]=[@[Mã công tác]]),--(CQ_Analysis[Thành tiền]=\"\"))>0,\"\",ROUND(SUMPRODUCT(--(CQ_Analysis[Mã công tác]=[@[Mã công tác]]),CQ_Analysis[Thành tiền]),-4))",
+  "round:-3": "=IF(SUMPRODUCT(--(CQ_Analysis[Mã công tác]=[@[Mã công tác]]),--(CQ_Analysis[Thành tiền]=\"\"))>0,\"\",ROUND(SUMPRODUCT(--(CQ_Analysis[Mã công tác]=[@[Mã công tác]]),CQ_Analysis[Thành tiền]),-3))",
+  "round:-2": "=IF(SUMPRODUCT(--(CQ_Analysis[Mã công tác]=[@[Mã công tác]]),--(CQ_Analysis[Thành tiền]=\"\"))>0,\"\",ROUND(SUMPRODUCT(--(CQ_Analysis[Mã công tác]=[@[Mã công tác]]),CQ_Analysis[Thành tiền]),-2))",
+  "round:-1": "=IF(SUMPRODUCT(--(CQ_Analysis[Mã công tác]=[@[Mã công tác]]),--(CQ_Analysis[Thành tiền]=\"\"))>0,\"\",ROUND(SUMPRODUCT(--(CQ_Analysis[Mã công tác]=[@[Mã công tác]]),CQ_Analysis[Thành tiền]),-1))",
+  "round:0": "=IF(SUMPRODUCT(--(CQ_Analysis[Mã công tác]=[@[Mã công tác]]),--(CQ_Analysis[Thành tiền]=\"\"))>0,\"\",ROUND(SUMPRODUCT(--(CQ_Analysis[Mã công tác]=[@[Mã công tác]]),CQ_Analysis[Thành tiền]),0))",
+  "round:1": "=IF(SUMPRODUCT(--(CQ_Analysis[Mã công tác]=[@[Mã công tác]]),--(CQ_Analysis[Thành tiền]=\"\"))>0,\"\",ROUND(SUMPRODUCT(--(CQ_Analysis[Mã công tác]=[@[Mã công tác]]),CQ_Analysis[Thành tiền]),1))",
+  "round:2": "=IF(SUMPRODUCT(--(CQ_Analysis[Mã công tác]=[@[Mã công tác]]),--(CQ_Analysis[Thành tiền]=\"\"))>0,\"\",ROUND(SUMPRODUCT(--(CQ_Analysis[Mã công tác]=[@[Mã công tác]]),CQ_Analysis[Thành tiền]),2))",
+  "round:3": "=IF(SUMPRODUCT(--(CQ_Analysis[Mã công tác]=[@[Mã công tác]]),--(CQ_Analysis[Thành tiền]=\"\"))>0,\"\",ROUND(SUMPRODUCT(--(CQ_Analysis[Mã công tác]=[@[Mã công tác]]),CQ_Analysis[Thành tiền]),3))",
+  "round:4": "=IF(SUMPRODUCT(--(CQ_Analysis[Mã công tác]=[@[Mã công tác]]),--(CQ_Analysis[Thành tiền]=\"\"))>0,\"\",ROUND(SUMPRODUCT(--(CQ_Analysis[Mã công tác]=[@[Mã công tác]]),CQ_Analysis[Thành tiền]),4))",
+  "round:5": "=IF(SUMPRODUCT(--(CQ_Analysis[Mã công tác]=[@[Mã công tác]]),--(CQ_Analysis[Thành tiền]=\"\"))>0,\"\",ROUND(SUMPRODUCT(--(CQ_Analysis[Mã công tác]=[@[Mã công tác]]),CQ_Analysis[Thành tiền]),5))",
+  "round:6": "=IF(SUMPRODUCT(--(CQ_Analysis[Mã công tác]=[@[Mã công tác]]),--(CQ_Analysis[Thành tiền]=\"\"))>0,\"\",ROUND(SUMPRODUCT(--(CQ_Analysis[Mã công tác]=[@[Mã công tác]]),CQ_Analysis[Thành tiền]),6))",
+  "roundUp:-9": "=IF(SUMPRODUCT(--(CQ_Analysis[Mã công tác]=[@[Mã công tác]]),--(CQ_Analysis[Thành tiền]=\"\"))>0,\"\",ROUNDUP(SUMPRODUCT(--(CQ_Analysis[Mã công tác]=[@[Mã công tác]]),CQ_Analysis[Thành tiền]),-9))",
+  "roundUp:-8": "=IF(SUMPRODUCT(--(CQ_Analysis[Mã công tác]=[@[Mã công tác]]),--(CQ_Analysis[Thành tiền]=\"\"))>0,\"\",ROUNDUP(SUMPRODUCT(--(CQ_Analysis[Mã công tác]=[@[Mã công tác]]),CQ_Analysis[Thành tiền]),-8))",
+  "roundUp:-7": "=IF(SUMPRODUCT(--(CQ_Analysis[Mã công tác]=[@[Mã công tác]]),--(CQ_Analysis[Thành tiền]=\"\"))>0,\"\",ROUNDUP(SUMPRODUCT(--(CQ_Analysis[Mã công tác]=[@[Mã công tác]]),CQ_Analysis[Thành tiền]),-7))",
+  "roundUp:-6": "=IF(SUMPRODUCT(--(CQ_Analysis[Mã công tác]=[@[Mã công tác]]),--(CQ_Analysis[Thành tiền]=\"\"))>0,\"\",ROUNDUP(SUMPRODUCT(--(CQ_Analysis[Mã công tác]=[@[Mã công tác]]),CQ_Analysis[Thành tiền]),-6))",
+  "roundUp:-5": "=IF(SUMPRODUCT(--(CQ_Analysis[Mã công tác]=[@[Mã công tác]]),--(CQ_Analysis[Thành tiền]=\"\"))>0,\"\",ROUNDUP(SUMPRODUCT(--(CQ_Analysis[Mã công tác]=[@[Mã công tác]]),CQ_Analysis[Thành tiền]),-5))",
+  "roundUp:-4": "=IF(SUMPRODUCT(--(CQ_Analysis[Mã công tác]=[@[Mã công tác]]),--(CQ_Analysis[Thành tiền]=\"\"))>0,\"\",ROUNDUP(SUMPRODUCT(--(CQ_Analysis[Mã công tác]=[@[Mã công tác]]),CQ_Analysis[Thành tiền]),-4))",
+  "roundUp:-3": "=IF(SUMPRODUCT(--(CQ_Analysis[Mã công tác]=[@[Mã công tác]]),--(CQ_Analysis[Thành tiền]=\"\"))>0,\"\",ROUNDUP(SUMPRODUCT(--(CQ_Analysis[Mã công tác]=[@[Mã công tác]]),CQ_Analysis[Thành tiền]),-3))",
+  "roundUp:-2": "=IF(SUMPRODUCT(--(CQ_Analysis[Mã công tác]=[@[Mã công tác]]),--(CQ_Analysis[Thành tiền]=\"\"))>0,\"\",ROUNDUP(SUMPRODUCT(--(CQ_Analysis[Mã công tác]=[@[Mã công tác]]),CQ_Analysis[Thành tiền]),-2))",
+  "roundUp:-1": "=IF(SUMPRODUCT(--(CQ_Analysis[Mã công tác]=[@[Mã công tác]]),--(CQ_Analysis[Thành tiền]=\"\"))>0,\"\",ROUNDUP(SUMPRODUCT(--(CQ_Analysis[Mã công tác]=[@[Mã công tác]]),CQ_Analysis[Thành tiền]),-1))",
+  "roundUp:0": "=IF(SUMPRODUCT(--(CQ_Analysis[Mã công tác]=[@[Mã công tác]]),--(CQ_Analysis[Thành tiền]=\"\"))>0,\"\",ROUNDUP(SUMPRODUCT(--(CQ_Analysis[Mã công tác]=[@[Mã công tác]]),CQ_Analysis[Thành tiền]),0))",
+  "roundUp:1": "=IF(SUMPRODUCT(--(CQ_Analysis[Mã công tác]=[@[Mã công tác]]),--(CQ_Analysis[Thành tiền]=\"\"))>0,\"\",ROUNDUP(SUMPRODUCT(--(CQ_Analysis[Mã công tác]=[@[Mã công tác]]),CQ_Analysis[Thành tiền]),1))",
+  "roundUp:2": "=IF(SUMPRODUCT(--(CQ_Analysis[Mã công tác]=[@[Mã công tác]]),--(CQ_Analysis[Thành tiền]=\"\"))>0,\"\",ROUNDUP(SUMPRODUCT(--(CQ_Analysis[Mã công tác]=[@[Mã công tác]]),CQ_Analysis[Thành tiền]),2))",
+  "roundUp:3": "=IF(SUMPRODUCT(--(CQ_Analysis[Mã công tác]=[@[Mã công tác]]),--(CQ_Analysis[Thành tiền]=\"\"))>0,\"\",ROUNDUP(SUMPRODUCT(--(CQ_Analysis[Mã công tác]=[@[Mã công tác]]),CQ_Analysis[Thành tiền]),3))",
+  "roundUp:4": "=IF(SUMPRODUCT(--(CQ_Analysis[Mã công tác]=[@[Mã công tác]]),--(CQ_Analysis[Thành tiền]=\"\"))>0,\"\",ROUNDUP(SUMPRODUCT(--(CQ_Analysis[Mã công tác]=[@[Mã công tác]]),CQ_Analysis[Thành tiền]),4))",
+  "roundUp:5": "=IF(SUMPRODUCT(--(CQ_Analysis[Mã công tác]=[@[Mã công tác]]),--(CQ_Analysis[Thành tiền]=\"\"))>0,\"\",ROUNDUP(SUMPRODUCT(--(CQ_Analysis[Mã công tác]=[@[Mã công tác]]),CQ_Analysis[Thành tiền]),5))",
+  "roundUp:6": "=IF(SUMPRODUCT(--(CQ_Analysis[Mã công tác]=[@[Mã công tác]]),--(CQ_Analysis[Thành tiền]=\"\"))>0,\"\",ROUNDUP(SUMPRODUCT(--(CQ_Analysis[Mã công tác]=[@[Mã công tác]]),CQ_Analysis[Thành tiền]),6))",
+  "roundDown:-9": "=IF(SUMPRODUCT(--(CQ_Analysis[Mã công tác]=[@[Mã công tác]]),--(CQ_Analysis[Thành tiền]=\"\"))>0,\"\",ROUNDDOWN(SUMPRODUCT(--(CQ_Analysis[Mã công tác]=[@[Mã công tác]]),CQ_Analysis[Thành tiền]),-9))",
+  "roundDown:-8": "=IF(SUMPRODUCT(--(CQ_Analysis[Mã công tác]=[@[Mã công tác]]),--(CQ_Analysis[Thành tiền]=\"\"))>0,\"\",ROUNDDOWN(SUMPRODUCT(--(CQ_Analysis[Mã công tác]=[@[Mã công tác]]),CQ_Analysis[Thành tiền]),-8))",
+  "roundDown:-7": "=IF(SUMPRODUCT(--(CQ_Analysis[Mã công tác]=[@[Mã công tác]]),--(CQ_Analysis[Thành tiền]=\"\"))>0,\"\",ROUNDDOWN(SUMPRODUCT(--(CQ_Analysis[Mã công tác]=[@[Mã công tác]]),CQ_Analysis[Thành tiền]),-7))",
+  "roundDown:-6": "=IF(SUMPRODUCT(--(CQ_Analysis[Mã công tác]=[@[Mã công tác]]),--(CQ_Analysis[Thành tiền]=\"\"))>0,\"\",ROUNDDOWN(SUMPRODUCT(--(CQ_Analysis[Mã công tác]=[@[Mã công tác]]),CQ_Analysis[Thành tiền]),-6))",
+  "roundDown:-5": "=IF(SUMPRODUCT(--(CQ_Analysis[Mã công tác]=[@[Mã công tác]]),--(CQ_Analysis[Thành tiền]=\"\"))>0,\"\",ROUNDDOWN(SUMPRODUCT(--(CQ_Analysis[Mã công tác]=[@[Mã công tác]]),CQ_Analysis[Thành tiền]),-5))",
+  "roundDown:-4": "=IF(SUMPRODUCT(--(CQ_Analysis[Mã công tác]=[@[Mã công tác]]),--(CQ_Analysis[Thành tiền]=\"\"))>0,\"\",ROUNDDOWN(SUMPRODUCT(--(CQ_Analysis[Mã công tác]=[@[Mã công tác]]),CQ_Analysis[Thành tiền]),-4))",
+  "roundDown:-3": "=IF(SUMPRODUCT(--(CQ_Analysis[Mã công tác]=[@[Mã công tác]]),--(CQ_Analysis[Thành tiền]=\"\"))>0,\"\",ROUNDDOWN(SUMPRODUCT(--(CQ_Analysis[Mã công tác]=[@[Mã công tác]]),CQ_Analysis[Thành tiền]),-3))",
+  "roundDown:-2": "=IF(SUMPRODUCT(--(CQ_Analysis[Mã công tác]=[@[Mã công tác]]),--(CQ_Analysis[Thành tiền]=\"\"))>0,\"\",ROUNDDOWN(SUMPRODUCT(--(CQ_Analysis[Mã công tác]=[@[Mã công tác]]),CQ_Analysis[Thành tiền]),-2))",
+  "roundDown:-1": "=IF(SUMPRODUCT(--(CQ_Analysis[Mã công tác]=[@[Mã công tác]]),--(CQ_Analysis[Thành tiền]=\"\"))>0,\"\",ROUNDDOWN(SUMPRODUCT(--(CQ_Analysis[Mã công tác]=[@[Mã công tác]]),CQ_Analysis[Thành tiền]),-1))",
+  "roundDown:0": "=IF(SUMPRODUCT(--(CQ_Analysis[Mã công tác]=[@[Mã công tác]]),--(CQ_Analysis[Thành tiền]=\"\"))>0,\"\",ROUNDDOWN(SUMPRODUCT(--(CQ_Analysis[Mã công tác]=[@[Mã công tác]]),CQ_Analysis[Thành tiền]),0))",
+  "roundDown:1": "=IF(SUMPRODUCT(--(CQ_Analysis[Mã công tác]=[@[Mã công tác]]),--(CQ_Analysis[Thành tiền]=\"\"))>0,\"\",ROUNDDOWN(SUMPRODUCT(--(CQ_Analysis[Mã công tác]=[@[Mã công tác]]),CQ_Analysis[Thành tiền]),1))",
+  "roundDown:2": "=IF(SUMPRODUCT(--(CQ_Analysis[Mã công tác]=[@[Mã công tác]]),--(CQ_Analysis[Thành tiền]=\"\"))>0,\"\",ROUNDDOWN(SUMPRODUCT(--(CQ_Analysis[Mã công tác]=[@[Mã công tác]]),CQ_Analysis[Thành tiền]),2))",
+  "roundDown:3": "=IF(SUMPRODUCT(--(CQ_Analysis[Mã công tác]=[@[Mã công tác]]),--(CQ_Analysis[Thành tiền]=\"\"))>0,\"\",ROUNDDOWN(SUMPRODUCT(--(CQ_Analysis[Mã công tác]=[@[Mã công tác]]),CQ_Analysis[Thành tiền]),3))",
+  "roundDown:4": "=IF(SUMPRODUCT(--(CQ_Analysis[Mã công tác]=[@[Mã công tác]]),--(CQ_Analysis[Thành tiền]=\"\"))>0,\"\",ROUNDDOWN(SUMPRODUCT(--(CQ_Analysis[Mã công tác]=[@[Mã công tác]]),CQ_Analysis[Thành tiền]),4))",
+  "roundDown:5": "=IF(SUMPRODUCT(--(CQ_Analysis[Mã công tác]=[@[Mã công tác]]),--(CQ_Analysis[Thành tiền]=\"\"))>0,\"\",ROUNDDOWN(SUMPRODUCT(--(CQ_Analysis[Mã công tác]=[@[Mã công tác]]),CQ_Analysis[Thành tiền]),5))",
+  "roundDown:6": "=IF(SUMPRODUCT(--(CQ_Analysis[Mã công tác]=[@[Mã công tác]]),--(CQ_Analysis[Thành tiền]=\"\"))>0,\"\",ROUNDDOWN(SUMPRODUCT(--(CQ_Analysis[Mã công tác]=[@[Mã công tác]]),CQ_Analysis[Thành tiền]),6))"
+ },
+ "templateHeaders": [
+  "STT",
+  "Mã công tác",
+  "Nhóm công tác",
+  "Nội dung công việc",
+  "Đơn vị tính",
+  "Khối lượng",
+  "Đơn giá vật liệu",
+  "Đơn giá nhân công",
+  "Đơn giá máy",
+  "Đơn giá khác",
+  "Đơn giá",
+  "Thành tiền",
+  "Ghi chú",
+  "Mã dòng"
+ ],
+ "sheetNames": [
+  "Báo giá (3)",
+  "History (2)"
+ ]
+}

@@ -2,6 +2,7 @@ using System;
 using System.Globalization;
 using System.IO;
 using ConsQuotation.Core.Library;
+using ConsQuotation.Core.Quotation;
 using ConsQuotation.Core.Storage;
 using ConsQuotation.Excel;
 using ConsQuotation.Ui;
@@ -39,8 +40,9 @@ namespace ConsQuotation.LibraryUi
     {
         private DateTime lastWrite;
 
-        public LibrarySession(LibraryService service, IPrompts prompts, IWorkbookGateway workbooks, Func<DateTime> now)
+        public LibrarySession(LibraryService service, IPrompts prompts, IWorkbookGateway workbooks, Func<DateTime> now, IQuoteGateway? quotes = null)
         {
+            Quotes = quotes;
             Service = service;
             Prompts = prompts;
             Workbooks = workbooks;
@@ -51,11 +53,14 @@ namespace ConsQuotation.LibraryUi
             new LibraryService(new LibraryStore(LibraryStore.DefaultPath), () => DateTime.UtcNow, () => Guid.NewGuid().ToString()),
             new DialogPrompts(),
             new ExcelWorkbookGateway(),
-            () => DateTime.Now);
+            () => DateTime.Now,
+            new ExcelQuoteGateway());
 
         public LibraryService Service { get; }
         public IPrompts Prompts { get; }
         public IWorkbookGateway Workbooks { get; }
+        /// <summary>Đọc/ghi báo giá trong workbook (chèn công tác, xuất diễn giải); null trong test không cần Excel.</summary>
+        public IQuoteGateway? Quotes { get; }
         /// <summary>Giờ máy (ngày hiệu lực, tên file sao lưu).</summary>
         public Func<DateTime> Now { get; }
 
@@ -66,6 +71,9 @@ namespace ConsQuotation.LibraryUi
         public string? LoadError { get; private set; }
 
         public string Today => Dates.TodayIso(Now());
+
+        /// <summary>Chèn công tác đang chọn vào báo giá (mở thẻ Thêm công tác); null khi không có cửa sổ Báo giá.</summary>
+        public Action<WorkItem>? InsertToQuote { get; set; }
 
         public event Action? Changed;
 

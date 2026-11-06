@@ -4,6 +4,7 @@ using System.Runtime.InteropServices;
 using System.Windows.Forms;
 using ConsQuotation.Core.Storage;
 using ConsQuotation.LibraryUi;
+using ConsQuotation.QuoteUi;
 using ExcelDna.Integration;
 using Newtonsoft.Json.Linq;
 using ExcelDna.Integration.CustomUI;
@@ -33,6 +34,11 @@ namespace ConsQuotation.Ribbon
             if (LibraryWindow.RibbonSections.TryGetValue(control.Id, out var section))
             {
                 LibraryWindow.Show(section, ExcelDnaUtil.WindowHandle);
+                return;
+            }
+            if (QuoteWindow.RibbonSections.TryGetValue(control.Id, out var quoteSection))
+            {
+                QuoteWindow.Show(quoteSection, ExcelDnaUtil.WindowHandle);
                 return;
             }
             var owner = new ExcelWindow();

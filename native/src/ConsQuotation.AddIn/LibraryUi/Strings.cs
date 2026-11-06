@@ -13,6 +13,8 @@ namespace ConsQuotation.LibraryUi
     {
         public const string Title = "Thư viện của tôi";
         public const string LoadFailed = "Không mở được thư viện";
+        public const string Insert = "Chèn vào báo giá";
+        public const string EmptyButUsed = "Thư viện trên máy này đang trống, nhưng workbook đang mở từng dùng thư viện. Có thể bạn đang dùng máy hoặc tài khoản khác. Hãy khôi phục từ bản sao lưu (nếu có) trước khi nhập lại.";
         public const string Retry = "Thử lại";
 
         public const string TabWorkItems = "Công tác";
@@ -324,6 +326,10 @@ namespace ConsQuotation.LibraryUi
         public const string ColWorkItem = "Công tác liên kết";
 
         public const string ResultTitle = "Kết quả tính";
+        public const string ExportExcel = "Xuất bảng diễn giải ra Excel";
+        public const string ExportInvalid = "Kết quả chưa hợp lệ nên chưa xuất. Sửa các lỗi ở trên trước.";
+        public const string ChangedMeanwhile = "Dữ liệu định mức hoặc giá vừa thay đổi kể từ lúc tính nên chưa xuất. Kết quả đã được tính lại; hãy xem lại rồi xuất.";
+        public static string Exported(string sheet) => $"Đã ghi bảng diễn giải vào sheet mới \"{sheet}\". Công thức Excel tính lại để bạn đối chiếu với cột Kết quả add-in.";
         public const string Valid = "Hợp lệ";
         public const string ValidWithWarnings = "Tính được, có cảnh báo";
         public const string Invalid = "Chưa tính được";

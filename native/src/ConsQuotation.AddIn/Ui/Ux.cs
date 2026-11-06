@@ -19,6 +19,8 @@ namespace ConsQuotation.Ui
         public static readonly Color WarningColor = Color.FromArgb(138, 90, 0);
         public static readonly Color SuccessColor = Color.FromArgb(16, 124, 16);
         public static readonly Color NoticeBack = Color.FromArgb(255, 244, 206);
+        public static readonly Color SuccessBack = Color.FromArgb(223, 246, 221);
+        public static readonly Color ErrorBack = Color.FromArgb(253, 231, 233);
 
         private static readonly float Scale = ReadScale();
 
@@ -345,7 +347,7 @@ namespace ConsQuotation.Ui
         }
     }
 
-    internal sealed class ChoiceField : FieldBox
+    internal class ChoiceField : FieldBox
     {
         public ChoiceField(string label, IEnumerable<Choice> choices, string? hint = null)
             : base(label, Ux.Combo(), false, hint)

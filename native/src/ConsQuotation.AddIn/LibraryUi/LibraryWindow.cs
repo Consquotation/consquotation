@@ -33,6 +33,7 @@ namespace ConsQuotation.LibraryUi
         private readonly Label backupStatus;
         private readonly Button backupNow;
         private readonly Label loadError;
+        private readonly Label emptyButUsed;
         private readonly Button retry;
         private readonly TabControl tabs;
         private readonly ToolStripStatusLabel notice;
@@ -73,6 +74,9 @@ namespace ConsQuotation.LibraryUi
             loadError = Ux.Notice("", Ux.ErrorColor);
             retry = Ux.Button(S.Retry, (_, __) => session.Reload());
             root.Controls.Add(Ux.ButtonRow(loadError, retry));
+            emptyButUsed = Ux.Notice("", Ux.WarningColor);
+            emptyButUsed.Visible = false;
+            root.Controls.Add(emptyButUsed);
 
             tabs = new TabControl { Dock = DockStyle.Fill, Margin = new Padding(0, Ux.Px(6), 0, 0) };
             AddPage(LibrarySection.WorkItems, S.TabWorkItems, new WorkItemsPage(session));
@@ -152,9 +156,31 @@ namespace ConsQuotation.LibraryUi
             }
             backupStatus.Visible = showReminder;
 
+            CheckEmptyButUsed();
             loadError.Text = session.LoadError == null ? "" : $"{S.LoadFailed}: {session.LoadError}";
             loadError.Visible = retry.Visible = session.LoadError != null;
             tabs.Enabled = session.LoadError == null;
+        }
+
+        /// <summary>Thư viện trống mà workbook đang mở từng dùng thư viện: có thể đang ở máy khác, nhắc khôi phục trước khi nhập lại.</summary>
+        private async void CheckEmptyButUsed()
+        {
+            Ux.Show(emptyButUsed, null);
+            if (session.Quotes == null || session.LoadError != null || !session.Library.IsEmpty)
+            {
+                return;
+            }
+            try
+            {
+                if (await session.Quotes.WasLibraryUsedAsync() && session.Library.IsEmpty && !IsDisposed)
+                {
+                    Ux.Show(emptyButUsed, S.EmptyButUsed);
+                }
+            }
+            catch (Exception ex) when (ex is Excel.WorkbookException || ex is System.Runtime.InteropServices.COMException)
+            {
+                // Không có workbook đang mở hoặc Excel đang bận: bỏ qua lời nhắc phụ này.
+            }
         }
 
         protected override void OnActivated(EventArgs e)
@@ -176,6 +202,10 @@ namespace ConsQuotation.LibraryUi
     internal static class LibraryWindow
     {
         private static LibraryForm? form;
+        private static LibrarySession? shared;
+
+        /// <summary>Phiên thư viện dùng chung cho cửa sổ Thư viện và cửa sổ Báo giá (cùng luồng giao diện).</summary>
+        public static LibrarySession SharedSession() => shared ?? (shared = LibrarySession.CreateDefault());
 
         public static readonly IReadOnlyDictionary<string, LibrarySection> RibbonSections = new Dictionary<string, LibrarySection>
         {
@@ -192,7 +222,9 @@ namespace ConsQuotation.LibraryUi
         {
             if (form == null || form.IsDisposed)
             {
-                form = new LibraryForm(LibrarySession.CreateDefault());
+                var session = SharedSession();
+                session.InsertToQuote = item => QuoteUi.QuoteWindow.InsertFromLibrary(item, excelWindow);
+                form = new LibraryForm(session);
                 form.SelectSection(section);
                 form.Show(new OwnerWindow(excelWindow));
             }

@@ -200,7 +200,7 @@ namespace ConsQuotation.Excel
             throw new WorkbookException($"Workbook \"{name}\" không còn mở. Bấm Làm mới danh sách sheet.");
         }
 
-        private sealed class Area
+        internal sealed class Area
         {
             public int FirstRow { get; set; }
             public int FirstColumn { get; set; }
@@ -215,7 +215,7 @@ namespace ConsQuotation.Excel
         /// Vùng có dữ liệu (ô có giá trị hoặc công thức), như getUsedRange(valuesOnly) của bản web. UsedRange của
         /// COM gồm cả ô chỉ có định dạng nên không dùng.
         /// </summary>
-        private static Area? Bounds(dynamic sheet)
+        internal static Area? Bounds(dynamic sheet)
         {
             dynamic cells = sheet.Cells;
             dynamic first = cells[1, 1];
@@ -291,7 +291,7 @@ namespace ConsQuotation.Excel
         }
 
         /// <summary>Mảng 0-based từ giá trị COM (mảng 1-based, hoặc một giá trị khi vùng chỉ có một ô).</summary>
-        private static object?[,] AsArray(object? value, int rows, int columns)
+        internal static object?[,] AsArray(object? value, int rows, int columns)
         {
             var result = new object?[rows, columns];
             if (value is object[,] array)

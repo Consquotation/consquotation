@@ -4,7 +4,9 @@ using System.Drawing;
 using System.Globalization;
 using System.IO;
 using System.Linq;
+using System.Threading.Tasks;
 using System.Windows.Forms;
+using ConsQuotation.Core.Quotation;
 using ConsQuotation.Core.Library;
 using ConsQuotation.Core.Numbers;
 using ConsQuotation.Core.Pricing;
@@ -48,6 +50,7 @@ namespace ConsQuotation.LibraryUi
         private readonly Label resultStatus;
         private readonly TableLayoutPanel totals;
         private readonly Label generalIssues;
+        private readonly Label exportNote;
 
         public NormDialog(LibrarySession session, string? normId)
         {
@@ -189,6 +192,12 @@ namespace ConsQuotation.LibraryUi
             components.Controls.Add(Ux.Text(NS.Rounding, color: SystemColors.GrayText));
             generalIssues = Ux.Notice("", SystemColors.ControlText);
             components.Controls.Add(generalIssues);
+            ExportButton = Ux.Button(NS.ExportExcel, async (_, __) => await ExportAsync());
+            ExportButton.Visible = session.Quotes != null;
+            exportNote = Ux.Text("");
+            exportNote.Visible = false;
+            components.Controls.Add(Ux.ButtonRow(ExportButton));
+            components.Controls.Add(exportNote);
             componentsSection = components;
             body.Controls.Add(components);
 
@@ -227,6 +236,8 @@ namespace ConsQuotation.LibraryUi
         public NormCalcResult? Result => result;
         public string StatusMessage => statusMessage.Text;
         public string FailureText => failure.Text;
+        public Button ExportButton { get; }
+        public string ExportNote => exportNote.Text;
 
         private CheckBox WasteBox => (CheckBox)WasteIncluded.Editor;
 
@@ -436,6 +447,41 @@ namespace ConsQuotation.LibraryUi
             generalIssues.ForeColor = resultStatus.ForeColor;
             generalIssues.Visible = general.Count > 0;
             ShowSelectedComponent();
+        }
+
+        /// <summary>Xuất bảng diễn giải: kiểm tra lại đầu vào ngay trước khi ghi, dữ liệu vừa đổi thì không xuất.</summary>
+        private async Task ExportAsync()
+        {
+            exportNote.ForeColor = Ux.WarningColor;
+            if (result == null || result.Status == CalcStatus.Invalid)
+            {
+                Ux.Show(exportNote, NS.ExportInvalid);
+                return;
+            }
+            ExportButton.Enabled = false;
+            try
+            {
+                var today = session.Today;
+                var check = NormCalc.Recheck(result, session.Service.Load(), new CalcOptions(today, DateTime.UtcNow.ToString("yyyy-MM-dd'T'HH:mm:ss.fff'Z'", CultureInfo.InvariantCulture)));
+                if (check == null)
+                {
+                    session.Reload();
+                    Ux.Show(exportNote, NS.ChangedMeanwhile);
+                    return;
+                }
+                var sheet = await session.Quotes!.WriteExplanationAsync(NormExplanation.Build(check.Value.Norm, check.Value.Result, today));
+                exportNote.ForeColor = Ux.SuccessColor;
+                Ux.Show(exportNote, NS.Exported(sheet));
+            }
+            catch (Exception ex) when (ex is Excel.WorkbookException || ex is System.Runtime.InteropServices.COMException || ex is LibraryStorageException)
+            {
+                exportNote.ForeColor = Ux.ErrorColor;
+                Ux.Show(exportNote, Excel.ExcelErrors.DescribeWrite(ex));
+            }
+            finally
+            {
+                ExportButton.Enabled = true;
+            }
         }
 
         private NormComponent? SelectedComponent() =>
