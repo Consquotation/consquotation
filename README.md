@@ -2,6 +2,19 @@
 
 Microsoft Excel Add-in hỗ trợ lập báo giá thi công xây dựng **ngay trong Excel**. Excel vẫn là bảng tính chính (ô, công thức, copy/paste, in, lưu file); add-in bổ sung tab Ribbon, task pane và nghiệp vụ báo giá. Mỗi người dùng tự xây dựng và quản lý thư viện công tác, định mức, đơn giá của mình — add-in **không** kèm sẵn dữ liệu định mức hay đơn giá.
 
+## Bản Windows
+
+Bản chính từ 2.0.0: add-in .NET Framework 4.8 (Excel-DNA) trong thư mục `native/`, cài bằng file `.exe` từ [GitHub Releases](https://github.com/Consquotation/consquotation/releases), chạy trên Excel 2016 trở lên bản 32-bit và 64-bit.
+
+- Người dùng: [docs/native/USER_GUIDE.md](docs/native/USER_GUIDE.md).
+- Kế hoạch và từng giai đoạn: [docs/NATIVE_PLAN.md](docs/NATIVE_PLAN.md), [docs/native/](docs/native/).
+- Nghiệm thu: [docs/native/ACCEPTANCE.md](docs/native/ACCEPTANCE.md).
+- Build và test: `dotnet test native/ConsQuotation.sln`. Gắn tag `vX.Y.Z` thì GitHub Actions đóng gói và đăng Release.
+
+Bản Windows không gửi workbook hay thư viện đi đâu. Add-in chỉ kết nối mạng để tải `licenses.json` khi bấm Kích hoạt và hỏi GitHub Releases tối đa 1 lần mỗi ngày.
+
+Bản web (Office.js) dừng ở 1.13.1. Phần còn lại của file này mô tả bản web.
+
 ## Trạng thái
 
 Đã triển khai theo bộ đặc tả trong `prompts/`: 04 (setup, manifest), 05 (Ribbon, task pane), 06 (workbook integration), 08 (thư viện cá nhân), 09 (nhập/xuất, sao lưu thư viện), 10 (tính đơn giá và thành tiền), 07 (quy trình báo giá), 11 (mẫu báo giá và in ấn), 13–17 (kiểm tra lỗi, tương thích, bảo mật, kiểm thử, hiệu năng), 20 (nghiệm thu — xem [biên bản](tests/manual/acceptance-checklist.md)).

@@ -7,13 +7,15 @@ namespace ConsQuotation
     {
         public void AutoOpen()
         {
-            // Ribbon do RibbonController tự đăng ký; cửa sổ Thư viện và Báo giá tạo khi người dùng bấm nút.
+            // Ribbon do RibbonController tự đăng ký; các cửa sổ tạo khi người dùng bấm nút.
+            SystemUi.SystemServices.CheckForUpdateInBackground(Ribbon.RibbonController.RefreshLabels);
         }
 
         public void AutoClose()
         {
             LibraryUi.LibraryWindow.CloseAll();
             QuoteUi.QuoteWindow.CloseAll();
+            SystemUi.SystemWindow.CloseAll();
         }
     }
 }

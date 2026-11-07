@@ -6,7 +6,9 @@ namespace ConsQuotation
     public static class AppInfo
     {
         public const string Name = "ConsQuotation";
-        public const string ReleasesUrl = "https://github.com/Consquotation/consquotation/releases";
+        public const string ReleasesUrl = Core.Updates.Releases.RepoPage;
+        public const string IssuesUrl = "https://github.com/Consquotation/consquotation/issues";
+        public const string GuideUrl = "https://github.com/Consquotation/consquotation/blob/master/docs/native/USER_GUIDE.md";
 
         /// <summary>Phiên bản đầy đủ (ví dụ 2.0.0-alpha.1), lấy từ thuộc tính build.</summary>
         public static string Version
@@ -21,9 +23,6 @@ namespace ConsQuotation
             }
         }
 
-        public static string VersionLine => $"Phiên bản {Version} (bản Windows, đang phát triển).";
-
-        public static string AboutText =>
-            $"{Name}: lập báo giá thi công xây dựng ngay trong Excel.\n\n{VersionLine}\n\nBản cài đặt và các bản cập nhật: {ReleasesUrl}";
+        public static string VersionLine => $"Phiên bản {Version}{(Version.Contains("-") ? " (bản thử)" : "")}.";
     }
 }

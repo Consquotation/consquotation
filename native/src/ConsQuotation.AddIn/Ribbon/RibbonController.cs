@@ -1,12 +1,12 @@
+using System;
 using System.IO;
 using System.Reflection;
 using System.Runtime.InteropServices;
-using System.Windows.Forms;
-using ConsQuotation.Core.Storage;
+using ConsQuotation.Core.Licensing;
 using ConsQuotation.LibraryUi;
 using ConsQuotation.QuoteUi;
+using ConsQuotation.SystemUi;
 using ExcelDna.Integration;
-using Newtonsoft.Json.Linq;
 using ExcelDna.Integration.CustomUI;
 
 namespace ConsQuotation.Ribbon
@@ -16,6 +16,8 @@ namespace ConsQuotation.Ribbon
     public class RibbonController : ExcelRibbon
     {
         public const string ResourceName = "ConsQuotation.Ribbon.xml";
+
+        private static IRibbonUI? ribbon;
 
         public override string GetCustomUI(string ribbonId) => LoadXml();
 
@@ -28,58 +30,74 @@ namespace ConsQuotation.Ribbon
             }
         }
 
+        public void OnRibbonLoad(IRibbonUI ui) => ribbon = ui;
+
+        /// <summary>Nhãn đổi theo trạng thái: nút Bản quyền hiện thời hạn, nút Cài đặt báo có bản mới. Chỉ đọc file, không ghi gì.</summary>
+        public string GetLabel(IRibbonControl control)
+        {
+            try
+            {
+                return control.Id == RibbonCommands.License
+                    ? Sys.LicenseLabel(SystemServices.License.Peek())
+                    : SystemServices.Updates.Known != null ? Sys.SettingsUpdateLabel : RibbonCommands.All[control.Id];
+            }
+            catch (Exception ex) when (ex is IOException || ex is UnauthorizedAccessException)
+            {
+                return RibbonCommands.All[control.Id];
+            }
+        }
+
         /// <summary>Mọi nút ribbon gọi về đây; id nút là mã lệnh.</summary>
         public void OnAction(IRibbonControl control)
         {
-            if (LibraryWindow.RibbonSections.TryGetValue(control.Id, out var section))
+            var expired = IsExpired();
+            ribbon?.InvalidateControl(RibbonCommands.License);
+            if (SystemWindow.RibbonSections.TryGetValue(control.Id, out var system))
+            {
+                ShowSystem(system);
+            }
+            else if (expired)
+            {
+                // Hết dùng thử, chưa cấp phép: khóa các chức năng ghi như bản web (ADR-0015); file Excel vẫn dùng bình thường.
+                ShowSystem(SystemSection.License);
+            }
+            else if (LibraryWindow.RibbonSections.TryGetValue(control.Id, out var section))
             {
                 LibraryWindow.Show(section, ExcelDnaUtil.WindowHandle);
-                return;
             }
-            if (QuoteWindow.RibbonSections.TryGetValue(control.Id, out var quoteSection))
+            else if (QuoteWindow.RibbonSections.TryGetValue(control.Id, out var quoteSection))
             {
                 QuoteWindow.Show(quoteSection, ExcelDnaUtil.WindowHandle);
-                return;
             }
-            var owner = new ExcelWindow();
-            if (control.Id == RibbonCommands.Help)
-            {
-                MessageBox.Show(owner, $"{AppInfo.AboutText}\n\n{LibraryLine()}", AppInfo.Name, MessageBoxButtons.OK, MessageBoxIcon.Information);
-                return;
-            }
-            var title = RibbonCommands.All.TryGetValue(control.Id, out var command) ? command.Title : control.Id;
-            var stage = command?.Stage ?? "sau";
-            MessageBox.Show(
-                owner,
-                $"Chức năng \"{title}\" đang được chuyển sang bản cài đặt cho Windows và sẽ có ở giai đoạn {stage}.\n\n{AppInfo.VersionLine}",
-                AppInfo.Name,
-                MessageBoxButtons.OK,
-                MessageBoxIcon.Information);
         }
 
-        /// <summary>
-        /// Nơi lưu và số bản ghi của thư viện trên máy, kèm phiên bản thư viện mã đã nạp (để chẩn đoán bản
-        /// cài thiếu thành phần). Chỉ đọc: file chưa có thì không tạo.
-        /// </summary>
-        private static string LibraryLine()
+        private static void ShowSystem(SystemSection section) => SystemWindow.Show(section, ExcelDnaUtil.WindowHandle, RefreshLabels);
+
+        /// <summary>Bắt đầu tính dùng thử ở lần bấm đầu tiên. Không đọc được file thì không khóa người dùng vì lỗi của máy.</summary>
+        private static bool IsExpired()
         {
-            var store = new LibraryStore(LibraryStore.DefaultPath);
-            var components = $"Thành phần: ConsQuotation.Core {typeof(LibraryStore).Assembly.GetName().Version}, Newtonsoft.Json {typeof(JToken).Assembly.GetName().Version}.";
             try
             {
-                var library = store.LoadAll();
-                return $"Thư viện trên máy: {store.FilePath}\n{library.WorkItems.Count} công tác, {library.Resources.Count} tài nguyên, {library.Norms.Count} định mức.\n{components}";
+                return SystemServices.License.State().Kind == LicenseKind.Expired;
             }
-            catch (LibraryStorageException ex)
+            catch (Exception ex) when (ex is IOException || ex is UnauthorizedAccessException)
             {
-                return $"{ex.Message}\n{components}";
+                return false;
             }
         }
 
-        /// <summary>Cửa sổ Excel làm cửa sổ cha cho hộp thoại, để hộp thoại nằm trên Excel.</summary>
-        private sealed class ExcelWindow : IWin32Window
+        /// <summary>Gọi được từ mọi luồng: ribbon chỉ cho phép gọi từ luồng chính của Excel.</summary>
+        public static void RefreshLabels() => ExcelAsyncUtil.QueueAsMacro(() =>
         {
-            public System.IntPtr Handle => ExcelDnaUtil.WindowHandle;
-        }
+            try
+            {
+                ribbon?.InvalidateControl(RibbonCommands.License);
+                ribbon?.InvalidateControl(RibbonCommands.Settings);
+            }
+            catch (COMException)
+            {
+                // Excel đang đóng: không còn ribbon để cập nhật.
+            }
+        });
     }
 }

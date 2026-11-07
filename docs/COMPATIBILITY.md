@@ -1,5 +1,7 @@
 # Ma trận tương thích Excel (prompts/14)
 
+File này mô tả bản web. Bản Windows: xem [native/ACCEPTANCE.md](native/ACCEPTANCE.md).
+
 Cập nhật 2026-10-21. Quyết định nền tảng: [ADR-0001](ADR/0001-nen-tang-excel-muc-tieu.md). Manifest và requirement set: [ADR-0002](ADR/0002-manifest-va-requirement-set.md).
 
 ## Nền tảng

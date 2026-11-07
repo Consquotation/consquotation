@@ -69,9 +69,25 @@ namespace ConsQuotation.Core.Licensing
             if (string.IsNullOrEmpty(trialStart))
             {
                 trialStart = NowIso();
-                storage.Write(new StoredLicense { TrialStart = trialStart, Activation = stored.Activation });
+                try
+                {
+                    storage.Write(new StoredLicense { TrialStart = trialStart, Activation = stored.Activation });
+                }
+                catch (Exception ex) when (ex is System.IO.IOException || ex is UnauthorizedAccessException)
+                {
+                    // Không lưu được: lần mở sau coi như lần đầu (như bản web), không chặn người dùng.
+                }
             }
             return License.Resolve(trialStart!, stored.Activation, nowUtc());
+        }
+
+        /// <summary>Trạng thái để hiển thị, không ghi gì; null khi chưa bắt đầu dùng thử.</summary>
+        public LicenseState? Peek()
+        {
+            var stored = storage.Read();
+            return stored.Activation == null && string.IsNullOrEmpty(stored.TrialStart)
+                ? null
+                : License.Resolve(stored.TrialStart ?? NowIso(), stored.Activation, nowUtc());
         }
 
         public async Task<ActivateResult> ActivateAsync(string emailText, string codeText)

@@ -2,7 +2,7 @@
   <!-- Thiết lập chung cho mọi project .NET của ConsQuotation (docs/NATIVE_PLAN.md). -->
   <PropertyGroup>
     <!-- Bản build trên máy; quy trình Release ghi đè bằng -p:Version=<tag>. -->
-    <Version>2.0.0-alpha.1</Version>
+    <Version>2.0.0</Version>
     <Company>ConsQuotation</Company>
     <Product>ConsQuotation</Product>
     <Copyright>ConsQuotation</Copyright>

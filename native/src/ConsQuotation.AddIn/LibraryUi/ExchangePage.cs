@@ -138,37 +138,53 @@ namespace ConsQuotation.LibraryUi
             Ux.Show(backupNotice, text);
         }
 
-        private BackupMeta Meta(DateTime utc) => new BackupMeta
+        private static BackupMeta Meta(LibrarySession session, DateTime utc) => new BackupMeta
         {
             ExportedAt = utc.ToString("yyyy-MM-dd'T'HH:mm:ss.fff'Z'", CultureInfo.InvariantCulture),
             AppVersion = AppInfo.Version,
-            LibraryName = Session.Service.LibraryName(),
+            LibraryName = session.Service.LibraryName(),
         };
 
         private static string Downloads => Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "Downloads");
 
-        /// <summary>Đọc lại thư viện từ file, ghi .json vào nơi người dùng chọn và ghi mốc sao lưu.</summary>
         public Task SaveJson()
+        {
+            var saved = WriteJsonBackup(Session, this);
+            if (saved.Error != null)
+            {
+                ShowBackupNotice(saved.Error, error: true);
+            }
+            else if (saved.Done != null)
+            {
+                ShowBackupNotice(saved.Done, error: false);
+            }
+            return Task.CompletedTask;
+        }
+
+        /// <summary>
+        /// Đọc lại thư viện từ file, ghi .json vào nơi người dùng chọn và ghi mốc sao lưu. Trả về câu báo xong hoặc
+        /// câu báo lỗi; người dùng hủy thì cả hai đều null. Thẻ Bản quyền cũng dùng khi hết hạn dùng thử.
+        /// </summary>
+        internal static (string? Done, string? Error) WriteJsonBackup(LibrarySession session, IWin32Window owner)
         {
             try
             {
-                var path = Session.Prompts.SaveFile(this, Backup.BackupFileName(Session.Now(), "json"), XS.JsonFilter, Downloads);
+                var path = session.Prompts.SaveFile(owner, Backup.BackupFileName(session.Now(), "json"), XS.JsonFilter, Downloads);
                 if (path == null)
                 {
-                    return Task.CompletedTask;
+                    return (null, null);
                 }
                 var now = DateTime.UtcNow;
-                var current = Session.Service.Load();
-                File.WriteAllText(path, Backup.ToBackupJson(current, Meta(now)), new UTF8Encoding(false));
-                Session.Service.RecordBackup(now);
-                Session.Reload();
-                ShowBackupNotice(XS.JsonDone(path), error: false);
+                var current = session.Service.Load();
+                File.WriteAllText(path, Backup.ToBackupJson(current, Meta(session, now)), new UTF8Encoding(false));
+                session.Service.RecordBackup(now);
+                session.Reload();
+                return (XS.JsonDone(path), null);
             }
             catch (Exception ex) when (ex is IOException || ex is UnauthorizedAccessException || ex is LibraryStorageException)
             {
-                ShowBackupNotice($"{XS.Failed}: {ex.Message}", error: true);
+                return (null, $"{XS.Failed}: {ex.Message}");
             }
-            return Task.CompletedTask;
         }
 
         public async Task ExportWorkbook(bool empty)
@@ -177,7 +193,7 @@ namespace ConsQuotation.LibraryUi
             {
                 var now = DateTime.UtcNow;
                 var data = empty ? new LibrarySnapshot() : Session.Service.Load();
-                var bytes = Xlsx.Build(Backup.ExportSheets(data, Meta(now)));
+                var bytes = Xlsx.Build(Backup.ExportSheets(data, Meta(Session, now)));
                 await Session.Workbooks.OpenNewWorkbookAsync(bytes, empty ? "MauThuVien" : "ThuVien");
                 if (!empty)
                 {

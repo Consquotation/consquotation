@@ -3,8 +3,9 @@
   Ribbon ConsQuotation: cùng 5 nhóm, 16 nút và 1 menu như bản web 1.13 (docs/NATIVE_PLAN.md).
   Icon là icon có sẵn của Office (imageMso), đã kiểm tên trên Excel 16.0.20527 ngày 2026-11-01.
   Mọi nút gọi RibbonController.OnAction; mã lệnh là id của nút (RibbonCommands).
+  Nhãn Cài đặt và Bản quyền đổi theo trạng thái (RibbonController.GetLabel).
 -->
-<customUI xmlns="http://schemas.microsoft.com/office/2009/07/customui">
+<customUI xmlns="http://schemas.microsoft.com/office/2009/07/customui" onLoad="OnRibbonLoad">
   <ribbon>
     <tabs>
       <tab id="cqTab" label="ConsQuotation">
@@ -41,9 +42,9 @@
           </menu>
         </group>
         <group id="cqGroupSystem" label="Hệ thống">
-          <button id="cqSettings" label="Cài đặt" size="large" imageMso="ApplicationOptionsDialog" onAction="OnAction"
+          <button id="cqSettings" getLabel="GetLabel" size="large" imageMso="ApplicationOptionsDialog" onAction="OnAction"
                   screentip="Cài đặt" supertip="Phiên bản, nơi lưu thư viện, kiểm tra cập nhật." />
-          <button id="cqLicense" label="Bản quyền" size="large" imageMso="AdpPrimaryKey" onAction="OnAction"
+          <button id="cqLicense" getLabel="GetLabel" size="large" imageMso="AdpPrimaryKey" onAction="OnAction"
                   screentip="Bản quyền" supertip="Thời hạn dùng thử, gửi yêu cầu cấp phép và nhập mã cấp phép." />
         </group>
         <group id="cqGroupHelp" label="Trợ giúp">

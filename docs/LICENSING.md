@@ -2,6 +2,8 @@
 
 Quyết định và lý do: [ADR-0015](ADR/0015-cap-phep-bang-ma-khong-may-chu.md). Áp dụng từ bản 1.12.0.
 
+Bản Windows (từ 2.0.0) dùng cùng cơ chế và cùng `licenses.json` trên GitHub Pages, nên quy trình duyệt dưới đây không đổi và mã đã cấp dùng được ở cả hai bản. Vì vậy phải giữ `licenses.json` trên GitHub Pages kể cả sau khi ngừng bản web. Khác biệt ở phía người dùng: xem [docs/native/N6_RELEASE.md](native/N6_RELEASE.md).
+
 ## Người dùng thấy gì
 
 1. Lần đầu mở add-in trên một máy: dùng thử đủ tính năng 30 ngày. Tiêu đề task pane hiện số ngày còn lại.

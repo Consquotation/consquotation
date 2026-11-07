@@ -32,6 +32,9 @@ jobs:
       - name: Test
         run: dotnet test native/ConsQuotation.sln -c Release
 
+      - name: Test trong tiến trình 32-bit
+        run: dotnet test native/ConsQuotation.sln -c Release --no-build -- RunConfiguration.TargetPlatform=x86
+
       - name: Build add-in
         run: dotnet build native/src/ConsQuotation.AddIn/ConsQuotation.AddIn.csproj -c Release -p:Version=${{ env.VERSION }}
 
@@ -63,9 +66,11 @@ jobs:
 
           Cài đặt: tải ConsQuotation-Setup-$env:VERSION.exe, đóng Excel, chạy file vừa tải. File chưa ký số nên Windows có thể hiện "Windows protected your PC": bấm More info › Run anyway. Mở Excel: tab ConsQuotation xuất hiện trên ribbon.
 
-          Gỡ cài: Settings › Apps › ConsQuotation › Uninstall.
+          Gỡ cài: Settings › Apps › ConsQuotation › Uninstall. Thư viện của bạn không bị xóa.
 
           Kiểm tra file: so mã SHA-256 với file .sha256 đi kèm.
+
+          Hướng dẫn sử dụng và cách chuyển từ bản web: https://github.com/Consquotation/consquotation/blob/master/docs/native/USER_GUIDE.md
           "@
           $flags = @()
           if ($env:VERSION -match '-') { $flags += "--prerelease" }

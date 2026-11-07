@@ -1,6 +1,8 @@
 # Bảo mật và triển khai — tình trạng theo prompts/15
 
-Rà soát ngày 2026-10-21, sau giai đoạn prompts/13–17.
+Rà soát ngày 2026-10-21, sau giai đoạn prompts/13–17. Bảng dưới mô tả bản web.
+
+Bản Windows có thêm 2 kết nối mạng: tải `licenses.json` khi bấm Kích hoạt và hỏi GitHub Releases tối đa 1 lần mỗi ngày. Cả hai đều chỉ tải về, không gửi email, mã cấp phép, workbook hay thư viện. Đường dẫn lấy từ GitHub chỉ được mở bằng trình duyệt khi nằm trong trang phát hành của sản phẩm. File `.exe` chưa ký số; người dùng đối chiếu được bằng mã SHA-256 đi kèm. Chi tiết: [native/N6_RELEASE.md](native/N6_RELEASE.md).
 
 | Yêu cầu | Tình trạng | Bằng chứng |
 |---|---|---|

@@ -24,6 +24,8 @@
   <ItemGroup>
     <!-- Gọi mô hình đối tượng COM của Excel bằng dynamic (không cần PIA); có sẵn trong .NET Framework. -->
     <Reference Include="Microsoft.CSharp" />
+    <!-- Tải danh sách cấp phép và hỏi bản mới (SystemUi); có sẵn trong .NET Framework. -->
+    <Reference Include="System.Net.Http" />
   </ItemGroup>
 
   <ItemGroup>

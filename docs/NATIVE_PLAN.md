@@ -1,6 +1,6 @@
 # Kế hoạch chuyển ConsQuotation sang add-in Windows (.NET, Excel-DNA)
 
-Trạng thái: **chờ chủ sản phẩm duyệt**. Quyết định của chủ sản phẩm ngày 2026-11-01:
+Trạng thái: N0 đến N6 đã làm xong trên máy kiểm chính (Excel 64-bit). Còn lại trước khi phát hành `v2.0.0`: các mục chạy tay trong [bộ kịch bản nghiệm thu](native/ACCEPTANCE.md). Quyết định của chủ sản phẩm ngày 2026-11-01:
 - cài bằng file .exe tải từ GitHub Releases của repo `Consquotation/consquotation`;
 - giao diện và icon kiểu cổ điển của Excel;
 - viết lại thành add-in Windows thuần (hướng B);
