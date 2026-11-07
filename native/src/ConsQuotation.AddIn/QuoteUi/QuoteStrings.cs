@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using System.Linq;
+using ConsQuotation.Core.Pricing;
 using ConsQuotation.Core.Quotation;
 
 namespace ConsQuotation.QuoteUi
@@ -13,6 +14,11 @@ namespace ConsQuotation.QuoteUi
         public const string TabInfo = "Thông tin";
         public const string TabAdd = "Thêm công tác";
         public const string TabItems = "Công tác";
+        public const string TabCheck = "Kiểm tra";
+        public const string TabSummary = "Tổng hợp";
+        public const string TabRounding = "Làm tròn";
+        public const string TabTerms = "Ghi chú";
+        public const string TabPrint = "Trang in";
         public const string Cancel = "Hủy";
         public const string Refresh = "Làm mới";
         public const string Table = "Bảng báo giá";
@@ -176,6 +182,9 @@ namespace ConsQuotation.QuoteUi
             public const string ActionInfo = "Nhập thông tin";
             public const string ActionAdd = "Thêm công tác";
             public const string ActionItems = "Xem công tác";
+            public const string ActionCheck = "Kiểm tra báo giá";
+            public const string ActionSummary = "Thiết lập tổng hợp";
+            public const string ActionPrint = "Thiết lập trang in";
             public const string NoStatus = "Workbook là nguồn sự thật: mỗi lần kiểm tra đều đọc lại dữ liệu hiện tại.";
 
             public static readonly IReadOnlyDictionary<StepState, string> States = new Dictionary<StepState, string>
@@ -200,7 +209,7 @@ namespace ConsQuotation.QuoteUi
             public const string DetailNoTable = "Chưa có bảng báo giá trong workbook.";
             public const string DetailHeadersChanged = "Bảng đã bị đổi tên cột mẫu: add-in không ghi vào bảng này.";
             public const string DetailSummaryNone = "Không có (không bắt buộc).";
-            public const string DetailFinish = "Lưu bằng Excel (Ctrl+S); in hoặc xuất PDF bằng File › Print / File › Export. ConsQuotation không tự gửi báo giá cho ai.";
+            public const string DetailFinish = "Ghi chú, điều khoản và trang in ở các thẻ Ghi chú, Trang in. Lưu bằng Excel (Ctrl+S); in hoặc xuất PDF bằng File › Print / File › Export. ConsQuotation không tự gửi báo giá cho ai.";
 
             public static string DetailTable(string name, string sheet) => $"Đang dùng {name} (sheet \"{sheet}\"). Add-in kiểm tra và hỏi trước khi ghi vào vùng có dữ liệu.";
             public static string DetailInfo(int filled, int total) => $"Đã điền {filled}/{total} mục (không bắt buộc).";
@@ -211,6 +220,221 @@ namespace ConsQuotation.QuoteUi
             public static string DetailSummaryTotal(string total) => $"Tổng cộng sau điều chỉnh: {total}.";
             public static string DetailSummaryError(string error) => $"Tổng cộng đang lỗi {error}.";
             public static string CheckedAt(string time) => $"Kiểm tra lúc {time}. Nếu bạn sửa sheet sau đó, hãy bấm Kiểm tra lại.";
+        }
+
+        internal static class Check
+        {
+            public const string Title = "Kiểm tra báo giá";
+            public const string Intro = "Đọc trực tiếp bảng báo giá trên sheet: lỗi công thức, thiếu hoặc sai dữ liệu, đơn giá bằng 0, công thức bị sửa tay, đơn giá lệch sheet phân tích, phần tổng hợp. Add-in chỉ báo; mọi sửa đổi đều do bạn xác nhận.";
+            public const string Run = "Kiểm tra";
+            public const string GoTo = "Đi tới ô";
+            public const string Error = "Lỗi";
+            public const string Warning = "Cảnh báo";
+            public const string ColSeverity = "Mức";
+            public const string ColCell = "Ô";
+            public const string ColWhere = "Vị trí";
+            public const string ColMessage = "Nội dung";
+            public const string CircularNote = "Tham chiếu vòng: Excel tự cảnh báo trên thanh trạng thái; add-in không đọc được trạng thái này.";
+            public const string FixTitle = "Cập nhật đơn giá theo phân tích?";
+            public const string Changed = "Bảng báo giá vừa thay đổi kể từ lúc kiểm tra; chưa ghi gì. Hãy kiểm tra lại.";
+            public const string MethodsTitle = "Phương pháp đơn giá";
+            public const string Confirm = "Đồng ý";
+
+            public static readonly IReadOnlyDictionary<PriceMethod, string> Methods = new Dictionary<PriceMethod, string>
+            {
+                [PriceMethod.Direct] = "Nhập trực tiếp",
+                [PriceMethod.Library] = "Thư viện",
+                [PriceMethod.Composition] = "Phân tích định mức",
+                [PriceMethod.Formula] = "Công thức tự nhập",
+                [PriceMethod.Missing] = "Chưa có đơn giá",
+            };
+
+            public static string Ok(int rows) => $"Không phát hiện vấn đề nào ({rows} dòng công tác).";
+            public static string Counts(int errors, int warnings, int rows) => $"{rows} dòng công tác: {errors} lỗi, {warnings} cảnh báo.";
+            public static string Hint(string text) => $"Cách sửa: {text}";
+            public static string CheckedAt(string time) => $"Kết quả lúc {time}. Nếu bạn sửa sheet sau đó, hãy bấm Kiểm tra lại; add-in không dùng kết quả cũ để ghi.";
+            public static string FixAll(int n) => $"Cập nhật {n} đơn giá theo sheet phân tích";
+            public static string FixBody(int n) => $"Ghi {n} đơn giá từ sheet \"Phân tích đơn giá\" vào bảng báo giá (thay giá trị hiện có). Thao tác không hoàn tác được bằng Ctrl+Z.";
+            public static string Fixed(int n) => $"Đã cập nhật {n} đơn giá.";
+        }
+
+        internal static class Sum
+        {
+            public const string Title = "Tổng hợp: chiết khấu, phụ phí, thuế";
+            public const string Intro = "Các khoản áp dụng theo thứ tự từ trên xuống, tính bằng công thức Excel trong bảng ngay dưới bảng báo giá. Add-in không có khoản hay tỷ lệ mặc định nào: bạn tự nhập theo hợp đồng hoặc quy định áp dụng.";
+            public const string None = "Bảng này chưa có phần tổng hợp. Thêm khoản mục rồi bấm Áp dụng.";
+            public const string Add = "Thêm khoản mục";
+            public const string Kind = "Loại";
+            public const string KindDeduct = "Giảm trừ (−)";
+            public const string KindAdd = "Cộng thêm (+)";
+            public const string Method = "Cách tính";
+            public const string MethodRunning = "% trên lũy kế (giá trị sau các khoản phía trên)";
+            public const string MethodBase = "% trên giá trị báo giá (trước mọi khoản)";
+            public const string MethodFixed = "Số tiền cố định";
+            public const string Value = "Giá trị";
+            public const string ValueHint = "Tỷ lệ % (8 nghĩa là 8%) hoặc số tiền. Để trống nếu chưa có: tổng sẽ báo thiếu.";
+            public const string MoveUp = "Lên";
+            public const string MoveDown = "Xuống";
+            public const string Remove = "Bỏ";
+            public const string Apply = "Áp dụng";
+            public const string RemoveTable = "Xóa bảng tổng hợp";
+            public const string ConfirmTitle = "Ghi bảng tổng hợp?";
+            public const string RemoveTitle = "Xóa bảng tổng hợp?";
+            public const string RemoveBody = "Xóa bảng tổng hợp (chiết khấu, phụ phí, thuế) của bảng báo giá này. Thao tác không hoàn tác được bằng Ctrl+Z.";
+            public const string Changed = "Workbook đã thay đổi trong lúc chờ xác nhận nên add-in chưa ghi gì. Hãy bấm Áp dụng để kiểm tra lại.";
+            public const string Written = "Đã ghi bảng tổng hợp.";
+            public const string Removed = "Đã xóa bảng tổng hợp.";
+            public const string Errors = "Hãy sửa các lỗi được đánh dấu.";
+            public const string ChangedOnSheet = "Bảng tổng hợp trên sheet vừa được sửa sau khi tải. Add-in chưa ghi gì và đã tải lại giá trị mới nhất; hãy xem lại rồi bấm Áp dụng.";
+
+            public static string Name(int n) => $"Khoản mục {n}";
+            public static string Existing(string address) => $"Đang có bảng tổng hợp tại {address}. Sửa bên dưới rồi bấm Áp dụng để ghi lại (giá trị bạn sửa trực tiếp trên sheet đã được đọc vào đây).";
+            public static string InvalidRows(int n) => $"{n} dòng trên sheet có Loại, Cách tính hoặc Giá trị không hợp lệ và sẽ bị bỏ khi ghi lại.";
+            public static string ConfirmBody(string address, int n) => $"Ghi bảng tổng hợp {n} khoản mục tại {address}. Vùng này đã được kiểm tra là trống (hoặc là bảng tổng hợp cũ của add-in).";
+
+            public static string Blocked(AreaCheck check)
+            {
+                switch (check.Block)
+                {
+                    case AreaBlock.TableMissing:
+                        return "Không tìm thấy bảng báo giá (có thể vừa bị xóa hoặc đổi tên). Bấm Làm mới.";
+                    case AreaBlock.HeadersChanged:
+                        return "Bảng báo giá đã bị đổi tên cột mẫu.";
+                    case AreaBlock.NoTotals:
+                        return "Bảng báo giá không bật dòng tổng (Table Design › Total Row) nên không có giá trị để tổng hợp.";
+                    case AreaBlock.Protected:
+                        return "Sheet đang được bảo vệ. Bỏ bảo vệ (Review › Unprotect Sheet) rồi thử lại.";
+                    default:
+                        return $"Vùng cần cho bảng tổng hợp (dưới dòng tổng của bảng báo giá) đang có dữ liệu ở {string.Join(", ", check.Sample)}. Add-in không ghi đè: hãy di chuyển dữ liệu đó rồi thử lại.";
+                }
+            }
+        }
+
+        internal static class Round
+        {
+            public const string Title = "Quy tắc làm tròn (workbook này)";
+            public const string Intro = "Mặc định không làm tròn. Làm tròn bằng hàm Excel trong công thức, áp dụng cho cả workbook và lưu trong file.";
+            public const string Mode = "Kiểu làm tròn";
+            public const string Digits = "Độ chính xác";
+            public const string Apply = "Áp dụng quy tắc làm tròn";
+            public const string ConfirmTitle = "Áp dụng quy tắc làm tròn?";
+            public const string ConfirmBody = "Add-in cập nhật công thức Thành tiền của mọi bảng báo giá, đơn giá công tác trên sheet phân tích và các khoản tổng hợp theo quy tắc mới. Ô có công thức bị sửa tay được giữ nguyên. Đơn giá đã ghi trong bảng báo giá không tự đổi: chạy Kiểm tra để cập nhật. Thao tác không hoàn tác được bằng Ctrl+Z.";
+
+            public static readonly IReadOnlyDictionary<RoundingLevel, string> Levels = new Dictionary<RoundingLevel, string>
+            {
+                [RoundingLevel.UnitPrice] = "Đơn giá phân tích (sheet Phân tích đơn giá)",
+                [RoundingLevel.Amount] = "Thành tiền từng dòng báo giá",
+                [RoundingLevel.Adjustment] = "Khoản chiết khấu, phụ phí, thuế",
+            };
+
+            public static readonly IReadOnlyDictionary<RoundingLevel, string> LevelHints = new Dictionary<RoundingLevel, string>
+            {
+                [RoundingLevel.UnitPrice] = "Đơn giá nhập trực tiếp hoặc lấy từ thư viện không bị làm tròn.",
+                [RoundingLevel.Amount] = "Thành tiền = làm tròn(Khối lượng × Đơn giá). Tổng là tổng các Thành tiền đã làm tròn.",
+                [RoundingLevel.Adjustment] = "Mỗi khoản được làm tròn trước khi cộng dồn.",
+            };
+
+            public static readonly IReadOnlyList<KeyValuePair<RoundingMode, string>> Modes = new[]
+            {
+                new KeyValuePair<RoundingMode, string>(RoundingMode.None, "Không làm tròn"),
+                new KeyValuePair<RoundingMode, string>(RoundingMode.Round, "Gần nhất, 0,5 ra xa số 0 (ROUND)"),
+                new KeyValuePair<RoundingMode, string>(RoundingMode.RoundUp, "Luôn ra xa số 0 (ROUNDUP)"),
+                new KeyValuePair<RoundingMode, string>(RoundingMode.RoundDown, "Luôn về phía số 0 (ROUNDDOWN)"),
+            };
+
+            public static readonly IReadOnlyList<KeyValuePair<int, string>> DigitOptions = new[]
+            {
+                new KeyValuePair<int, string>(-6, "Hàng triệu"),
+                new KeyValuePair<int, string>(-3, "Hàng nghìn"),
+                new KeyValuePair<int, string>(-2, "Hàng trăm"),
+                new KeyValuePair<int, string>(-1, "Hàng chục"),
+                new KeyValuePair<int, string>(0, "Hàng đơn vị (0 chữ số thập phân)"),
+                new KeyValuePair<int, string>(1, "1 chữ số thập phân"),
+                new KeyValuePair<int, string>(2, "2 chữ số thập phân"),
+                new KeyValuePair<int, string>(3, "3 chữ số thập phân"),
+                new KeyValuePair<int, string>(4, "4 chữ số thập phân"),
+            };
+
+            public static string Applied(int updated, int kept) => $"Đã áp dụng: cập nhật {updated} ô công thức{(kept > 0 ? $"; giữ nguyên {kept} ô có công thức bị sửa tay" : "")}. Hãy chạy Kiểm tra nếu có đơn giá phân tích.";
+            public static string Current(string text) => $"Hiện tại: {text}.";
+        }
+
+        internal static class TermsText
+        {
+            public const string Title = "Ghi chú và điều khoản";
+            public const string Intro = "Chọn mục cần có và tự nhập nội dung: add-in không soạn sẵn điều khoản nào. Khu vực được ghi ngay dưới bảng báo giá (hoặc dưới bảng tổng hợp), nhãn ở cột đầu, nội dung ở cột Nội dung công việc. Mục để trống không được ghi.";
+            public const string None = "Bảng này chưa có khu vực ghi chú và điều khoản.";
+            public const string Apply = "Ghi khu vực ghi chú";
+            public const string Remove = "Xóa khu vực ghi chú";
+            public const string ConfirmTitle = "Ghi khu vực ghi chú và điều khoản?";
+            public const string RemoveTitle = "Xóa khu vực ghi chú và điều khoản?";
+            public const string RemoveBody = "Xóa nội dung khu vực ghi chú và điều khoản của bảng này. Không hoàn tác được bằng Ctrl+Z.";
+            public const string Written = "Đã ghi khu vực ghi chú và điều khoản.";
+            public const string Removed = "Đã xóa khu vực ghi chú và điều khoản.";
+            public const string Nothing = "Chưa có mục nào có nội dung.";
+            public const string ChangedOnSheet = "Khu vực ghi chú trên sheet vừa được sửa sau khi tải. Add-in chưa ghi gì và đã tải lại nội dung mới nhất; hãy xem lại rồi bấm Ghi.";
+            public const string TooLong = "Nội dung quá dài (tối đa 32.000 ký tự).";
+
+            public static string Existing(string address) => $"Đang có khu vực ghi chú tại {address} (nội dung bên dưới đọc từ sheet).";
+            public static string Clipped(IEnumerable<string> labels) => $"Đã ghi, nhưng mục {string.Join(", ", labels)} dài quá chiều cao hàng tối đa của Excel: chữ vẫn đủ trong ô nhưng phần cuối không hiện và không in được. Hãy rút ngắn hoặc tách bớt ra mục khác.";
+            public static string ConfirmBody(string address, int n) => $"Ghi {n} mục tại {address}. Vùng này đã được kiểm tra là trống (hoặc là khu vực cũ của add-in).";
+
+            public static string Blocked(AreaCheck check)
+            {
+                switch (check.Block)
+                {
+                    case AreaBlock.TableMissing:
+                        return "Không tìm thấy bảng báo giá (có thể vừa bị xóa hoặc đổi tên). Bấm Làm mới.";
+                    case AreaBlock.Protected:
+                        return "Sheet đang được bảo vệ. Bỏ bảo vệ (Review › Unprotect Sheet) rồi thử lại.";
+                    default:
+                        return $"Vùng cần cho khu vực ghi chú đang có dữ liệu ({string.Join(", ", check.Sample)}). Add-in không ghi đè: hãy di chuyển dữ liệu đó rồi thử lại.";
+                }
+            }
+        }
+
+        internal static class PrintText
+        {
+            public const string Title = "Thiết lập trang in";
+            public const string Intro = "Add-in đặt vùng in, khổ giấy và co giãn cho sheet báo giá. Xem trước, in và xuất PDF dùng chức năng có sẵn của Excel.";
+            public const string Protected = "Sheet đang được bảo vệ: không đặt được thiết lập in. Bỏ bảo vệ (Review › Unprotect Sheet) rồi quay lại thẻ này.";
+            public const string Orientation = "Hướng giấy";
+            public const string Portrait = "Dọc";
+            public const string Landscape = "Ngang";
+            public const string Paper = "Khổ giấy";
+            public const string Fit = "Co giãn";
+            public const string FitWidth = "Vừa chiều ngang 1 trang (khuyên dùng cho bảng dài)";
+            public const string FitPage = "Thu cả báo giá vào 1 trang";
+            public const string FitNone = "Không co giãn (100%)";
+            public const string RepeatHeader = "Lặp dòng tiêu đề bảng trên mỗi trang";
+            public const string PageNumbers = "Đánh số trang ở chân trang (\"Trang x / y\")";
+            public const string Center = "Căn giữa theo chiều ngang";
+            public const string Wrap = "Xuống dòng cho cột Nội dung công việc và Ghi chú (tránh bị cắt chữ khi in)";
+            public const string Apply = "Áp dụng thiết lập in";
+            public const string ConfirmTitle = "Áp dụng thiết lập trang in?";
+            public const string GuideTitle = "Xem trước, in và xuất PDF trong Excel";
+            public const string NoPrinterHint = "Excel cần có một máy in mặc định để đọc thiết lập trang in (ví dụ Microsoft Print to PDF).";
+
+            public static readonly IReadOnlyList<string> Guide = new[]
+            {
+                "Xem trước và in: File › Print (Ctrl+P). Kiểm tra ngắt trang ở khung xem trước bên phải.",
+                "Xuất PDF: File › Export › Create PDF/XPS, hoặc File › Save As và chọn loại PDF.",
+                "Chỉnh ngắt trang: View › Page Break Preview, kéo đường ngắt màu xanh.",
+                "Khi co giãn để vừa trang, Excel có thể ngắt chữ khác màn hình làm dòng cuối của ô bị cắt: kiểm tra bản xem trước và kéo cao dòng đó nếu cần.",
+            };
+
+            public static string Area(string area, string sheet) => $"Vùng báo giá sẽ in: {area} trên sheet \"{sheet}\".";
+            public static string ConfirmBody(string area, string old) => $"Đặt vùng in {area}{(old != "" && old != area ? $" (thay vùng in hiện có {old})" : "")} cùng các thiết lập đã chọn cho sheet này.";
+            public static string Applied(string area) => $"Đã đặt thiết lập in, vùng in {area}. Xem trước bằng File › Print (Ctrl+P).";
+
+            public static string CurrentText(PrintCurrent c)
+            {
+                const string none = "chưa đặt";
+                var fit = c.Scale != null ? $"{c.Scale}%" : c.FitWide != null ? $"vừa {c.FitWide} trang ngang{(c.FitTall != null ? $", {c.FitTall} trang dọc" : "")}" : none;
+                var paper = c.Paper != null ? c.Paper.ToString() : c.PaperCode != null ? $"mã {c.PaperCode}" : none;
+                var orientation = c.Orientation == PageOrientationKind.Landscape ? Landscape : c.Orientation == PageOrientationKind.Portrait ? Portrait : none;
+                return $"Hiện có trên sheet: vùng in {(c.PrintArea != "" ? c.PrintArea : none)}; dòng lặp lại {(c.TitleRows != "" ? c.TitleRows : none)}; hướng giấy {orientation}; khổ giấy {paper}; co giãn {fit}; chân trang {(c.Footer != "" ? c.Footer : none)}.";
+            }
         }
 
         internal static class Items

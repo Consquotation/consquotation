@@ -18,6 +18,11 @@ namespace ConsQuotation.QuoteUi
         Info,
         Add,
         Items,
+        Check,
+        Summary,
+        Rounding,
+        Terms,
+        Print,
     }
 
     /// <summary>
@@ -31,6 +36,7 @@ namespace ConsQuotation.QuoteUi
         private readonly Dictionary<QuoteSection, QuotePanel> panels = new Dictionary<QuoteSection, QuotePanel>();
         private readonly Dictionary<QuoteSection, TabPage> pages = new Dictionary<QuoteSection, TabPage>();
         private bool ready;
+        private bool refreshPending;
 
         public QuoteForm(QuoteSession session)
         {
@@ -48,7 +54,19 @@ namespace ConsQuotation.QuoteUi
             AddPage(QuoteSection.Info, Q.TabInfo, new InfoPanel(session));
             AddPage(QuoteSection.Add, Q.TabAdd, new AddItemPanel(session));
             AddPage(QuoteSection.Items, Q.TabItems, new ItemsPanel(session));
+            AddPage(QuoteSection.Check, Q.TabCheck, new CheckPanel(session));
+            AddPage(QuoteSection.Summary, Q.TabSummary, new SummaryPanel(session));
+            AddPage(QuoteSection.Rounding, Q.TabRounding, new RoundingPanel(session));
+            AddPage(QuoteSection.Terms, Q.TabTerms, new TermsPanel(session));
+            AddPage(QuoteSection.Print, Q.TabPrint, new PrintPanel(session));
             Controls.Add(tabs);
+            session.Idle += async () =>
+            {
+                if (refreshPending)
+                {
+                    await RefreshAsync();
+                }
+            };
             tabs.SelectedIndexChanged += async (_, __) =>
             {
                 if (ready)
@@ -83,8 +101,11 @@ namespace ConsQuotation.QuoteUi
         {
             if (session.Busy)
             {
+                // Người dùng đổi thẻ trong lúc thẻ khác đang chạy: đọc lại ngay khi việc đó xong.
+                refreshPending = true;
                 return;
             }
+            refreshPending = false;
             var refresh = RefreshTablesAsync();
             session.Refreshing = refresh;
             await refresh;
@@ -133,6 +154,8 @@ namespace ConsQuotation.QuoteUi
             ["cqQuoteInfo"] = QuoteSection.Info,
             ["cqAddItem"] = QuoteSection.Add,
             ["cqItems"] = QuoteSection.Items,
+            ["cqPricing"] = QuoteSection.Check,
+            ["cqPrint"] = QuoteSection.Terms,
         };
 
         public static void Show(QuoteSection section, IntPtr excelWindow) => UiThread.Post(() => Ensure(excelWindow, section));

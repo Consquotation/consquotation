@@ -14,7 +14,7 @@ namespace ConsQuotation.Excel
     /// Mỗi phương thức chạy trọn trong một lượt macro trên luồng chính của Excel: kiểm tra lại vùng đích rồi ghi
     /// ngay trong lượt đó nên người dùng không xen vào giữa được.
     /// </summary>
-    public sealed class ExcelQuoteGateway : IQuoteGateway
+    public sealed partial class ExcelQuoteGateway : IQuoteGateway
     {
         private const int XlSrcRange = 1;
         private const int XlYes = 1;
@@ -716,21 +716,8 @@ namespace ConsQuotation.Excel
         /// <summary>Khối của chính add-in dưới bảng báo giá (bảng tổng hợp, khu vực điều khoản): Excel dời cùng khi chèn dòng nên không phải hỏi.</summary>
         private static List<Rect> OwnBlocks(dynamic book, string quoteTable)
         {
-            var rects = new List<Rect>();
-            dynamic? summary = FindTable(book, Adjustments.SummaryTableName(quoteTable));
-            if (summary != null)
-            {
-                rects.Add(RectOf(summary.Range));
-            }
-            var termsName = Naming.TermsNameFor(quoteTable);
-            foreach (dynamic name in book.Names)
-            {
-                if (string.Equals((string)name.Name, termsName, StringComparison.OrdinalIgnoreCase))
-                {
-                    BestEffort(() => rects.Add(RectOf(name.RefersToRange)));
-                }
-            }
-            return rects;
+            (Rect? Summary, Rect? Terms) own = OwnRects(book, quoteTable);
+            return new[] { own.Summary, own.Terms }.Where(r => r != null).Select(r => r!.Value).ToList();
         }
 
         private static OccupiedCells CellsBeside(dynamic sheet, Rect whole, bool right, out object?[,] formulas, IReadOnlyList<Rect>? exclude = null)
@@ -868,10 +855,13 @@ namespace ConsQuotation.Excel
                 {
                     // Dòng trống đã kiểm tra: chỉ ghi các cột mẫu và cột có giá trị, không đụng cột người dùng tự thêm.
                     dynamic body = table.DataBodyRange;
-                    for (var c = 0; c < headers.Count; c++)
+                    NoAutoFill((object)app, () =>
                     {
-                        Put(body.Cells[fillIndex.Value + 1, c + 1], aligned[0]![c]);
-                    }
+                        for (var c = 0; c < headers.Count; c++)
+                        {
+                            Put(body.Cells[fillIndex.Value + 1, c + 1], aligned[0]![c]);
+                        }
+                    });
                     firstRow = (int)body.Row - 1 + fillIndex.Value;
                 }
                 else
@@ -883,10 +873,14 @@ namespace ConsQuotation.Excel
                         dynamic added = insertIndex == null ? table.ListRows.Add() : table.ListRows.Add(insertIndex.Value + 1 + i);
                         dynamic range = added.Range;
                         firstRow = firstRow < 0 ? (int)range.Row - 1 : firstRow;
-                        for (var c = 0; c < headers.Count; c++)
+                        var values = aligned[i]!;
+                        NoAutoFill((object)app, () =>
                         {
-                            Put(range.Cells[1, c + 1], aligned[i]![c]);
-                        }
+                            for (var c = 0; c < headers.Count; c++)
+                            {
+                                Put(range.Cells[1, c + 1], values[c]);
+                            }
+                        });
                     }
                 }
                 Rect full = RectOf(table.Range);

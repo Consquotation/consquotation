@@ -350,6 +350,85 @@ namespace ConsQuotation.Tests
         public Task GoToAsync(string sheetName, string address) => Task.CompletedTask;
         public Task SelectQuoteTableAsync(string tableName) => Task.CompletedTask;
         public Task<string> WriteExplanationAsync(ExplanationSheet sheet) => Task.FromResult(sheet.SheetName);
+
+        // N5: làm tròn, tổng hợp, điều khoản, trang in.
+        public RoundingConfig? AppliedRounding;
+        public SummaryState SummaryOnSheet = new SummaryState();
+        public AreaCheck SummaryCheck = new AreaCheck { Address = "D19:I22", Fingerprint = "fs" };
+        public bool ChangedOnSummary;
+        public int SummaryWrites;
+        public bool SummaryRemoved;
+        public TermsState TermsOnSheet = new TermsState();
+        public AreaCheck TermsCheck = new AreaCheck { Address = "A24:N26", Fingerprint = "ft" };
+        public int TermsWrites;
+        public List<UnitPriceFix> Fixes = new List<UnitPriceFix>();
+        public bool ChangedOnFix;
+        public PrintOptions? AppliedPrint;
+        public PrintSetupState Print = new PrintSetupState { SheetName = "BG", QuoteArea = "A1:N18", Current = new PrintCurrent { PrintArea = "A1:C3" } };
+
+        public Task<RoundingApplyResult> ApplyRoundingAsync(RoundingConfig config)
+        {
+            AppliedRounding = config;
+            RoundingRules = config;
+            return Task.FromResult(new RoundingApplyResult { UpdatedCells = 3, KeptCells = 1 });
+        }
+
+        public Task<SummaryState> ReadSummaryAsync(string tableName) => Task.FromResult(SummaryOnSheet);
+        public Task<AreaCheck> InspectSummaryAsync(string tableName, int adjustmentCount) => Task.FromResult(SummaryCheck);
+
+        public Task WriteSummaryAsync(string tableName, IReadOnlyList<Adjustment> adjustments, string fingerprint)
+        {
+            if (ChangedOnSummary)
+            {
+                throw new TargetChangedException();
+            }
+            SummaryWrites++;
+            SummaryOnSheet = new SummaryState { Exists = true, Adjustments = adjustments.ToList(), Address = "D19:I22" };
+            return Task.CompletedTask;
+        }
+
+        public Task RemoveSummaryAsync(string tableName)
+        {
+            SummaryRemoved = true;
+            SummaryOnSheet = new SummaryState();
+            return Task.CompletedTask;
+        }
+
+        public Task<int> SetUnitPricesAsync(IReadOnlyList<UnitPriceFix> fixes)
+        {
+            if (ChangedOnFix)
+            {
+                throw new TargetChangedException();
+            }
+            Fixes.AddRange(fixes);
+            return Task.FromResult(fixes.Count);
+        }
+
+        public Task<TermsState> ReadTermsAsync(string tableName) => Task.FromResult(TermsOnSheet);
+        public Task<AreaCheck> InspectTermsAsync(string tableName, int rowCount) => Task.FromResult(TermsCheck);
+
+        public List<string> TermsClipped = new List<string>();
+
+        public Task<List<string>> WriteTermsAsync(string tableName, IReadOnlyList<TermsSection> sections, string fingerprint)
+        {
+            TermsWrites++;
+            TermsOnSheet = new TermsState { Exists = true, Sections = Terms.ToWrite(sections), Address = "A24:N26" };
+            return Task.FromResult(TermsClipped);
+        }
+
+        public Task RemoveTermsAsync(string tableName)
+        {
+            TermsOnSheet = new TermsState();
+            return Task.CompletedTask;
+        }
+
+        public Task<PrintSetupState> ReadPrintSetupAsync(string tableName) => Task.FromResult(Print);
+
+        public Task<string> ApplyPrintSetupAsync(string tableName, PrintOptions options)
+        {
+            AppliedPrint = options;
+            return Task.FromResult(Print.QuoteArea);
+        }
     }
 
     public class QuotationTests
@@ -1224,6 +1303,18 @@ namespace ConsQuotation.Tests
             public Task GoToAsync(string sheetName, string address) => throw new NotSupportedException();
             public Task SelectQuoteTableAsync(string tableName) => throw new NotSupportedException();
             public Task<string> WriteExplanationAsync(ExplanationSheet sheet) => throw new NotSupportedException();
+            public Task<RoundingApplyResult> ApplyRoundingAsync(RoundingConfig config) => throw new NotSupportedException();
+            public Task<SummaryState> ReadSummaryAsync(string tableName) => throw new NotSupportedException();
+            public Task<AreaCheck> InspectSummaryAsync(string tableName, int adjustmentCount) => throw new NotSupportedException();
+            public Task WriteSummaryAsync(string tableName, IReadOnlyList<Adjustment> adjustments, string fingerprint) => throw new NotSupportedException();
+            public Task RemoveSummaryAsync(string tableName) => throw new NotSupportedException();
+            public Task<int> SetUnitPricesAsync(IReadOnlyList<UnitPriceFix> fixes) => throw new NotSupportedException();
+            public Task<TermsState> ReadTermsAsync(string tableName) => throw new NotSupportedException();
+            public Task<AreaCheck> InspectTermsAsync(string tableName, int rowCount) => throw new NotSupportedException();
+            public Task<List<string>> WriteTermsAsync(string tableName, IReadOnlyList<TermsSection> sections, string fingerprint) => throw new NotSupportedException();
+            public Task RemoveTermsAsync(string tableName) => throw new NotSupportedException();
+            public Task<PrintSetupState> ReadPrintSetupAsync(string tableName) => throw new NotSupportedException();
+            public Task<string> ApplyPrintSetupAsync(string tableName, PrintOptions options) => throw new NotSupportedException();
         }
 
         private static readonly object[] OneRow = { "=ROW()", "BT-01", "", "Đổ bê tông", "m3", 1m, 2m, "=x", "" };

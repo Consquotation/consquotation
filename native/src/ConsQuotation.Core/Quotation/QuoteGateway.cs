@@ -228,5 +228,21 @@ namespace ConsQuotation.Core.Quotation
         Task SelectQuoteTableAsync(string tableName);
         /// <summary>Tạo sheet mới, ghi bảng diễn giải định mức, kích hoạt sheet đó. Trả về tên sheet.</summary>
         Task<string> WriteExplanationAsync(ExplanationSheet sheet);
+        /// <summary>Lưu quy tắc làm tròn và cập nhật các công thức mẫu (Thành tiền, đơn giá phân tích, tổng hợp).</summary>
+        Task<RoundingApplyResult> ApplyRoundingAsync(RoundingConfig config);
+        Task<SummaryState> ReadSummaryAsync(string tableName);
+        Task<AreaCheck> InspectSummaryAsync(string tableName, int adjustmentCount);
+        Task WriteSummaryAsync(string tableName, IReadOnlyList<Adjustment> adjustments, string fingerprint);
+        Task RemoveSummaryAsync(string tableName);
+        /// <summary>Ghi đơn giá theo phân tích sau khi người dùng xác nhận; trả về số ô đã ghi.</summary>
+        Task<int> SetUnitPricesAsync(IReadOnlyList<UnitPriceFix> fixes);
+        Task<TermsState> ReadTermsAsync(string tableName);
+        Task<AreaCheck> InspectTermsAsync(string tableName, int rowCount);
+        /// <summary>Ghi khu vực điều khoản; trả về nhãn các mục dài quá chiều cao hàng tối đa của Excel (chữ vẫn đủ trong ô nhưng không hiện, không in hết).</summary>
+        Task<List<string>> WriteTermsAsync(string tableName, IReadOnlyList<TermsSection> sections, string fingerprint);
+        Task RemoveTermsAsync(string tableName);
+        Task<PrintSetupState> ReadPrintSetupAsync(string tableName);
+        /// <summary>Đặt vùng in, lặp tiêu đề, hướng, khổ giấy, co giãn, chân trang; trả về vùng in đã đặt.</summary>
+        Task<string> ApplyPrintSetupAsync(string tableName, PrintOptions options);
     }
 }

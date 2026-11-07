@@ -59,6 +59,11 @@ namespace ConsQuotation.QuoteUi
         /// <summary>Lượt đọc lại danh sách bảng đang chạy nền: việc người dùng bấm chờ xong rồi mới chạy, không bị bỏ qua.</summary>
         public Task Refreshing { get; set; } = Task.CompletedTask;
 
+        /// <summary>Việc của thẻ vừa chạy xong: cửa sổ đọc lại nếu người dùng đã đổi thẻ trong lúc đó.</summary>
+        public event Action? Idle;
+
+        public void RaiseIdle() => Idle?.Invoke();
+
         /// <summary>Danh sách bảng hoặc bảng đang chọn vừa đổi.</summary>
         public event Action? TablesChanged;
 
@@ -213,6 +218,7 @@ namespace ConsQuotation.QuoteUi
                 Session.Busy = false;
                 Enabled = true;
                 UseWaitCursor = false;
+                Session.RaiseIdle();
             }
         }
 

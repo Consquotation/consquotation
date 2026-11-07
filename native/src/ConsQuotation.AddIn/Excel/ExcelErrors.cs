@@ -34,6 +34,10 @@ namespace ConsQuotation.Excel
                         return $"Excel báo lỗi khi thực hiện thao tác. (Mã lỗi: {code})";
                 }
             }
+            if (error is Microsoft.CSharp.RuntimeBinder.RuntimeBinderException)
+            {
+                return "Add-in không đọc được dữ liệu Excel trả về. Hãy báo lại lỗi này kèm phiên bản Excel đang dùng.";
+            }
             return error.Message;
         }
 

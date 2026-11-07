@@ -47,7 +47,10 @@ namespace ConsQuotation.QuoteUi
                 Ux.Button(Q.Flow.ActionCreate, (_, __) => open(QuoteSection.Create)),
                 Ux.Button(Q.Flow.ActionInfo, (_, __) => open(QuoteSection.Info)),
                 Ux.Button(Q.Flow.ActionAdd, (_, __) => open(QuoteSection.Add)),
-                Ux.Button(Q.Flow.ActionItems, (_, __) => open(QuoteSection.Items))));
+                Ux.Button(Q.Flow.ActionItems, (_, __) => open(QuoteSection.Items)),
+                Ux.Button(Q.Flow.ActionCheck, (_, __) => open(QuoteSection.Check)),
+                Ux.Button(Q.Flow.ActionSummary, (_, __) => open(QuoteSection.Summary)),
+                Ux.Button(Q.Flow.ActionPrint, (_, __) => open(QuoteSection.Print))));
             Body.Controls.Add(Status);
             steps = new RecordList<StepRow>(s => s.Key.ToString(),
                 new Column<StepRow>("Bước", 240, s => Q.Flow.Steps[s.Key]),

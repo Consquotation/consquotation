@@ -465,7 +465,7 @@ namespace ConsQuotation.Core.Quotation
             var cascade = "Thường do tổng bảng báo giá hoặc một khoản phía trên bị lỗi: sửa các lỗi đó trước. Nếu vẫn lỗi: " + reapply;
             int S(string name) => summary.Headers.IndexOf(name);
             void Add(IssueSeverity severity, QuoteIssue place, string message, string hint) => push(severity, place, message, hint, null, null, null, null);
-            var kinds = new[] { Adjustments.KindLabel(AdjustmentKind.Add), Adjustments.KindLabel(AdjustmentKind.Deduct) };
+            var kinds = new[] { Adjustments.KindLabel(AdjustmentKind.Deduct), Adjustments.KindLabel(AdjustmentKind.Add) };
             var methods = ((AdjustmentMethod[])Enum.GetValues(typeof(AdjustmentMethod))).Select(Adjustments.MethodLabel).ToList();
             for (var r = 0; r < summary.Rows.Count; r++)
             {

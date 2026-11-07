@@ -4,7 +4,7 @@ namespace ConsQuotation.Ribbon
 {
     /// <summary>
     /// Danh mục lệnh của ribbon: id nút → tên lệnh và giai đoạn sẽ có chức năng (docs/NATIVE_PLAN.md).
-    /// Lệnh chưa có chức năng báo "đang chuyển sang bản Windows"; lệnh Thư viện (N3) và Báo giá (N4) mở cửa sổ tương ứng.
+    /// Lệnh chưa có chức năng báo "đang chuyển sang bản Windows"; lệnh Thư viện (N3) và Báo giá (N4, N5) mở cửa sổ tương ứng.
     /// </summary>
     public static class RibbonCommands
     {

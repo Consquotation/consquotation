@@ -405,6 +405,216 @@ namespace ConsQuotation.Tests
         });
 
         [Fact]
+        public void TheKiemTra_TuChayKhiMoThe_CapNhatDonGiaCanXacNhan() => Sta(() =>
+        {
+            var note = "Phân tích định mức: DM-01; 1 tài nguyên";
+            wb.Add("DM-01", 1.0, 700.0, "L1", notes: note);
+            wb.AnalysisRows = new List<FakeQuoteWorkbook.AnalysisSpec> { new FakeQuoteWorkbook.AnalysisSpec { Code = "DM-01", ResourceCode = "A", Type = ResourceType.Material, Quantity = 1.0, Price = 721.0 } };
+            prompts.Answer = (_, __) => false;
+            var session = Session();
+            using (var panel = new CheckPanel(session))
+            {
+                session.RefreshTablesAsync(true).GetAwaiter().GetResult();
+                panel.ReloadAsync();
+                Done(panel);
+                Assert.Contains("1 dòng công tác", panel.SummaryText);
+                Assert.Contains("Phân tích định mức: 1", panel.MethodsText);
+                Assert.Equal("Cập nhật 1 đơn giá theo sheet phân tích", panel.FixButton.Text);
+
+                panel.ApplyFixes();
+                Done(panel);
+                Assert.Empty(wb.Fixes);
+
+                prompts.Answer = (_, __) => true;
+                wb.ChangedOnFix = true;
+                panel.ApplyFixes();
+                Done(panel);
+                Assert.StartsWith("Bảng báo giá vừa thay đổi", panel.StatusText);
+                wb.ChangedOnFix = false;
+
+                panel.ApplyFixes();
+                Done(panel);
+                var fix = Assert.Single(wb.Fixes);
+                Assert.Equal((721.0, 700.0), (fix.Value, (double)fix.Expected!));
+                Assert.Equal("Đã cập nhật 1 đơn giá.", panel.StatusText);
+            }
+        });
+
+        [Fact]
+        public void TheTongHop_LoiTungO_SheetDoiThiKhongGhi_GhiVaXoa() => Sta(() =>
+        {
+            var session = Session();
+            using (var panel = new SummaryPanel(session))
+            {
+                session.RefreshTablesAsync(true).GetAwaiter().GetResult();
+                panel.ReloadAsync();
+                Done(panel);
+                panel.AddDraft();
+                panel.AddDraft();
+                panel.Rows[1].Value.Value = "abc";
+                panel.ApplyNow();
+                Done(panel);
+                Assert.Equal("Nhập tên khoản mục.", panel.Rows[0].Name.Error);
+                Assert.NotNull(panel.Rows[1].Value.Error);
+                Assert.Equal(0, wb.SummaryWrites);
+
+                panel.Rows[0].Name.Value = "Chiết khấu";
+                panel.Rows[0].Kind.Value = AdjustmentKind.Deduct.ToString();
+                panel.Rows[0].Value.Value = "5";
+                panel.Rows[1].Name.Value = "Thuế";
+                panel.Rows[1].Value.Value = "8";
+                panel.MoveDraft(1, -1);
+                Assert.Equal("Thuế", panel.Rows[0].Name.Value);
+                panel.MoveDraft(0, 1);
+
+                prompts.Answer = (_, __) => false;
+                panel.ApplyNow();
+                Done(panel);
+                Assert.Equal(0, wb.SummaryWrites);
+
+                prompts.Answer = (_, __) => true;
+                var edited = wb.SummaryOnSheet;
+                wb.SummaryOnSheet = new SummaryState { Exists = true, Address = "D19:I21", Adjustments = new List<Adjustment> { new Adjustment("Sửa trên sheet", AdjustmentKind.Add, AdjustmentMethod.Fixed, 1) } };
+                panel.ApplyNow();
+                Done(panel);
+                Assert.StartsWith("Bảng tổng hợp trên sheet vừa được sửa", panel.StatusText);
+                Assert.Equal("Sửa trên sheet", panel.Rows[0].Name.Value);
+                Assert.Equal(0, wb.SummaryWrites);
+
+                wb.SummaryOnSheet = edited;
+                panel.ReloadAsync();
+                Done(panel);
+                panel.AddDraft();
+                panel.Rows[0].Name.Value = "Thuế GTGT";
+                panel.Rows[0].Value.Value = "8";
+                wb.SummaryCheck = new AreaCheck { Block = AreaBlock.Occupied, Sample = { "D20" } };
+                panel.ApplyNow();
+                Done(panel);
+                Assert.Contains("D20", panel.StatusText);
+                Assert.Equal(0, wb.SummaryWrites);
+
+                wb.SummaryCheck = new AreaCheck { Address = "D19:I22", Fingerprint = "fs" };
+                wb.ChangedOnSummary = true;
+                panel.ApplyNow();
+                Done(panel);
+                Assert.StartsWith("Workbook đã thay đổi trong lúc chờ xác nhận", panel.StatusText);
+                Assert.Equal(0, wb.SummaryWrites);
+
+                wb.ChangedOnSummary = false;
+                panel.ApplyNow();
+                Done(panel);
+                Assert.Equal("Đã ghi bảng tổng hợp.", panel.StatusText);
+                Assert.Equal(1, wb.SummaryWrites);
+                Assert.Equal(8m, wb.SummaryOnSheet.Adjustments[0].Value);
+
+                panel.RemoveNow();
+                Done(panel);
+                Assert.True(wb.SummaryRemoved);
+                Assert.Empty(panel.Rows);
+            }
+        });
+
+        [Fact]
+        public void TheLamTron_DocQuyTac_HuyThiKhongGhi_ApDung() => Sta(() =>
+        {
+            wb.RoundingRules = new RoundingConfig(Rounding.NoRounding, new RoundingRule(RoundingMode.Round, -5), Rounding.NoRounding);
+            prompts.Answer = (_, __) => false;
+            var session = Session();
+            using (var panel = new RoundingPanel(session))
+            {
+                panel.ReloadAsync();
+                Done(panel);
+                // Độ chính xác ngoài danh sách gợi ý (suy từ công thức cũ) vẫn đọc đúng.
+                Assert.Equal(new RoundingRule(RoundingMode.Round, -5), panel.Rule(RoundingLevel.Amount));
+
+                panel.Set(RoundingLevel.UnitPrice, RoundingMode.RoundUp, -3);
+                panel.ApplyNow();
+                Done(panel);
+                Assert.Null(wb.AppliedRounding);
+                // Có thay đổi chưa áp dụng: quay lại cửa sổ không đọc đè.
+                panel.ReloadAsync();
+                Done(panel);
+                Assert.Equal(new RoundingRule(RoundingMode.RoundUp, -3), panel.Rule(RoundingLevel.UnitPrice));
+
+                prompts.Answer = (_, __) => true;
+                panel.ApplyNow();
+                Done(panel);
+                Assert.Equal(new RoundingRule(RoundingMode.RoundUp, -3), wb.AppliedRounding!.UnitPrice);
+                Assert.Equal("Đã áp dụng: cập nhật 3 ô công thức; giữ nguyên 1 ô có công thức bị sửa tay. Hãy chạy Kiểm tra nếu có đơn giá phân tích.", panel.StatusText);
+            }
+        });
+
+        [Fact]
+        public void TheGhiChu_ChuaNhapGi_BaoTrong_GhiDocLaiXoa() => Sta(() =>
+        {
+            var session = Session();
+            using (var panel = new TermsPanel(session))
+            {
+                session.RefreshTablesAsync(true).GetAwaiter().GetResult();
+                panel.ReloadAsync();
+                Done(panel);
+                panel.SaveNow();
+                Done(panel);
+                Assert.Equal("Chưa có mục nào có nội dung.", panel.StatusText);
+                Assert.Equal(0, wb.TermsWrites);
+
+                panel.Fields[TermsKey.Scope].Value = "Phần thô\r\nDòng 2";
+                panel.Fields[TermsKey.Notes].Value = new string('x', 32001);
+                panel.SaveNow();
+                Done(panel);
+                Assert.NotNull(panel.Fields[TermsKey.Notes].Error);
+                Assert.Equal(0, wb.TermsWrites);
+
+                panel.Fields[TermsKey.Notes].Value = "";
+                panel.SaveNow();
+                Done(panel);
+                Assert.Equal(1, wb.TermsWrites);
+                Assert.Equal("Phần thô\nDòng 2", wb.TermsOnSheet.Sections[0].Text);
+                Assert.Equal("Phần thô\r\nDòng 2", panel.Fields[TermsKey.Scope].Value);
+
+                wb.TermsClipped = new List<string> { "Phạm vi công việc" };
+                panel.Fields[TermsKey.Scope].Value = "Rất dài";
+                panel.SaveNow();
+                Done(panel);
+                Assert.Contains("mục Phạm vi công việc dài quá", panel.StatusText);
+
+                // Xóa hết chữ rồi ghi: hỏi xóa khu vực.
+                panel.Fields[TermsKey.Scope].Value = "";
+                panel.SaveNow();
+                Done(panel);
+                Assert.False(wb.TermsOnSheet.Exists);
+                Assert.Equal("Đã xóa khu vực ghi chú và điều khoản.", panel.StatusText);
+            }
+        });
+
+        [Fact]
+        public void TheTrangIn_DocHienCo_HuyThiKhongDat_ApDungDungLuaChon() => Sta(() =>
+        {
+            prompts.Answer = (_, __) => false;
+            var session = Session();
+            using (var panel = new PrintPanel(session))
+            {
+                session.RefreshTablesAsync(true).GetAwaiter().GetResult();
+                panel.ReloadAsync();
+                Done(panel);
+                Assert.Contains("A1:N18", panel.AreaText);
+                panel.Orientation.Value = PageOrientationKind.Landscape.ToString();
+                panel.Fit.Value = FitKind.Page.ToString();
+                panel.PageNumbers.Checked = false;
+                panel.ApplyNow();
+                Done(panel);
+                Assert.Contains("thay vùng in hiện có A1:C3", prompts.Confirms.Last());
+                Assert.Null(wb.AppliedPrint);
+
+                prompts.Answer = (_, __) => true;
+                panel.ApplyNow();
+                Done(panel);
+                Assert.Equal((PageOrientationKind.Landscape, FitKind.Page, false, true), (wb.AppliedPrint!.Orientation, wb.AppliedPrint.Fit, wb.AppliedPrint.PageNumbers, wb.AppliedPrint.RepeatHeader));
+                Assert.StartsWith("Đã đặt thiết lập in, vùng in A1:N18", panel.StatusText);
+            }
+        });
+
+        [Fact]
         public void LoiCom_CoThongBaoTiengViet_KhongLoNoiDungO()
         {
             var com = new System.Runtime.InteropServices.COMException("nội dung lạ", unchecked((int)0x800A03EC));
